@@ -13,17 +13,17 @@ Building the kernel
 To build the kernel, simply run ``make`` from the command-line. This requires
 having some tools installed. They are listed here:
 
-*) GNU Make. I use the GNU version, but other versions of ``make`` will probably
+* GNU Make. I use the GNU version, but other versions of ``make`` will probably
 work too.
 
-*) GCC and Binutils for ``x86_64-elf``. They must be accessible as
+* GCC and Binutils for ``x86_64-elf``. They must be accessible as
 ``x86_64-elf-gcc``, ``x86_64-elf-objcopy``, etc.
 
-*) Sparse, the Linux syntax parser. This is an optional depencendy, used for
+* Sparse, the Linux syntax parser. This is an optional depencendy, used for
 static analysis of the kernel. This is not needed when building the kernel, but
 recommended for developers working on the kernel.
 
-*) m4 for generating arch/x86/loader/include_kernel.S.
+* m4 for generating arch/x86/loader/include_kernel.S.
 
 If I forgot anything in this list of dependencies, report an issue.
 
@@ -53,11 +53,11 @@ The kernel ships a script that allows for running the kernel in an emulator by
 simply typing ``./run`` on the command-line. This has its own set of additional
 dependencies:
 
-*) GNU GRUB. This is the bootloader installed to the kernel image.
+* GNU GRUB. This is the bootloader installed to the kernel image.
 
-*) xorriso. This program is a depencency of ``grub-mkrescue`` needed to write an
+* xorriso. This program is a depencency of ``grub-mkrescue`` needed to write an
 ISO file.
 
-*) QEMU.
+* QEMU.
 
 If I forgot anything in this list of dependencies, report an issue.
