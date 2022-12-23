@@ -204,55 +204,58 @@ static int should_directmap(enum memmap_type type)
 		|| type == MEMMAP_ACPI_DATA;
 }
 
-static void directmap(void *page_tables, unsigned long offset, unsigned long start,
+static void directmap(void *pgt, unsigned long offset, unsigned long start,
 	unsigned long end, enum memmap_type malloc_type)
 {
+	pte_t flags = __PG_PRESENT | __PG_WRITE | __PG_GLOBAL;
+	if(nx_bit_enable)
+		flags |= __PG_NOEXEC;
+
 	start = align_up(start, PAGE_SIZE);
 	end = align_down(end, PAGE_SIZE);
-	if(end <= start)
-		return;
 
-	unsigned long start_2M = align_up(start, P2E_SIZE);
-	unsigned long end_4K = min(start_2M, end);
-	for(; start < end_4K; start += PAGE_SIZE) {
-		p1e_t *p1e = get_p1e(page_tables, offset + start, malloc_type);
-		*p1e = (force p1e_t) start
-			| __PG_PRESENT | __PG_WRITE
-			| (nx_bit_enable ? __PG_NOEXEC : 0);
+	/*
+	 * Fill in 4KiB pages up until the first 2MiB page.
+	 */
+	for(; start < min(end, align_up(start, P2E_SIZE)); start += PAGE_SIZE) {
+		p1e_t *p1e = get_p1e(pgt, start + offset, malloc_type);
+		*p1e = ((force p1e_t) start) | flags;
 	}
 
-	unsigned long start_1G = align_up(start, P3E_SIZE);
-	unsigned long end_2M = min(start_1G, end);
-	for(; start < end_2M; start += PAGE_SIZE) {
-		p2e_t *p2e = get_p2e(page_tables, offset + start, malloc_type);
-		*p2e = (force p2e_t) start
-			| __PG_PRESENT | __PG_WRITE | __PG_GLOBAL | __PG_SIZE
-			| (nx_bit_enable ? __PG_NOEXEC : 0);
+	if(!pdpe1g_enable)
+		goto no_1GiB_pages;
+
+	/*
+	 * Fill in 2MiB pages up until the first 1GiB page.
+	 */
+	for(; start < min(align_down(end, P2E_SIZE), align_up(start, P3E_SIZE)); start += P2E_SIZE) {
+		p2e_t *p2e = get_p2e(pgt, start + offset, malloc_type);
+		*p2e = ((force p2e_t) start) | flags | __PG_SIZE;
 	}
 
-	unsigned long end_1G = align_down(end, P3E_SIZE);
-	if(pdpe1g_enable) {
-		for(; start < end_1G; start += P3E_SIZE) {
-			p3e_t *p3e = get_p3e(page_tables, offset + start, malloc_type);
-			*p3e = (force p3e_t) start
-				| __PG_PRESENT | __PG_WRITE | __PG_GLOBAL | __PG_SIZE
-				| (nx_bit_enable ? __PG_NOEXEC : 0);
-		}
+	/*
+	 * Fill in as many 1GiB pages as possible.
+	 */
+	for(; start < align_down(end, P3E_SIZE); start += P3E_SIZE) {
+		p3e_t *p3e = get_p3e(pgt, start + offset, malloc_type);
+		*p3e = ((force p3e_t) start) | flags | __PG_SIZE;
 	}
 
-	end_2M = align_down(end, P2E_SIZE);
-	for(; start < end_2M; start += P2E_SIZE) {
-		p2e_t *p2e = get_p2e(page_tables, offset + start, malloc_type);
-		*p2e = (force p2e_t) start
-			| __PG_PRESENT | __PG_WRITE | __PG_GLOBAL | __PG_SIZE
-			| (nx_bit_enable ? __PG_NOEXEC : 0);
+no_1GiB_pages:
+	/*
+	 * Fill in remaining 2MiB pages.
+	 */
+	for(; start < align_down(end, P2E_SIZE); start += P2E_SIZE) {
+		p2e_t *p2e = get_p2e(pgt, start + offset, malloc_type);
+		*p2e = ((force p2e_t) start) | flags | __PG_SIZE;
 	}
 
+	/*
+	 * Fill in remaining 4KiB pages.
+	 */
 	for(; start < end; start += PAGE_SIZE) {
-		p1e_t *p1e = get_p1e(page_tables, offset + start, malloc_type);
-		*p1e = (force p1e_t) start
-			| __PG_PRESENT | __PG_WRITE | __PG_GLOBAL
-			| (nx_bit_enable ? __PG_NOEXEC : 0);
+		p1e_t *p1e = get_p1e(pgt, start + offset, malloc_type);
+		*p1e = ((force p1e_t) start) | flags;
 	}
 }
 
@@ -470,6 +473,8 @@ unsigned long loader_main(struct mb2_info *multiboot)
 
 	unsigned long hhdm_base = l5_paging_enable
 		? 0xff00000000000000UL : 0xffff800000000000UL;
+
+	debug("HHDM base: %p\n", hhdm_base);
 
 	struct list *pos = orig_memmap.entry_list.next;
 	unsigned long start = 0;

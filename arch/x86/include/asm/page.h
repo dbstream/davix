@@ -42,7 +42,7 @@ typedef p5e_t *p5d_t;
 #define P2E_SHIFT 21
 #define P3E_SHIFT 30
 #define P4E_SHIFT 39
-#define P5E_SHIFT 46
+#define P5E_SHIFT 48
 
 #define PAGE_SIZE (1UL << P1E_SHIFT)
 #define P2E_SIZE (1UL << P2E_SHIFT)
@@ -61,5 +61,10 @@ typedef p5e_t *p5d_t;
 #define P3E(x) (((x) >> P3E_SHIFT) & P3E_MASK)
 #define P4E(x) (((x) >> P4E_SHIFT) & P4E_MASK)
 #define P5E(x) (((x) >> P5E_SHIFT) & P5E_MASK)
+
+extern unsigned long HHDM_OFFSET;
+
+#define phys_to_virt(x) ((unsigned long) (x) + HHDM_OFFSET)
+#define virt_to_phys(x) ((unsigned long) (x) - HHDM_OFFSET)
 
 #endif /* __ASM_PAGE_H */
