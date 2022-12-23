@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: CC0
+# If you have an editor that creates or uses special files in this directory and
+# need to modify this file to ignore them, uncomment the following line:
+# .gitignore
+# Alternatively, consider adding them to ``~/.config/git/ignore``.
+
+# Default path to objtree
+build
+
+# Bochs
+bochsrc.txt
+bx_enh_dbg.ini

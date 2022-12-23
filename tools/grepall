@@ -1,0 +1,14 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+DIRS="include kernel tools doc"
+if [ "$ARCH" != "" ]; then
+	DIRS="$DIRS arch/$ARCH"
+else
+	DIRS="$DIRS arch"
+fi
+
+FILES="$(find $DIRS -type f)"
+
+FILES="$FILES $(find . -maxdepth 1 -type f -not -name .\*)"
+
+exec grep --color=auto -Hn "$@" $FILES
