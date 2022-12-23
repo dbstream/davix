@@ -19,7 +19,7 @@ endif
 
 PHONY += htmldocs
 htmldocs:
-	@echo -e SPHINX-BUILD\\htmldocs
+	@echo -e SPHINX-BUILD\\thtmldocs
 	@sphinx-build -b html -a doc $(objtree)/htmldocs
 
 PHONY += pdfdocs
