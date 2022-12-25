@@ -65,6 +65,10 @@ loader_obj :=
 include arch/x86/loader/Makefile
 __loader_obj += $(patsubst %,$(objtree)/arch/x86/loader/%,$(loader_obj))
 
+obj :=
+include arch/x86/mm/Makefile
+__obj += $(patsubst %,$(objtree)/arch/x86/mm/%,$(obj))
+
 $(filter $(objtree)/%.c.o,$(__obj)): $(objtree)/%.c.o: %.c
 	@mkdir -p $(dir $@)
 	@echo -e CC\\t$<
