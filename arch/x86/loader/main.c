@@ -24,10 +24,10 @@ extern char mainkernel[], mainkernel_end[];
 struct memmap orig_memmap;
 struct memmap memmap;
 
-static int l5_paging_enable = 0;
+int l5_paging_enable = 0;
 static int nx_bit_enable = 0;
 static int pdpe1g_enable = 0;
-static unsigned long max_phys_addr = 1UL << 32;
+unsigned long max_phys_addr = 1UL << 32;
 
 union cpuid_vendor {
 	struct {

@@ -35,9 +35,13 @@ endif
 __obj :=
 dep :=
 
-obj:=
+obj :=
 include kernel/Makefile
 __obj += $(patsubst %.o,$(objtree)/kernel/%.o,$(obj))
+
+obj :=
+include mm/Makefile
+__obj += $(patsubst %.o,$(objtree)/mm/%.o,$(obj))
 
 # Keep this the last thing that is included! (__obj needs to be complete)
 include arch/$(ARCH)/Makefile

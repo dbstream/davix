@@ -118,7 +118,7 @@ struct list {
 #define align_down(x, align) ({ \
 	auto __aligndown_x = (x); \
 	auto __aligndown_align = (align); \
-	__aligndown_x - (__aligndown_x % align); \
+	__aligndown_x - (__aligndown_x % __aligndown_align); \
 })
 
 #define align_up(x, align) ({ \
@@ -126,6 +126,24 @@ struct list {
 	auto __alignup_align = (align); \
 	align_down(__alignup_x + __alignup_align - 1, __alignup_align); \
 })
+
+typedef unsigned long bitwise alloc_flags_t;
+
+#define __ALLOC_BIT(idx) ((force alloc_flags_t) (1UL << idx))
+
+#define __ALLOC_ZERO __ALLOC_BIT(0)
+
+#define __ALLOC_ARCH_SHIFT 1
+#include <asm/arch_alloc_flags.h>
+
+#define ALLOC_KERNEL (0)
+
+#define THIS_ADDR ({ \
+	__label__ __this_addr; \
+	__this_addr: (unsigned long) &&__this_addr; \
+})
+
+#define RET_ADDR __builtin_extract_return_addr(__builtin_return_address(0))
 
 #endif /* __KERNEL__ */
 #endif /* __DAVIX_TYPES_H */

@@ -1,17 +1,169 @@
 /* SPDX-License-Identifier: MIT */
 
-#include <davix/printk.h>
 #include <davix/list.h>
-#include <asm/page.h>
+#include <davix/page_alloc.h>
+#include <davix/printk.h>
 #include <asm/boot.h>
+#include <asm/cpuid.h>
+#include <asm/page.h>
+#include <asm/segment.h>
 
 unsigned long HHDM_OFFSET;
+unsigned long PAGE_OFFSET;
+
+unsigned long max_phys_addr;
+
+int l5_paging_enable;
+int l3_hugepage_enable;
+pte_t x86_nx_bit;
+
+static void init_vmem_constants(void)
+{
+	l5_paging_enable = x86_boot_struct.l5_paging_enable;
+
+	max_phys_addr = 1UL << 32;
+	x86_nx_bit = 0;
+	l3_hugepage_enable = 0;
+
+	HHDM_OFFSET = 0xffff800000000000UL;
+	PAGE_OFFSET = 0xffffc00000000000UL;
+	if(l5_paging_enable) {
+		HHDM_OFFSET = 0xff00000000000000UL;
+		PAGE_OFFSET = 0xff80000000000000UL;
+	}
+
+	unsigned long a, b, c, d, extmax;
+
+	do_cpuid(0x80000000, a, b, c, d);
+	extmax = a;
+
+	if(extmax < 0x80000001)
+		return;
+
+	if(d & __ID_80000001_EDX_NX)
+		x86_nx_bit = __PG_NOEXEC;
+	if(d & __ID_80000001_EDX_PDPE1G)
+		l3_hugepage_enable = 1;
+
+	if(extmax < 0x80000008)
+		return;
+
+	do_cpuid(0x80000008, a, b, c, d);
+	max_phys_addr = 1UL << min(l5_paging_enable ? 52 : 45, a & 0xff);
+}
+
+static struct list early_pagealloc_list = LIST_INIT(early_pagealloc_list);
+
+static void early_free_page(unsigned long phys)
+{
+	list_add(&early_pagealloc_list, (struct list *) phys_to_virt(phys));
+}
+
+static unsigned long early_alloc_page(void)
+{
+	if(list_empty(&early_pagealloc_list))
+		return 0;
+
+	struct list *entry = early_pagealloc_list.next;
+	list_del(entry);
+	memset(entry, 0, PAGE_SIZE);
+	return virt_to_phys(entry);
+}
+
+static unsigned long pgtable_alloc(void)
+{
+	unsigned long ret = early_alloc_page();
+	if(!ret) {
+		critical("x86/mm: Couldn't allocate a page to hold page tables.\n");
+		for(;;)
+			relax();
+	}
+	return ret;
+}
+
+static void *kernel_pagetables;
+
+static p4e_t *get_p4e(void *pgt, unsigned long vaddr)
+{
+	p5d_t p5d;
+	p5e_t *p5e;
+	p4d_t p4d;
+	if(!l5_paging_enable) {
+		p4d = (p4d_t) pgt;
+		goto has_p4d;
+	}
+
+	p5d = (p5d_t) pgt;
+	p5e = &p5d[P5E(vaddr)];
+	if(!*p5e)
+		*p5e = (force p5e_t) pgtable_alloc()
+			| __PG_PRESENT | __PG_WRITE;
+	p4d = (p4d_t) PTE_VADDR(*p5e);
+has_p4d:
+	return &p4d[P4E(vaddr)];
+}
+
+static p3e_t *get_p3e(void *pgt, unsigned long vaddr)
+{
+	p4e_t *p4e = get_p4e(pgt, vaddr);
+	if(!*p4e)
+		*p4e = (force p4e_t) pgtable_alloc()
+			| __PG_PRESENT | __PG_WRITE;
+	p3d_t p3d = (p3d_t) PTE_VADDR(*p4e);
+	return &p3d[P3E(vaddr)];
+}
+
+static p2e_t *get_p2e(void *pgt, unsigned long vaddr)
+{
+	p3e_t *p3e = get_p3e(pgt, vaddr);
+	if(!*p3e)
+		*p3e = (force p3e_t) pgtable_alloc()
+			| __PG_PRESENT | __PG_WRITE;
+	p2d_t p2d = (p2d_t) PTE_VADDR(*p3e);
+	return &p2d[P2E(vaddr)];
+}
+
+static p1e_t *get_p1e(void *pgt, unsigned long vaddr)
+{
+	p2e_t *p2e = get_p2e(pgt, vaddr);
+	if(!*p2e)
+		*p2e = (force p2e_t) pgtable_alloc()
+			| __PG_PRESENT | __PG_WRITE;
+	p1d_t p1d = (p1d_t) PTE_VADDR(*p2e);
+	return &p1d[P1E(vaddr)];
+}
+
+static void map_mem_for_page_structs(unsigned long start, unsigned long end)
+{
+	pte_t flags = __PG_PRESENT | __PG_WRITE | __PG_GLOBAL | x86_nx_bit;
+
+	start = (unsigned long) phys_to_page(align_down(start,
+		PAGE_SIZE << (NUM_ORDERS - 1)));
+
+	end = (unsigned long) phys_to_page(align_up(end,
+		PAGE_SIZE << (NUM_ORDERS - 1)));
+
+	for(; start < end; start += PAGE_SIZE) {
+		p1e_t *p1e = get_p1e(kernel_pagetables, start);
+		if(*p1e)
+			continue;
+
+		unsigned long mem = early_alloc_page();
+		if(!mem) {
+			critical("Couldn't allocate a page to hold page tables.\n");
+			for(;;)
+				relax();
+		}
+		*p1e = ((force p1e_t) mem) | flags;
+	}
+}
 
 void x86_setup_memory(void);
 void x86_setup_memory(void)
 {
-	HHDM_OFFSET = x86_boot_struct.l5_paging_enable
-		? 0xff00000000000000UL : 0xffff800000000000UL;
+	init_vmem_constants();
+	if(l5_paging_enable)
+		debug("x86/mm: Booted with five-level paging enabled.\n");
 
 	struct memmap_entry *entry;
 	info("x86/mm: Memory map:\n");
@@ -41,4 +193,31 @@ void x86_setup_memory(void)
 		}
 #endif
 	}
+
+	list_for_each(entry, &x86_boot_struct.memmap_entries, list) {
+		if(entry->type != MEMMAP_USABLE_RAM)
+			continue;
+		unsigned long start = align_up(entry->start, PAGE_SIZE);
+		unsigned long end = align_down(entry->end, PAGE_SIZE);
+		for(; start < end; start += PAGE_SIZE)
+			early_free_page(start);
+	}
+
+	kernel_pagetables = (void *) PTE_VADDR(read_cr3());
+	list_for_each(entry, &x86_boot_struct.memmap_entries, list) {
+		if(!(entry->type == MEMMAP_USABLE_RAM
+			|| entry->type == MEMMAP_KERNEL
+			|| entry->type == MEMMAP_LOADER
+			|| entry->type == MEMMAP_ACPI_DATA))
+				continue;
+	
+		map_mem_for_page_structs(entry->start, entry->end);
+	}
+
+	init_pagezones();
+	for(unsigned long mem = early_alloc_page(); mem;
+		mem = early_alloc_page()) {
+			free_page(phys_to_page(mem), 0);
+	}
+	dump_pgalloc_info();
 }

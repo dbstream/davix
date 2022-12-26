@@ -62,9 +62,36 @@ typedef p5e_t *p5d_t;
 #define P4E(x) (((x) >> P4E_SHIFT) & P4E_MASK)
 #define P5E(x) (((x) >> P5E_SHIFT) & P5E_MASK)
 
-extern unsigned long HHDM_OFFSET;
+extern unsigned long HHDM_OFFSET;	/* HHDM start */
+extern unsigned long PAGE_OFFSET;	/* ``struct page`` start */
+
+extern unsigned long max_phys_addr;
+
+extern int l5_paging_enable;
+extern int l3_hugepage_enable;
+extern pte_t x86_nx_bit;		/* 0 or __PG_NOEXEC (CPUID dependent) */
 
 #define phys_to_virt(x) ((unsigned long) (x) + HHDM_OFFSET)
 #define virt_to_phys(x) ((unsigned long) (x) - HHDM_OFFSET)
+
+#define phys_to_pfn(x) ((unsigned long) (x) / PAGE_SIZE)
+#define pfn_to_phys(x) ((unsigned long) (x) * PAGE_SIZE)
+
+#define virt_to_pfn(x) phys_to_pfn(virt_to_phys(x))
+#define pfn_to_virt(x) phys_to_virt(pfn_to_phys(x))
+
+struct page;
+#define STRUCTPAGE_SIZE (8 * sizeof(unsigned long))
+
+#define pfn_to_page(x) ((struct page *) (PAGE_OFFSET + STRUCTPAGE_SIZE * (unsigned long) (x)))
+#define page_to_pfn(x) (((unsigned long) x - PAGE_OFFSET) / STRUCTPAGE_SIZE)
+
+#define phys_to_page(x) pfn_to_page(phys_to_pfn(x))
+#define page_to_phys(x) pfn_to_phys(page_to_pfn(x))
+
+#define virt_to_page(x) phys_to_page(virt_to_phys(x))
+#define page_to_virt(x) phys_to_virt(page_to_phys(x))
+
+#define PTE_VADDR(x)	phys_to_virt(PTE_ADDR(x))
 
 #endif /* __ASM_PAGE_H */
