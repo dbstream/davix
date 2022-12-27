@@ -69,6 +69,8 @@ typedef __u64 u64;
 #define designated_init
 #endif
 
+#define warn_unused __attribute__((warn_unused_result))
+
 #define strlen __builtin_strlen
 #define strcmp __builtin_strcmp
 #define strncmp __builtin_strncmp

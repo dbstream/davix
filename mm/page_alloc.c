@@ -45,11 +45,11 @@ static struct page *alloc_page_from_freelist(struct page_alloc_zone *zone,
 {
 	struct page *page = NULL;
 	unsigned int current_order = order;
-	spin_acquire(&zone->lock);
+	int irqflag = spin_acquire(&zone->lock);
 
 	for(;;) {
 		if(current_order >= NUM_ORDERS) {
-			spin_release(&zone->lock);
+			spin_release(&zone->lock, irqflag);
 			return NULL;
 		}
 
@@ -67,14 +67,14 @@ static struct page *alloc_page_from_freelist(struct page_alloc_zone *zone,
 		__add_to_freelist(&zone->freelists[current_order], buddy);
 	}
 
-	spin_release(&zone->lock);
+	spin_release(&zone->lock, irqflag);
 	return page;
 }
 
 static void free_page_to_freelist(struct page *page,
 	struct page_alloc_zone *zone, unsigned order)
 {
-	spin_acquire(&zone->lock);
+	int irqflag = spin_acquire(&zone->lock);
 
 	for(;;) {
 		if(order == NUM_ORDERS - 1)
@@ -98,7 +98,7 @@ static void free_page_to_freelist(struct page *page,
 	page->buddy.order = order;
 	__add_to_freelist(&zone->freelists[order], page);
 
-	spin_release(&zone->lock);
+	spin_release(&zone->lock, irqflag);
 }
 
 struct page *alloc_page(alloc_flags_t flags, unsigned order)

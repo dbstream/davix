@@ -34,12 +34,12 @@ static void uart_emit(struct console *console,
 {
 	struct uart_chip *uart =
 		container_of(console, struct uart_chip, console);
-	spin_acquire(&uart->lock);
+	int irqflag = spin_acquire(&uart->lock);
 	if(msg->loglevel)
 		uart_put(uart, msg->loglevel);
 	for(const char *s = msg->string; *s; s++)
 		uart_put(uart, *s);
-	spin_release(&uart->lock);
+	spin_release(&uart->lock, irqflag);
 }
 
 static int uart_probe(struct uart_chip *uart, unsigned baudrate)

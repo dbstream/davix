@@ -3,6 +3,8 @@
 #define __DAVIX_SPINLOCK_H
 
 #include <davix/atomic.h>
+#include <davix/types.h>
+#include <asm/irq.h>
 
 typedef struct spinlock {
 	atomic int contended;
@@ -25,7 +27,7 @@ static inline int spin_try_acquire(spinlock_t *lock)
 		1, memory_order_acquire, memory_order_relaxed);
 }
 
-static inline void spin_acquire(spinlock_t *lock)
+static inline void _spin_acquire(spinlock_t *lock)
 {
 	for(;;) {
 		int expected = 0;
@@ -39,9 +41,30 @@ static inline void spin_acquire(spinlock_t *lock)
 	}
 }
 
-static inline void spin_release(spinlock_t *lock)
+static inline void _spin_release(spinlock_t *lock)
 {
 	atomic_store(&lock->contended, 0, memory_order_release);
+}
+
+/*
+ * Return value: interrupt enable flag to be passed to spin_release().
+ */
+static inline warn_unused int spin_acquire(spinlock_t *lock)
+{
+	int ret = interrupts_enabled();
+	disable_interrupts();
+	_spin_acquire(lock);
+	return ret;
+}
+
+/*
+ * Pass the interrupt enable flag from spin_acquire().
+ */
+static inline void spin_release(spinlock_t *lock, int irqflag)
+{
+	_spin_release(lock);
+	if(irqflag)
+		enable_interrupts();	
 }
 
 #endif /* __DAVIX_SPINLOCK_H */
