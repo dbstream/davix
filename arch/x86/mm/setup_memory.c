@@ -52,11 +52,22 @@ static void init_vmem_constants(void)
 	max_phys_addr = 1UL << min(l5_paging_enable ? 52 : 45, a & 0xff);
 }
 
+/*
+ * Embedded into pages of memory to keep track of free pages.
+ */
+struct early_pagealloc_info {
+	unsigned long count;
+	struct list list;
+};
+
 static struct list early_pagealloc_list = LIST_INIT(early_pagealloc_list);
 
-static void early_free_page(unsigned long phys)
+static void early_free_pages(unsigned long phys, unsigned long count)
 {
-	list_add(&early_pagealloc_list, (struct list *) phys_to_virt(phys));
+	struct early_pagealloc_info *info =
+		(struct early_pagealloc_info *) phys_to_virt(phys);
+	info->count = count;
+	list_add(&early_pagealloc_list, &info->list);
 }
 
 static unsigned long early_alloc_page(void)
@@ -64,10 +75,18 @@ static unsigned long early_alloc_page(void)
 	if(list_empty(&early_pagealloc_list))
 		return 0;
 
-	struct list *entry = early_pagealloc_list.next;
-	list_del(entry);
-	memset(entry, 0, PAGE_SIZE);
-	return virt_to_phys(entry);
+	struct early_pagealloc_info *info =
+		container_of(early_pagealloc_list.next,
+			struct early_pagealloc_info, list);
+
+	info->count--;
+	unsigned long phys = virt_to_phys(info) + info->count * PAGE_SIZE;
+
+	if(info->count == 0)
+		list_del(&info->list);
+
+	memset((void *) phys_to_virt(phys), 0, PAGE_SIZE);
+	return phys;
 }
 
 static unsigned long pgtable_alloc(void)
@@ -199,8 +218,7 @@ void x86_setup_memory(void)
 			continue;
 		unsigned long start = align_up(entry->start, PAGE_SIZE);
 		unsigned long end = align_down(entry->end, PAGE_SIZE);
-		for(; start < end; start += PAGE_SIZE)
-			early_free_page(start);
+		early_free_pages(start, (end - start) / PAGE_SIZE);
 	}
 
 	kernel_pagetables = (void *) PTE_VADDR(read_cr3());
@@ -215,9 +233,16 @@ void x86_setup_memory(void)
 	}
 
 	init_pagezones();
-	for(unsigned long mem = early_alloc_page(); mem;
-		mem = early_alloc_page()) {
-			free_page(phys_to_page(mem), 0);
+
+	struct early_pagealloc_info *info, *tmp;
+	list_for_each_safe(info, &early_pagealloc_list, list, tmp) {
+		unsigned long phys = virt_to_phys(info);
+		unsigned long count = info->count;
+		list_del(&info->list);
+		while(count) {
+			count--;
+			free_page(phys_to_page(phys + count * PAGE_SIZE), 0);
+		}
 	}
 	dump_pgalloc_info();
 }
