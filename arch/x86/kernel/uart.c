@@ -16,6 +16,7 @@ struct uart_chip {
 };
 
 static void uart_put_raw(struct uart_chip *uart, char c)
+	must_hold(&uart->lock)
 {
 	while(!(io_inb(uart->io_base + 5) & 0x20))
 		relax();
@@ -23,6 +24,7 @@ static void uart_put_raw(struct uart_chip *uart, char c)
 } 
 
 static void uart_put(struct uart_chip *uart, char c)
+	must_hold(&uart->lock)
 {
 	if(c == '\n')
 		uart_put_raw(uart, '\r');

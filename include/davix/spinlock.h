@@ -49,7 +49,7 @@ static inline void _spin_release(spinlock_t *lock)
 /*
  * Return value: interrupt enable flag to be passed to spin_release().
  */
-static inline warn_unused int spin_acquire(spinlock_t *lock)
+static inline warn_unused int spin_acquire(spinlock_t *lock) acquires(lock)
 {
 	int ret = interrupts_enabled();
 	disable_interrupts();
@@ -60,7 +60,7 @@ static inline warn_unused int spin_acquire(spinlock_t *lock)
 /*
  * Pass the interrupt enable flag from spin_acquire().
  */
-static inline void spin_release(spinlock_t *lock, int irqflag)
+static inline void spin_release(spinlock_t *lock, int irqflag) releases(lock)
 {
 	_spin_release(lock);
 	if(irqflag)
