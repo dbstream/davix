@@ -3,6 +3,7 @@
 #include <davix/list.h>
 #include <davix/page_alloc.h>
 #include <davix/printk.h>
+#include <davix/kmalloc.h>
 #include <asm/boot.h>
 #include <asm/cpuid.h>
 #include <asm/page.h>
@@ -245,4 +246,7 @@ void x86_setup_memory(void)
 		}
 	}
 	dump_pgalloc_info();
+
+	init_kmalloc();
+	dump_kmalloc_slabs();
 }

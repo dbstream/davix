@@ -50,6 +50,10 @@ void init_pagezones(void);
 	for(struct page_alloc_zone *zone = zoneiter_start(); \
 		zone; zone = zoneiter_next(zone))
 
+/*
+ * When pages are freed, ``page->flags`` (of all pages, not just the first) must
+ * be the same as when the pages were allocated.
+ */
 struct page *alloc_page(alloc_flags_t flags, unsigned order);
 void free_page(struct page *page, unsigned order);
 
