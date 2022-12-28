@@ -30,7 +30,7 @@ void init_kmalloc(void)
 void dump_kmalloc_slabs(void)
 {
 	debug("Kmalloc slabs:\n");
-	debug("  <slab>       <total>  <free> <slabs> <objs/slab> <order>\n");
+	debug("  <slab>       <total>  <allocated> <free> <slabs> <objs/slab> <order>\n");
 	for(int i = 0; i <16; i++) {
 		struct slab_alloc *slab = &kmalloc_slabs[i];
 		unsigned long sz, total, totfree, nslab, slab_objs, slab_order;
@@ -43,8 +43,8 @@ void dump_kmalloc_slabs(void)
 		totfree = slab->free_obs;
 		nslab = slab->total_slabs;
 		spin_release(&slab->lock, irqflag);
-		debug("  kmalloc-%-4lu %7lu %7lu %7lu %11lu %lu\n",
-			sz, total, totfree, nslab, slab_objs, slab_order);
+		debug("  kmalloc-%-4lu %11lu %7lu %7lu %7lu %11lu %lu\n",
+			sz, total, total - totfree, totfree, nslab, slab_objs, slab_order);
 	}
 }
 
