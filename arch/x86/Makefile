@@ -88,7 +88,7 @@ endif
 $(objtree)/%.S.o: %.S
 	@mkdir -p $(dir $@)
 	@echo -e AS\\t$<
-	@$(CC) $(ASFLAGS) -c -o $@ $<
+	@$(CC) $(ASFLAGS) -c -o $@ $< -MD -MP -MF $@.d
 
 $(objtree)/mainkernel: $(__obj)
 	@mkdir -p $(dir $@)
