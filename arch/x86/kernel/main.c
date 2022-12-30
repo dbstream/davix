@@ -2,6 +2,7 @@
 #include <davix/printk.h>
 #include <davix/list.h>
 #include <asm/boot.h>
+#include <asm/entry.h>
 #include "uart.h"
 
 struct boot_struct x86_boot_struct section(".bootstruct") = {
@@ -20,7 +21,6 @@ void x86_start_kernel(void);
 void x86_start_kernel(void)
 {
 	x86_uart_init();
-
 	info("x86/kernel: Booted with protocol version %u.%u.%u by \"%s\". LA57: %s\n",
 		BOOTPROTOCOL_VERSION_MAJOR(x86_boot_struct.protocol_version),
 		BOOTPROTOCOL_VERSION_MINOR(x86_boot_struct.protocol_version),
@@ -28,6 +28,7 @@ void x86_start_kernel(void)
 		x86_boot_struct.bootloader_name,
 		x86_boot_struct.l5_paging_enable ? "on" : "off");
 
+	x86_setup_early_idt();
 	x86_setup_memory();
 
 	info("x86/kernel: Done.\n");

@@ -31,3 +31,12 @@ void printk(char loglevel, const char *fmt, ...)
 			console->emit(console, &msg);
 	}
 }
+
+void printk_bust_locks(void)
+{
+	for(struct console *console = first_console;
+		console; console = console->next) {
+			if(console->bust_locks)
+				console->bust_locks(console);
+	}
+}

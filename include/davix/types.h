@@ -49,6 +49,8 @@ typedef __u64 u64;
 #define packed __attribute__((packed))
 #define section(name) __attribute__((section(name)))
 
+#define alignas _Alignas
+
 #ifdef __CHECKER__
 #define force __attribute__((force))
 #define bitwise __attribute__((bitwise))

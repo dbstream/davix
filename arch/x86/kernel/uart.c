@@ -44,6 +44,13 @@ static void uart_emit(struct console *console,
 	spin_release(&uart->lock, irqflag);
 }
 
+static void uart_bust_locks(struct console *console)
+{
+	struct uart_chip *uart =
+		container_of(console, struct uart_chip, console);
+	spinlock_init(&uart->lock);
+}
+
 static int uart_probe(struct uart_chip *uart, unsigned baudrate)
 {
 	u16 baudrate_div = 115200 / baudrate;
@@ -67,12 +74,14 @@ static int uart_probe(struct uart_chip *uart, unsigned baudrate)
 
 static struct uart_chip COM1 = {
 	.console.emit = uart_emit,
+	.console.bust_locks = uart_bust_locks,
 	.lock = SPINLOCK_INIT(COM1.lock),
 	.io_base = 0x3f8
 };
 
 static struct uart_chip COM2 ={
 	.console.emit = uart_emit,
+	.console.bust_locks = uart_bust_locks,
 	.lock = SPINLOCK_INIT(COM1.lock),
 	.io_base = 0x2f8
 };

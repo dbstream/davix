@@ -80,6 +80,21 @@
 
 #include <davix/types.h>
 
+struct packed idt_entry {
+	u16 offset1;
+	u16 cs;
+	u8 ist_entry;
+	u8 attribs;
+	u16 offset2;
+	u32 offset3;
+	u32 reserved;
+};
+
+struct packed segment_ptr {
+	u16 limit;
+	u64 base;
+};
+
 #define BUILD_RW(reg) \
 	static inline unsigned long read_##reg(void) { \
 		unsigned long r; \
@@ -97,6 +112,16 @@ BUILD_RW(cr4)
 BUILD_RW(cr8)
 
 #undef BUILD_RW
+
+static inline void load_idt(unsigned long base, unsigned short limit)
+{
+	struct segment_ptr segptr = {
+		.limit = limit,
+		.base = base
+	};
+
+	asm volatile("lidt %0" : : "m"(segptr) );
+}
 
 #endif /* !__ASSEMBLER__ */
 

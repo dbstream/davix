@@ -20,6 +20,11 @@ struct console {
 	void (*emit)(struct console *console, const struct printk_message *msg);
 
 	/*
+	 * Reset all spinlocks used by the console, for panic() scenarios.
+	 */
+	void (*bust_locks)(struct console *console);
+
+	/*
 	 * Linked list of consoles.
 	 *
 	 * The rules are:
@@ -51,5 +56,7 @@ void printk(char loglevel, const char *fmt, ...);
 #define warn(...) printk(KERN_WARN, __VA_ARGS__)
 #define error(...) printk(KERN_ERROR, __VA_ARGS__)
 #define critical(...) printk(KERN_CRITICAL, __VA_ARGS__)
+
+void printk_bust_locks(void);	/* For use in panic() or kernel exceptions */
 
 #endif /* __DAVIX_PRINTK_H */
