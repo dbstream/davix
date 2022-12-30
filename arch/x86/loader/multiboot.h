@@ -26,7 +26,17 @@ struct packed mb2_tag_hdr {
 };
 
 #define MB2_TAG_END 0
+#define MB2_TAG_MODULE 3
 #define MB2_TAG_MEMMAP 6
+#define MB2_TAG_RSDP 14
+#define MB2_TAG_XSDP 15
+
+struct packed mb2_module {
+	struct mb2_tag_hdr hdr;
+	u32 mod_start;
+	u32 mod_end;
+	char string[];
+};
 
 struct packed mb2_memmap {
 	struct mb2_tag_hdr hdr;
@@ -46,6 +56,19 @@ struct packed mb2_memmap_entry {
 #define MB2_MEMMAP_RECLAIM 3	/* ACPI Reclaimable Memory */
 #define MB2_MEMMAP_ACPI_NVS 4	/* ACPI NVS memory, requires special handling */
 #define MB2_MEMMAP_BADRAM 5	/* Defective System RAM */
+
+struct packed mb2_rsdp {
+	struct mb2_tag_hdr hdr;
+	char ac_sig[8];
+	u8 ac_chksum;
+	char ac_OEMID[6];
+	u8 ac_rev;
+	u32 ac_pRSDT;
+	u32 ac_len;
+	u64 ac_pXSDT;
+	u8 ac_xchksum;
+	u8 ac_reserved[3];
+};
 
 static inline struct mb2_tag_hdr *mb2_first(struct mb2_info *info)
 {

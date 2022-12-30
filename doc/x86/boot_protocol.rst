@@ -19,6 +19,9 @@ At address ``0xffffffff80000000`` in the kernel there will be a
 for parameters which are passed to the kernel. For more information, see
 ``arch/x86/include/asm/boot.h``.
 
+The kernel must leave sensible defaults in ``struct boot_struct``, such as
+``NULL`` for ``boot_struct->acpi_rsdp``.
+
 Page tables
 ===========
 

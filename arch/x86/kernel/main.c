@@ -12,7 +12,10 @@ struct boot_struct x86_boot_struct section(".bootstruct") = {
 	.memmap_entries = LIST_INIT(x86_boot_struct.memmap_entries),
 	.l5_paging_enable = 0,
 	.com1_initialized = 0,
-	.com2_initialized = 0
+	.com2_initialized = 0,
+	.initrd_start = 0,
+	.initrd_size = 0,
+	.acpi_rsdp = 0
 };
 
 void x86_setup_memory(void);	/* in arch/x86/mm/setup_memory.c */
@@ -29,6 +32,17 @@ void x86_start_kernel(void)
 		x86_boot_struct.l5_paging_enable ? "on" : "off");
 
 	x86_setup_early_idt();
+
+	info("ACPI RSDP: %p\n", x86_boot_struct.acpi_rsdp);
+	if(x86_boot_struct.initrd_size == 0) {
+		info("No initial ramdisk provided.\n");
+	} else {
+		info("Initial ramdisk: [mem %p - %p]\n",
+			x86_boot_struct.initrd_start,
+			x86_boot_struct.initrd_start
+				+ x86_boot_struct.initrd_size - 1);
+	}
+
 	x86_setup_memory();
 
 	info("x86/kernel: Done.\n");

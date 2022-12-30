@@ -533,6 +533,25 @@ unsigned long loader_main(struct mb2_info *multiboot)
 
 	boot_struct->l5_paging_enable = l5_paging_enable;
 
+	int has_xsdt = 0;
+	for_each_multiboot_tag(tag, multiboot) {
+		if(tag->type == MB2_TAG_RSDP) {
+			if(has_xsdt)
+				continue;
+			struct mb2_rsdp *rsdp = (struct mb2_rsdp *) tag;
+			boot_struct->acpi_rsdp = rsdp->ac_pRSDT;
+		} else if(tag->type == MB2_TAG_XSDP) {
+			has_xsdt = 1;
+			struct mb2_rsdp *rsdp = (struct mb2_rsdp *) tag;
+			boot_struct->acpi_rsdp = rsdp->ac_pXSDT;
+		} else if(tag->type == MB2_TAG_MODULE) {
+			struct mb2_module *module = (struct mb2_module *) tag;
+			boot_struct->initrd_start = module->mod_start;
+			boot_struct->initrd_size =
+				module->mod_end - module->mod_start;
+		}
+	}
+
 	info("Kernel entry point: %p\n", elf_kernel->entry);
 	info("Booting %s, protocol version %u.%u.%u...\n",
 		boot_struct->kernel,

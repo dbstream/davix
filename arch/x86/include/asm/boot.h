@@ -62,6 +62,21 @@ struct boot_struct {
 	 */
 	char com1_initialized;
 	char com2_initialized;
+
+	/*
+	 * Location and size of the initial ramdisk. If no ramdisk is provided,
+	 * ``initrd_size`` should be 0.
+	 *
+	 * The initial ramdisk is required to be physically contiguous and in
+	 * ``MEMMAP_KERNEL`` memory.
+	 */
+	unsigned long initrd_start;	/* Physical address */
+	unsigned long initrd_size;
+
+	/*
+	 * Physical address of the ACPI RSDT/XSDT, or zero.
+	 */
+	unsigned long acpi_rsdp;
 };
 
 #define BOOTSTRUCT_MAGIC "\177DAVIX_KERNEL_BOOT_INFO"
