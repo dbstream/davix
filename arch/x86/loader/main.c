@@ -348,6 +348,15 @@ unsigned long loader_main(struct mb2_info *multiboot)
 		(unsigned long) multiboot + multiboot->size,
 		MEMMAP_LOADER, 0);
 
+	for_each_multiboot_tag(tag, multiboot) {
+		if(tag->type == MB2_TAG_MODULE) {
+			struct mb2_module *module = (struct mb2_module *) tag;
+			memmap_update_region(&memmap,
+				module->mod_start,
+				module->mod_end, MEMMAP_KERNEL, 0);
+		}
+	}
+
 	setup_pgtable();
 	map_all_mem();
 
