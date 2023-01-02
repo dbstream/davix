@@ -86,7 +86,6 @@ ifneq ($(srctree),$(workdir))
 $(error Cannot invoke configuration targets from a subdirectory.)
 endif
 
-.PHONY: $(objtree)/tools/kconfig/nconf
 $(objtree)/tools/kconfig/nconf:
 	$(Q)$(MAKE) -f $(srctree)/tools/kconfig/Makefile $@
 
@@ -101,11 +100,14 @@ ifndef has_done_syncconfig
 has_done_syncconfig := 1
 export has_done_syncconfig
 
-$(srctree)/include/generated/config.h $(srctree)/include/generated/config.include: $(srctree)/.config
-	$(Q)$(objtree)/tools/kbuild/conf syncconfig
+$(objtree)/tools/kconfig/conf:
+	$(Q)$(MAKE) -f $(srctree)/tools/kconfig/Makefile $@
+
+$(srctree)/include/generated/autoconf.h $(srctree)/include/config/auto.conf: $(srctree)/.config $(objtree)/tools/kconfig/conf
+	$(Q)$(objtree)/tools/kconfig/conf --syncconfig Kconfig
 
 .PHONY: all $(MAKECMDGOALS)
-all $(MAKECMDGOALS): $(srctree)/include/generated/config.h $(srctree)/include/generated/config.include
+all $(MAKECMDGOALS): $(srctree)/include/generated/autoconf.h $(srctree)/include/config/auto.conf
 	$(Q)$(MAKE) -f $(this-makefile) $(MAKECMDGOALS)
 
 else # !has_done_syncconfig
