@@ -1,6 +1,4 @@
 # SPDX-License-Identifier: MIT
-# mm/Makefile
-
-obj += kmalloc.c.o
-obj += page_alloc.c.o
-obj += slab.c.o
+obj-y += kmalloc.c.o
+obj-y += page_alloc.c.o
+obj-y += slab.c.o

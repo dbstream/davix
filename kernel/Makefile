@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
-obj += printk.c.o
-obj += printk_lib.c.o
-obj += stdlib.c.o
+
+obj-y += printk_lib.c.o
+obj-y += printk.c.o
+obj-y += stdlib.c.o

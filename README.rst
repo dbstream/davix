@@ -61,3 +61,20 @@ ISO file.
 * QEMU.
 
 If I forgot anything in this list of dependencies, report an issue.
+
+Licenses
+========
+
+All kernel source files should have a SPDX license identifier field, similar to
+this::
+
+	/* SPDX-License-Identifier: <your favorite license> */
+	#include /*...*/
+
+Make sure that the license you apply to your code exists at the location
+``Licenses/<your favorite license>``.
+
+The preferred license for kernel code is the MIT license. However, other
+licenses are acceptable, and sometimes necessary. For example, all code under
+tools/kconfig is copied from the Linux kernel v6.0 (scripts/kconfig, with slight
+modifications), and is under the GPL-2.0 license.

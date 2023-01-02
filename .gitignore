@@ -10,3 +10,11 @@ build
 # Bochs
 bochsrc.txt
 bx_enh_dbg.ini
+
+# Generated files
+include/config
+include/generated
+
+# Saved KConfig configurations
+.config
+.config.old

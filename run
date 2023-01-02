@@ -5,7 +5,7 @@ set -e
 
 QCMD=$(tools/gen_qemu_cmd.sh -X "-cdrom /tmp/bootable-davix.iso" -X "-serial stdio" -X "-nic none" $@)
 
-make build/davix
+make # build the kernel (and davix-multiboot2)
 
 if [ -d /tmp/isodir.davix ]; then
 	rm -r /tmp/isodir.davix
@@ -13,7 +13,7 @@ fi
 
 mkdir -p /tmp/isodir.davix/boot/grub
 
-cp build/davix /tmp/isodir.davix/davix
+cp build/davix-multiboot2 /tmp/isodir.davix/davix-multiboot2
 cat << EOF >> /tmp/isodir.davix/boot/grub/grub.cfg
 
 insmod fat
@@ -24,7 +24,7 @@ set timeout=1
 
 menuentry "Davix" {
 	echo "Loading multiboot2 image..."
-	multiboot2 /davix
+	multiboot2 /davix-multiboot2
 	echo "Booting..."
 	boot
 }

@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MIT
+
+CFLAGS += \
+	-mno-red-zone \
+	-mno-80387 \
+	-mno-mmx \
+	-mno-sse \
+	-mno-sse2 \
+	-mgeneral-regs-only \
+	-mcmodel=kernel \
+	-fno-PIC
+
+AFLAGS += -g
+
+LDFLAGS += \
+	-zmax-page-size=0x1000 \
+	-nostdlib \
+	-T$(srctree)/arch/x86/kernel.lds
+
+extra-targets-$(CONFIG_MULTIBOOT2_LOADER) += $(objtree)/davix-multiboot2
+
+.PHONY: $(objtree)/davix-multiboot2
+$(objtree)/davix-multiboot2: $(objtree)/davix-kernel
+	$(Q)$(MAKE) -f $(srctree)/arch/x86/loader/Makefile $@

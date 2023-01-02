@@ -5,7 +5,7 @@
 .type mainkernel, @object
 mainkernel:
 
-	.incbin "OBJTREE/mainkernel"
+	.incbin PATH_TO_MAINKERNEL
 
 .size mainkernel, . - mainkernel
 
