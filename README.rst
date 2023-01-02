@@ -4,28 +4,23 @@
 README
 ======
 
-Currently, the only supported architecture is x86. This document is tailored
-towards it.
+Currently, the only supported architecture is x86. This document is heavily
+tailored towards it.
 
 Building the kernel
 ===================
 
-To build the kernel, simply run ``make`` from the command-line. This requires
-having some tools installed. They are listed here:
+To build the kernel, first run ``make nconfig``, which will bring up a
+configuration menu that allows you to configure various settings in the kernel.
 
-* GNU Make. I use the GNU version, but other versions of ``make`` will probably
-work too.
+* GNU ``make``. I use the GNU version, but other versions of ``make`` will
+probably work too.
 
 * GCC and Binutils for ``x86_64-elf``. They must be accessible as
-``x86_64-elf-gcc``, ``x86_64-elf-objcopy``, etc.
+``x86_64-elf-gcc``, ``x86_64-elf-objcopy``, etc. (This can be overridden with
+CONFIG_CROSS_COMPILE).
 
-* Sparse, the Linux syntax parser. This is an optional depencendy, used for
-static analysis of the kernel. This is not needed when building the kernel, but
-recommended for developers working on the kernel.
-
-* m4 for generating arch/x86/loader/include_kernel.S.
-
-If I forgot anything in this list of dependencies, report an issue.
+* ``flex`` and ``yacc`` (bison) for compiling the Kconfig utilities.
 
 Building the kernel on Windows
 ==============================
@@ -44,14 +39,20 @@ filesystem and invoking QEMU on the host.
 Building in a different location
 ================================
 
-Simply run ``objtree=/path/to/build-directory make``.
+Simply run ``make O=/path/to/your/builddir``.
 
 Running the kernel in an emulator
 =================================
 
 The kernel ships a script that allows for running the kernel in an emulator by
-simply typing ``./run`` on the command-line. This has its own set of additional
-dependencies:
+simply typing ``./run`` on the command-line. This will automatically build the
+kernel for you.
+
+``run`` supports several command-line options, such as ``--bios`` or
+``--no-kvm``, which modify the behaviour of the virtual machine. For a full
+list, run ``./run --help``.
+
+``run`` has its own set of additional dependencies:
 
 * GNU GRUB. This is the bootloader installed to the kernel image.
 

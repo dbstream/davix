@@ -61,7 +61,7 @@ FIRMWARE="UEFI"
 while true; do
 	case "$1" in
 		'-h'|'--help')
-			_help
+			_help >&2
 			exit 1
 		;;
 		'-d'|'--debug')

@@ -162,6 +162,19 @@ $(objtree)/davix-kernel: $(objtree)/built-in.a
 	@echo -e LINK\\t$(notdir $@)
 	$(Q)$(CC) $(LDFLAGS) -o $@ $<
 
+.PHONY: doc-html
+doc-html:
+	$(Q)sphinx-build -b html -a doc $(objtree)/doc-html
+
+.PHONY: doc-singlehtml
+doc-singlehtml:
+	$(Q)sphinx-build -b singlehtml -a doc $(objtree)/doc-singlehtml
+
+.PHONY: doc-pdf
+doc-pdf:
+	$(Q)sphinx-build -b latex -a doc $(objtree)/doc-pdf
+	$(Q)$(MAKE) -C $(objtree)/doc-pdf all-pdf
+
 else
 
 all: $(objtree)/$(current-subdir)built-in.a
