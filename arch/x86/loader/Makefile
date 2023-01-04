@@ -6,8 +6,7 @@ all:
 CFLAGS := \
 	-std=gnu17 \
 	-nostdinc \
-	-I$(srctree)/include \
-	-I$(srctree)/arch/x86/include \
+	$(DAVIXINCLUDE) \
 	-Wall \
 	-Werror \
 	-O2 -g \
@@ -22,8 +21,7 @@ CFLAGS := \
 	-mcmodel=large
 
 AFLAGS := \
-	-I$(srctree)/include \
-	-I$(srctree)/arch/x86/include \
+	$(DAVIXINCLUDE) \
 	-D__KERNEL__ \
 	-g
 
@@ -49,6 +47,8 @@ $(objtree)/%.S.o: $(srctree)/%.S
 	@mkdir -p $(dir $@)
 	@echo -e AS\\tarch/x86/loader/$(notdir $<)
 	$(Q)$(CC) $(AFLAGS) $(AFLAGS-$(notdir $@)) -c -o $@ $< -MD -MP -MF $@.d
+
+$(objtree)/arch/x86/loader/include_kernel.S.o: $(objtree)/davix-kernel
 
 $(objtree)/davix-multiboot2: $(real-obj-y)
 	@echo -e LINK\\t$(notdir $@)
