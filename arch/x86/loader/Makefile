@@ -54,4 +54,4 @@ $(objtree)/davix-multiboot2: $(real-obj-y)
 	@echo -e LINK\\t$(notdir $@)
 	$(Q)$(CC) -zmax-page-size=0x1000 -nostdlib -T$(srctree)/arch/x86/loader.lds -o $@ $(real-obj-y)
 
--include $(filter %.d,$(patsubst %.o,%.o.d,$(obj-y)))
+-include $(filter %.d,$(patsubst %.o,%.o.d,$(real-obj-y)))
