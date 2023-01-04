@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 MAKEFLAGS += -Rr --no-print-directory
 
+KERNELVERSION := 0.0.1
+
 export LC_ALL = C.UTF-8
 
 .PHONY: __all
@@ -139,9 +141,12 @@ CFLAGS := \
 	-Werror \
 	-O2 -g \
 	-D__KERNEL__ \
+	'-DKERNELVERSION="$(KERNELVERSION)"' \
 	-ffreestanding
 
-AFLAGS := $(DAVIXINCLUDE) -D__KERNEL__
+AFLAGS := $(DAVIXINCLUDE) -D__KERNEL__ \
+	'-DKERNELVERSION="$(KERNELVERSION")'
+
 LDFLAGS :=
 
 extra-targets-y :=
@@ -198,6 +203,7 @@ $(objtree)/%.S.o: $(srctree)/%.S
 
 $(objtree)/$(current-subdir)built-in.a: $(real-obj-y)
 	@echo -e AR\\t$(current-subdir)built-in.a
+	$(Q)if [ -f $@ ]; then rm $@; fi
 	$(Q)$(AR) cDPrT $@ $^
 
 .PHONY: $(built-ins)
