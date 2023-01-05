@@ -20,12 +20,18 @@ struct boot_struct x86_boot_struct section(".bootstruct") = {
 	.cmdline = NULL
 };
 
-void x86_setup_memory(void);	/* in arch/x86/mm/setup_memory.c */
-
 void x86_start_kernel(void);
 void x86_start_kernel(void)
 {
 	x86_uart_init();
+	x86_setup_early_idt();
+	start_kernel(x86_boot_struct.cmdline);
+}
+
+void x86_setup_memory(void);	/* in arch/x86/mm/setup_memory.c */
+
+void arch_early_init(void)
+{
 	info("x86/kernel: Booted with protocol version %u.%u.%u by \"%s\". LA57: %s\n",
 		BOOTPROTOCOL_VERSION_MAJOR(x86_boot_struct.protocol_version),
 		BOOTPROTOCOL_VERSION_MINOR(x86_boot_struct.protocol_version),
@@ -33,9 +39,14 @@ void x86_start_kernel(void)
 		x86_boot_struct.bootloader_name,
 		x86_boot_struct.l5_paging_enable ? "on" : "off");
 
-	x86_setup_early_idt();
+	x86_setup_memory();
 
-	info("ACPI RSDP: %p\n", x86_boot_struct.acpi_rsdp);
+	if(x86_boot_struct.acpi_rsdp) {
+		info("ACPI RSDP: %p\n", x86_boot_struct.acpi_rsdp);
+	} else {
+		info("No ACPI RSDP provided by bootloader.\n");
+	}
+
 	if(x86_boot_struct.initrd_size == 0) {
 		info("No initial ramdisk provided.\n");
 	} else {
@@ -44,8 +55,4 @@ void x86_start_kernel(void)
 			x86_boot_struct.initrd_start
 				+ x86_boot_struct.initrd_size - 1);
 	}
-
-	x86_setup_memory();
-
-	start_kernel(x86_boot_struct.cmdline);
 }
