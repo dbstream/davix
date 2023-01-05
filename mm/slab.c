@@ -44,6 +44,8 @@ static struct page *create_new_slab(struct slab_alloc *alloc)
 	if(!page)
 		return NULL;
 
+	set_page_bit(page, PAGE_SLAB_HEAD);
+
 	for(unsigned long i = 1; i < (1 << alloc->slab_order); i++)
 		page[i].slab.head = page;
 
