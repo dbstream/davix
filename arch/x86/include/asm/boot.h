@@ -77,6 +77,11 @@ struct boot_struct {
 	 * Physical address of the ACPI RSDT/XSDT, or zero.
 	 */
 	unsigned long acpi_rsdp;
+
+	/*
+	 * Kernel command line, or NULL.
+	 */
+	char *cmdline;
 };
 
 #define BOOTSTRUCT_MAGIC "\177DAVIX_KERNEL_BOOT_INFO"

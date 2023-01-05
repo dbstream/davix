@@ -558,6 +558,11 @@ unsigned long loader_main(struct mb2_info *multiboot)
 			boot_struct->initrd_start = module->mod_start;
 			boot_struct->initrd_size =
 				module->mod_end - module->mod_start;
+		} else if(tag->type == MB2_TAG_CMDLINE) {
+			struct mb2_tag_generic_string *cmdline =
+				(struct mb2_tag_generic_string *) tag;
+
+			boot_struct->cmdline = cmdline->string;
 		}
 	}
 

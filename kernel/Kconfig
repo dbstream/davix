@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: MIT
+
+menu "Kernel"
+
+config EXTRAVERSION
+	string "A string appended to the kernel version string."
+	default ""
+
+endmenu

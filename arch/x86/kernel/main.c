@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include <davix/printk.h>
 #include <davix/list.h>
+#include <davix/setup.h>
 #include <asm/boot.h>
 #include <asm/entry.h>
 #include "uart.h"
@@ -15,7 +16,8 @@ struct boot_struct x86_boot_struct section(".bootstruct") = {
 	.com2_initialized = 0,
 	.initrd_start = 0,
 	.initrd_size = 0,
-	.acpi_rsdp = 0
+	.acpi_rsdp = 0,
+	.cmdline = NULL
 };
 
 void x86_setup_memory(void);	/* in arch/x86/mm/setup_memory.c */
@@ -45,7 +47,5 @@ void x86_start_kernel(void)
 
 	x86_setup_memory();
 
-	info("x86/kernel: Done.\n");
-	for(;;)
-		__builtin_ia32_pause();
+	start_kernel(x86_boot_struct.cmdline);
 }

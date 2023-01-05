@@ -130,6 +130,8 @@ DAVIXINCLUDE := \
 	-I$(srctree)/arch/$(ARCH)/include \
 	-include $(srctree)/include/generated/autoconf.h
 
+export DAVIXINCLUDE
+
 CC := $(CONFIG_CROSS_COMPILE)gcc
 AR := $(CONFIG_CROSS_COMPILE)ar
 

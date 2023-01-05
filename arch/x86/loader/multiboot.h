@@ -25,7 +25,13 @@ struct packed mb2_tag_hdr {
 	u32 size;
 };
 
+struct packed mb2_tag_generic_string {
+	struct mb2_tag_hdr hdr;
+	char string[];
+};
+
 #define MB2_TAG_END 0
+#define MB2_TAG_CMDLINE 1
 #define MB2_TAG_MODULE 3
 #define MB2_TAG_MEMMAP 6
 #define MB2_TAG_RSDP 14

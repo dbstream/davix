@@ -101,6 +101,16 @@ struct list {
 	struct list *next, *prev;
 };
 
+struct avlnode {
+	struct avlnode *left, *right;
+	struct avlnode *parent;
+	int height;
+};
+
+struct avltree {
+	struct avlnode *root;
+};
+
 #define swap(a, b) ({ \
 	auto __tmp = b; \
 	b = a; \
