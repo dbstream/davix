@@ -10,4 +10,6 @@ config MULTIBOOT2_LOADER
 	bool "Build the included multiboot2 loader."
 	default y
 
+source "arch/x86/loader/Kconfig"
+
 endmenu

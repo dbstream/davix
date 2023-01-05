@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT
+
+choice
+	prompt "Loader loglevel"
+	default LOADER_LOGLEVEL_WARN
+
+config LOADER_LOGLEVEL_DEBUG
+	bool "Debug"
+	help
+		Enable all printk() statements in the loader.
+
+config LOADER_LOGLEVEL_INFO
+	bool "Info"
+	help
+		Enable printk() statements with a loglevel of INFO and above in
+		the loader.
+
+config LOADER_LOGLEVEL_WARN
+	bool "Warning"
+	help
+		Enable printk() statements with a loglevel of WARN and above in
+		the loader.
+
+config LOADER_LOGLEVEL_ERROR
+	bool "Error"
+	help
+		Enable printk() statements with a loglevel of ERROR and above in
+		the loader.
+
+endchoice

@@ -4,6 +4,21 @@
 #include "printk.h"
 #include "../../../kernel/printk_lib.c"
 
+static const char LOGLEVEL =
+#ifdef CONFIG_LOADER_LOGLEVEL_DEBUG
+	KERN_DEBUG
+#endif
+#ifdef CONFIG_LOADER_LOGLEVEL_INFO
+	KERN_INFO
+#endif
+#ifdef CONFIG_LOADER_LOGLEVEL_WARN
+	KERN_WARN
+#endif
+#ifdef CONFIG_LOADER_LOGLEVEL_ERROR
+	KERN_ERROR
+#endif
+;
+
 #define COM1 0x3f8
 
 static int has_uart = 0;
@@ -28,6 +43,9 @@ static void uart_write_printk(u16 iobase, char loglevel, const char *s)
 
 void printk(char loglevel, const char *fmt, ...)
 {
+	if(LOGLEVEL > loglevel)
+		return;
+
 	if(!has_uart)
 		return;
 
@@ -59,7 +77,7 @@ void uart_init(void)
 	io_outb(COM1 + 4, 0x0f);	/* resume normal operation */
 	has_uart = 1;
 
-	for(const char *s = "\ec\e[0m\e[?25h\e[H\e[J\e[3JHello, World!\n";
+	for(const char *s = "\ec\e[0m\e[?25h\e[H\e[J\e[3J\n";
 		*s; s++)
 		uart_write(COM1, *s);
 }
