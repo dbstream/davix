@@ -108,6 +108,11 @@ $(objtree)/tools/kconfig/conf:
 $(srctree)/include/generated/autoconf.h $(srctree)/include/config/auto.conf: $(srctree)/.config $(objtree)/tools/kconfig/conf
 	$(Q)$(objtree)/tools/kconfig/conf --syncconfig Kconfig
 
+$(srctree)/.config:
+	@echo 'No .config found.'
+	@echo 'Please run ``make nconfig`` before building the kernel.'
+	@/bin/false
+
 .PHONY: all $(MAKECMDGOALS)
 all $(MAKECMDGOALS): $(srctree)/include/generated/autoconf.h $(srctree)/include/config/auto.conf
 	$(Q)$(MAKE) -f $(this-makefile) $(MAKECMDGOALS)
