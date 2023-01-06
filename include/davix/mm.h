@@ -23,4 +23,6 @@
 #define test_page_bit(page, bit) \
 	_test_page_bit((page), (bit), memory_order_relaxed)
 
+extern struct mm kernelmode_mm;
+
 #endif /* __DAVIX_MM_H */
