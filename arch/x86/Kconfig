@@ -4,6 +4,12 @@ config CROSS_COMPILE
 	string "A string prefixed to all GCC and Binutils executables."
 	default "x86_64-elf-"
 
+config X86
+	def_bool y
+	select HAVE_PGCACHEMODE_WRITETHROUGH
+	select HAVE_PGCACHEMODE_WRITECOMBINING
+	select HAVE_PGCACHEMODE_UNCACHED_MINUS
+
 menu "Architecture-specific options"
 
 config MULTIBOOT2_LOADER

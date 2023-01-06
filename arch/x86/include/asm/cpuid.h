@@ -14,6 +14,7 @@
 
 
 #define __ID_00000007_0_ECX_LA57 (1 << 16)	/* 5-level paging */
+#define __ID_00000001_EDX_PAT (1 << 16) /* Page Attribute Table */
 #define __ID_80000001_EDX_NX (1 << 20)	/* No-Execute support */
 #define __ID_80000001_EDX_PDPE1G (1 << 26)	/* 1GiB paging */
 

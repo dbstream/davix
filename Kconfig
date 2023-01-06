@@ -5,3 +5,5 @@ mainmenu "Davix ($(ARCH)) configuration"
 source "arch/$(ARCH)/Kconfig"
 
 source "kernel/Kconfig"
+
+source "mm/Kconfig"

@@ -178,6 +178,8 @@ static void map_mem_for_page_structs(unsigned long start, unsigned long end)
 	}
 }
 
+void x86_setup_pat(void);	/* in arch/x86/mm/page_table.c */
+
 void x86_setup_memory(void);
 void x86_setup_memory(void)
 {
@@ -246,6 +248,8 @@ void x86_setup_memory(void)
 		}
 	}
 	dump_pgalloc_info();
+
+	x86_setup_pat();
 
 	init_kmalloc();
 	dump_kmalloc_slabs();

@@ -8,6 +8,8 @@
 #define _EFER_LMA (1 << 10)	/* long mode active (RO) */
 #define _EFER_NXE (1 << 11) 	/* no execute enable */
 
+#define MSR_PAT 0x277
+
 #ifndef __ASSEMBLER__
 
 #include <davix/types.h>
