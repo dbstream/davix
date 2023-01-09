@@ -3,6 +3,7 @@
 #define __DAVIX_PRINTK_H
 
 #include <davix/atomic.h>
+#include <davix/types.h>
 
 struct printk_message {
 	char loglevel;
@@ -43,6 +44,7 @@ struct console {
 
 void printk_add_console(struct console *console);
 
+void vprintk(char loglevel, const char *fmt, va_list ap);
 void printk(char loglevel, const char *fmt, ...);
 
 #define KERN_DEBUG '0'

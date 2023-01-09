@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
-
 #include <davix/list.h>
 #include <davix/page_alloc.h>
+#include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/kmalloc.h>
 #include <davix/resource.h>
@@ -96,9 +96,7 @@ static unsigned long pgtable_alloc(void)
 {
 	unsigned long ret = early_alloc_page();
 	if(!ret) {
-		critical("x86/mm: Couldn't allocate a page to hold page tables.\n");
-		for(;;)
-			relax();
+		panic("x86/mm: Couldn't allocate a page to hold page tables.\n");
 	}
 	return ret;
 }
@@ -172,9 +170,7 @@ static void map_mem_for_page_structs(unsigned long start, unsigned long end)
 
 		unsigned long mem = early_alloc_page();
 		if(!mem) {
-			critical("Couldn't allocate a page to hold page tables.\n");
-			for(;;)
-				relax();
+			panic("Couldn't allocate a page to hold page tables.\n");
 		}
 		*p1e = ((force p1e_t) mem) | flags;
 	}
@@ -258,9 +254,7 @@ void x86_setup_memory(void)
 
 	if(init_resource(&system_memory,
 		0, max_phys_addr, "System Memory", NULL)) {
-			critical("init_resource() failed.\n");
-			for(;;)
-				relax();
+			panic("init_resource() failed.\n");
 	}
 
 	struct resource *prev = NULL;
@@ -281,11 +275,9 @@ void x86_setup_memory(void)
 		}
 		if(!alloc_resource_at(&system_memory,
 			entry->start, entry->end - entry->start, name)) {
-				critical("alloc_resource_at() failed for [mem %p - %p].\n",
+				panic("alloc_resource_at() failed for [mem %p - %p].\n",
 					entry->start,
 					entry->end - 1);
-				for(;;)
-					relax();
 		}
 	}
 
@@ -299,10 +291,8 @@ void x86_setup_memory(void)
 
 	char *copied_cmdline = kmalloc(cmdline_length);
 	if(!copied_cmdline) {
-		critical("kmalloc() failed for %lu-character command line.\n",
+		panic("kmalloc() failed for %lu-character command line.\n",
 			cmdline_length);
-		for(;;)
-			relax();
 	}
 
 	memcpy(copied_cmdline, x86_boot_struct.cmdline, cmdline_length);

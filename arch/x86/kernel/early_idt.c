@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT */
+#include <davix/panic.h>
 #include <davix/printk.h>
 #include <asm/entry.h>
 #include <asm/segment.h>
@@ -7,89 +8,52 @@ extern unsigned long early_isr_stubs[];
 
 static struct idt_entry early_idt[32];
 
-static void dump_registers(struct irq_frame *frame)
+static struct stack_frame create_fake_frame(unsigned long rbp,
+	unsigned long rip)
 {
-	info("Registers:\n");
-	info("     rax=%p     rbx=%p     rcx=%p     rdx=%p\n",
-		frame->rax, frame->rbx, frame->rcx, frame->rdx);
-	info("     rdi=%p     rsi=%p     rbp=%p     rsp=%p\n",
-		frame->rdi, frame->rsi, frame->rbp, frame->rsp);
-	info("      r8=%p      r9=%p     r10=%p     r11=%p\n",
-		frame->r8, frame->r9, frame->r10, frame->r11);
-	info("     r12=%p     r13=%p     r14=%p     r15=%p\n",
-		frame->r12, frame->r13, frame->r14, frame->r15);
-	info("  rflags=%p      ip=%p\n", frame->rflags, frame->rip);
+	return (struct stack_frame) {(struct stack_frame *) rbp, rip};
 }
 
 void __handle_early_nmi(struct irq_frame *frame);
 void __handle_early_nmi(struct irq_frame *frame)
 {
-	printk_bust_locks();
-
-	critical("\n");
+	struct stack_frame btframe = create_fake_frame(frame->rbp, frame->rip);
 	if(frame->excep_nr == X86_TRAP_NMI) {
-		critical("=====================================\n");
-		critical(" caught non-maskable interrupt (NMI)\n");
-		critical("=====================================\n");
+		panic_frame(&btframe, "Caught NMI");
 	} else {
-		critical("==================================\n");
-		critical(" caught machine-check error (MCE)\n");
-		critical(" error code 0x%x\n", frame->error);
-		critical("==================================\n");
+		panic_frame(&btframe, "Caught MCE %#x",
+			frame->error);
 	}
-
-	dump_registers(frame);
-
-	for(;;)
-		relax();
 }
 
 void __handle_early_exception(struct irq_frame *frame);
 void __handle_early_exception(struct irq_frame *frame)
 {
-	printk_bust_locks();
-
-	critical("\n");
-	critical("=======================\n");
-	critical(" caught exception 0x%x\n", frame->excep_nr);
-	critical(" error code 0x%x\n", frame->error);
-	critical("=======================\n");
-
-	dump_registers(frame);
-
-	for(;;)
-		relax();
+	struct stack_frame btframe = create_fake_frame(frame->rbp, frame->rip);
+	panic_frame(&btframe, "Caught exception %x (error code %x)\n",
+		frame->excep_nr, frame->error);
 }
 
 void __handle_early_pagefault(struct irq_frame *frame);
 void __handle_early_pagefault(struct irq_frame *frame)
 {
-	printk_bust_locks();
-
 	int present = frame->error & 1;
 	int write = frame->error & 2;
 	int ifetch = frame->error & 16;
 
-	critical("\n");
-	critical("=========================================================\n");
-	critical(" PAGE FAULT!\n");
-	critical(" Caused by %s %p\n",
-		present
-			? ifetch
-				? "instruction fetch from no-execute address"
-				: "write to read-only address"
-			: ifetch
-				? "instruction fetch from non-present address"
-				: write
-					? "write to non-present address"
-					: "read from non-present-address",
-		read_cr2());
-	critical("=========================================================\n");
+	const char *cause = present
+		? ifetch
+			? "instruction fetch from no-execute address"
+			: "write to read-only address"
+		: ifetch
+			? "instruction fetch from non-present address"
+			: write
+				? "write to non-present address"
+				: "read from non-present-address";
 
-	dump_registers(frame);
-
-	for(;;)
-		relax();
+	struct stack_frame btframe = create_fake_frame(frame->rbp, frame->rip);
+	panic_frame(&btframe, "Page fault caused by %s %p\n",
+		cause, read_cr2());
 }
 
 static void set_idt_gate(unsigned idx, unsigned long addr)

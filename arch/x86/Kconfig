@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: MIT
 
 config CROSS_COMPILE
-	string "A string prefixed to all GCC and Binutils executables."
+	string "Cross-prefix"
 	default "x86_64-elf-"
+	help
+		A string prefixed to all GCC and Binutils executables.
 
 config X86
 	def_bool y

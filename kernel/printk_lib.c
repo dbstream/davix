@@ -198,6 +198,28 @@ static int do_string(struct printk_callback *cb, prflag_t flag, int w, int p, co
 	return 0;
 }
 
+static int do_custom_pointer(struct printk_callback *cb,
+	const char **fmt, va_list *ap,
+	prflag_t flag, int w, int p)
+{
+	char c = *((*fmt)++);
+
+	switch(c) {
+	case 'V':;
+		/*
+		 * Implement a "recursive printk()".
+		 */
+		const char *recursive_fmt = va_arg(*ap, const char *);
+		va_list *recursive_ap = va_arg(*ap, va_list *);
+		return raw_vprintk(cb, recursive_fmt, recursive_ap);
+	default:
+		/*
+		 * Unknown format specifier, stop printing immediatelly.
+		 */
+		return 1;
+	}
+}
+
 int raw_vprintk(struct printk_callback *cb, const char *fmt, va_list *ap)
 {
 	while(1) {
@@ -290,6 +312,18 @@ do_fmt:;
 					return 1;
 				break;
 			case 'p':
+				if(flag & PR_ALTERNATIVE) {
+					/*
+					 * For '%#p.*' format specifiers, allow
+					 * non-standard, kernel-internal output
+					 * formats by calling
+					 * do_custom_pointer().
+					 */
+					if(do_custom_pointer(cb, &fmt, ap,
+						flag, w, p))
+							return 1;
+					break;
+				}
 				flag |= PR_ALTERNATIVE | PR_ZEROPAD;
 				if(sizeof(long) > sizeof(int))
 					flag |= PR_LONG;

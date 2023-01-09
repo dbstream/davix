@@ -17,19 +17,29 @@ void printk_add_console(struct console *console)
 	spin_release(&console_lock, irqflag);
 }
 
-void printk(char loglevel, const char *fmt, ...)
+static void printk_emit(char loglevel, const char *str)
 {
-	char buf[1024];
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintk(buf, 1024, fmt, ap);
-
-	struct printk_message msg = { .loglevel = loglevel, .string = buf };
-
-	for(struct console *console = atomic_load(&first_console, memory_order_seq_cst);
-		console; console = atomic_load(&console->next, memory_order_seq_cst)) {
+	struct printk_message msg = { .loglevel = loglevel, .string = str };
+	for(struct console *console =
+		atomic_load(&first_console, memory_order_seq_cst); console;
+		console = atomic_load(&console->next, memory_order_seq_cst)) {
 			console->emit(console, &msg);
 	}
+}
+
+void vprintk(char loglevel, const char *fmt, va_list ap)
+{
+	char buf[1024];
+	vsnprintk(buf, 1024, fmt, ap);
+	printk_emit(loglevel, buf);
+}
+
+void printk(char loglevel, const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	vprintk(loglevel, fmt, ap);
+	va_end(ap);
 }
 
 void printk_bust_locks(void)

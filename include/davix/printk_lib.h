@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
-#ifndef __DAVIX_RAW_PRINTK_H
-#define __DAVIX_RAW_PRINTK_H
+#ifndef __DAVIX_PRINTK_LIB_H
+#define __DAVIX_PRINTK_LIB_H
 
 #include <davix/types.h>
 
@@ -22,4 +22,4 @@ int raw_printk(struct printk_callback *cb, const char *fmt, ...);
 void vsnprintk(char *buf, unsigned long bufsiz, const char *fmt, va_list ap);
 void snprintk(char *buf, unsigned long bufsiz, const char *fmt, ...);
 
-#endif /* __DAVIX_RAW_PRINTK_H */
+#endif /* __DAVIX_PRINTK_LIB_H */

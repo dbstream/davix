@@ -158,6 +158,14 @@ LDFLAGS :=
 
 extra-targets-y :=
 
+ifeq ($(CONFIG_DEBUG_BUILD),y)
+
+CFLAGS += \
+	-fno-omit-frame-pointer \
+	-fno-optimize-sibling-calls
+
+endif
+
 include $(srctree)/arch/$(ARCH)/toolchain.include
 
 export CC CFLAGS AFLAGS

@@ -1,9 +1,19 @@
 # SPDX-License-Identifier: MIT
 
-menu "Kernel"
+menu "General kernel options"
 
 config EXTRAVERSION
-	string "A string appended to the kernel version string."
+	string "Extra version"
 	default ""
+	help
+		A string appended to the kernel version string.
+
+config DEBUG_BUILD
+	bool "Debug build"
+	default n
+	help
+		Enable additional code and compiler flags, such as
+		-fno-omit-frame-pointer and -fno-optimize-sibling-calls, for
+		debugging purposes.
 
 endmenu
