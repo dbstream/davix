@@ -4,6 +4,8 @@
 #include <davix/page_alloc.h>
 #include <davix/printk.h>
 #include <davix/kmalloc.h>
+#include <davix/resource.h>
+#include <davix/setup.h>
 #include <asm/boot.h>
 #include <asm/cpuid.h>
 #include <asm/page.h>
@@ -178,6 +180,8 @@ static void map_mem_for_page_structs(unsigned long start, unsigned long end)
 	}
 }
 
+static struct resource system_memory;
+
 void x86_setup_pat(void);	/* in arch/x86/mm/page_table.c */
 
 void x86_setup_memory(void);
@@ -247,10 +251,60 @@ void x86_setup_memory(void)
 			free_page(phys_to_page(phys + count * PAGE_SIZE), 0);
 		}
 	}
-	dump_pgalloc_info();
 
 	x86_setup_pat();
 
 	init_kmalloc();
+
+	if(init_resource(&system_memory,
+		0, max_phys_addr, "System Memory", NULL)) {
+			critical("init_resource() failed.\n");
+			for(;;)
+				relax();
+	}
+
+	struct resource *prev = NULL;
+	list_for_each(entry, &x86_boot_struct.memmap_entries, list) {
+		const char *name =
+			entry->type == MEMMAP_USABLE_RAM ? "System RAM" :
+			entry->type == MEMMAP_LOADER ? "System RAM" :
+			entry->type == MEMMAP_ACPI_DATA ? "ACPI Tables" :
+			entry->type == MEMMAP_KERNEL ? "Kernel" :
+			entry->type == MEMMAP_RESERVED ? "Reserved" :
+			entry->type == MEMMAP_ACPI_NVS ? "ACPI NVS Memory" :
+			"Unknown";
+
+		if(prev && prev->end == entry->start
+			&& !strcmp(prev->name, name)) {
+				prev->end = entry->end;
+				continue;
+		}
+		if(!alloc_resource_at(&system_memory,
+			entry->start, entry->end - entry->start, name)) {
+				critical("alloc_resource_at() failed for [mem %p - %p].\n",
+					entry->start,
+					entry->end - 1);
+				for(;;)
+					relax();
+		}
+	}
+
+	dump_resource(&system_memory);
+
+	dump_pgalloc_info();
 	dump_kmalloc_slabs();
+
+	info("Copying the boot command line...\n");
+	unsigned long cmdline_length = strlen(x86_boot_struct.cmdline) + 1;
+
+	char *copied_cmdline = kmalloc(cmdline_length);
+	if(!copied_cmdline) {
+		critical("kmalloc() failed for %lu-character command line.\n",
+			cmdline_length);
+		for(;;)
+			relax();
+	}
+
+	memcpy(copied_cmdline, x86_boot_struct.cmdline, cmdline_length);
+	kernel_cmdline = copied_cmdline;
 }

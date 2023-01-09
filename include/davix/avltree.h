@@ -63,6 +63,19 @@ void __avl_delete(struct avlnode *node, struct avltree *tree,
 	avl_update_callback_t callback);
 
 /*
+ * Call a function for the node and every parent node.
+ */
+static inline void __avl_update_node_and_parents(struct avlnode *node,
+	avl_update_callback_t callback)
+{
+	if(!callback)
+		return;
+
+	for(; node; node = node->parent)
+		callback(node);
+}
+
+/*
  * Insert a node into the tree using a comparison function.
  *
  * Arguments:
@@ -121,6 +134,66 @@ static inline struct avlnode *avl_delete(void *key, struct avltree *tree,
 			node = (diff > 0) ? node->right : node->left;
 		}
 	}
+}
+
+static inline struct avlnode *avl_first(struct avltree *tree)
+{
+	struct avlnode *node = tree->root;
+	if(!node)
+		return NULL;
+
+	while(node->left)
+		node = node->left;
+
+	return node;
+}
+
+static inline struct avlnode *avl_last(struct avltree *tree)
+{
+	struct avlnode *node = tree->root;
+	if(!node)
+		return NULL;
+
+	while(node->right)
+		node = node->right;
+
+	return node;
+}
+
+static inline struct avlnode *avl_predecessor(struct avlnode *node)
+{
+	if(node->left) {
+		node = node->left;
+		while(node->right)
+			node = node->right;
+		return node;
+	}
+
+	while(node->parent) {
+		if(node->parent->left == node)
+			return node->parent;
+		node = node->parent;
+	}
+
+	return NULL;
+}
+
+static inline struct avlnode *avl_successor(struct avlnode *node)
+{
+	if(node->right) {
+		node = node->right;
+		while(node->left)
+			node = node->left;
+		return node;
+	}
+
+	while(node->parent) {
+		if(node->parent->left == node)
+			return node->parent;
+		node = node->parent;
+	}
+
+	return NULL;
 }
 
 #endif /* __DAVIX_AVLTREE_H */

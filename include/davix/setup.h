@@ -2,7 +2,9 @@
 #ifndef __DAVIX_SETUP_H
 #define __DAVIX_SETUP_H
 
-void start_kernel(const char *cmdline);
+extern const char *kernel_cmdline;
+
+void start_kernel(void);
 
 /*
  * arch_early_init() should do stuff like find all memory regions, initialize

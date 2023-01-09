@@ -25,7 +25,7 @@ void x86_start_kernel(void)
 {
 	x86_uart_init();
 	x86_setup_early_idt();
-	start_kernel(x86_boot_struct.cmdline);
+	start_kernel();
 }
 
 void x86_setup_memory(void);	/* in arch/x86/mm/setup_memory.c */
