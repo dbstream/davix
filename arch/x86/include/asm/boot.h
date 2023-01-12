@@ -79,7 +79,9 @@ struct boot_struct {
 	unsigned long acpi_rsdp;
 
 	/*
-	 * Kernel command line, or NULL.
+	 * Kernel command line, or NULL
+	 * This may be in lower-half memory, or in the HHDM. The only important
+	 * point is that it is mapped during kernel entry.
 	 */
 	char *cmdline;
 };

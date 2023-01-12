@@ -4,6 +4,16 @@
 
 #include <davix/types.h>
 
+/*
+ * Page table API.
+ *
+ * Page tables can be modified by calling the pgop* and *_pte functions.
+ *
+ * Generally speaking, these functions don't validate their inputs, i.e. don't
+ * pass in random junk that you haven't checked for correctness to these
+ * functions.
+ */
+
 typedef enum pgcachemode {
 	PG_WRITEBACK,		/* Normal, "cacheable" memory. Use this when possible. */
 #ifdef CONFIG_HAVE_PGCACHEMODE_WRITETHROUGH
@@ -62,8 +72,7 @@ struct pgop {
 	struct list delayed_pages;
 
 	/*
-	 * The mm object we are modifying. This must be set by the caller of
-	 * pgop_begin(), as it is a parameter to it.
+	 * The mm object we are modifying.
 	 *
 	 * If this is ``&kernelmode_mm``, we are mapping kernel pages and should
 	 * make them inaccessible to user-mode.
@@ -86,7 +95,7 @@ int has_hugepage_size(unsigned shift);
  *
  * ``shift`` specifies the hugepage size.
  */
-void pgop_begin(struct pgop *pgop, unsigned shift);
+void pgop_begin(struct pgop *pgop, struct mm *mm, unsigned shift);
 void pgop_end(struct pgop *pgop);
 
 /*
@@ -100,6 +109,8 @@ int alloc_ptes(struct pgop *pgop,
 
 /*
  * Free PTEs from ``start_addr`` to ``end_addr``.
+ *
+ * NOTE: Remember to call clear_pte() for all pages within the range.
  */
 void free_ptes(struct pgop *pgop,
 	unsigned long start_addr, unsigned long end_addr);

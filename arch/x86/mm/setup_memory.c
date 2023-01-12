@@ -43,6 +43,7 @@ static void init_vmem_constants(void)
 	if(extmax < 0x80000001)
 		return;
 
+	do_cpuid(0x80000001, a, b, c, d);
 	if(d & __ID_80000001_EDX_NX)
 		x86_nx_bit = __PG_NOEXEC;
 	if(d & __ID_80000001_EDX_PDPE1G)
@@ -178,7 +179,11 @@ static void map_mem_for_page_structs(unsigned long start, unsigned long end)
 
 static struct resource system_memory;
 
-void x86_setup_pat(void);	/* in arch/x86/mm/page_table.c */
+/*
+ * These are in 'arch/x86/mm/page_table.c'.
+ */
+void x86_setup_pat(void);
+void x86_setup_nonearly_page_tables(void);
 
 void x86_setup_memory(void);
 void x86_setup_memory(void)
@@ -224,6 +229,7 @@ void x86_setup_memory(void)
 		early_free_pages(start, (end - start) / PAGE_SIZE);
 	}
 
+	debug("Mapping memory for page structs...\n");
 	kernel_pagetables = (void *) PTE_VADDR(read_cr3());
 	list_for_each(entry, &x86_boot_struct.memmap_entries, list) {
 		if(!(entry->type == MEMMAP_USABLE_RAM
@@ -247,8 +253,6 @@ void x86_setup_memory(void)
 			free_page(phys_to_page(phys + count * PAGE_SIZE), 0);
 		}
 	}
-
-	x86_setup_pat();
 
 	init_kmalloc();
 
@@ -297,4 +301,7 @@ void x86_setup_memory(void)
 
 	memcpy(copied_cmdline, x86_boot_struct.cmdline, cmdline_length);
 	kernel_cmdline = copied_cmdline;
+
+	x86_setup_pat();
+	x86_setup_nonearly_page_tables();
 }
