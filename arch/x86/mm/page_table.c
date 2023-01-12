@@ -15,11 +15,11 @@ static int use_pat;
 static unsigned long msrpat_value;
 
 static pte_t pgcachemode_to_pteflags_table[NUM_PG_CACHEMODES] = {
-	[PG_WRITEBACK] =	0		| 0		| 0,
-	[PG_WRITETHROUGH] =	0		| 0		| __PG_PWT,
-	[PG_WRITECOMBINE] =	__P1E_PAT	| 0		| 0,
-	[PG_UNCACHED_MINUS] =	0		| __PG_PCD	| 0,
-	[PG_UNCACHED] =		0		| __PG_PCD	| __PG_PWT
+	[PG_WRITEBACK] = 0,
+	[PG_WRITETHROUGH] =                         __PG_PWT,
+	[PG_WRITECOMBINE] =   __P1E_PAT,
+	[PG_UNCACHED_MINUS] =            __PG_PCD,
+	[PG_UNCACHED] =	                 __PG_PCD | __PG_PWT
 };
 
 static inline pte_t pgcachemode_to_pteflags(pgcachemode_t cachemode, struct pgop *pgop)
@@ -49,7 +49,7 @@ void x86_setup_pat(void)
 	}
 
 	use_pat = 1;
-	msrpat_value = 0x100070406; /* UC  UC  UC  WC  UC  UC-  WT  WB */
+	msrpat_value = 0x100070406UL; /* UC  UC  UC  WC  UC  UC-  WT  WB */
 
 	debug("x86/mm: enable PAT mechanism.\n");
 	write_msr(MSR_PAT, msrpat_value);
@@ -185,7 +185,7 @@ static int alloc_single_pte(struct pgop *pgop, unsigned long addr)
 	}
 
 	/* Give these a value. (-Werror=maybe-uninitialized) */
-	p5d_t p5d = 0;
+	p5d_t p5d = NULL;
 	p5e_t *p5e = NULL;
 
 	p4d_t p4d;

@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: MIT
 
+CROSS_COMPILE_DEFAULT := x86_64-elf-
+export CROSS_COMPILE_DEFAULT
+
 CFLAGS += \
 	-mno-red-zone \
 	-mno-80387 \

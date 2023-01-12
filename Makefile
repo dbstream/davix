@@ -88,6 +88,8 @@ ifneq ($(srctree),$(workdir))
 $(error Cannot invoke configuration targets from a subdirectory.)
 endif
 
+include $(srctree)/arch/$(ARCH)/toolchain.include # for CROSS_COMPILE_DEFAULT
+
 $(objtree)/tools/kconfig/nconf:
 	$(Q)$(MAKE) -f $(srctree)/tools/kconfig/Makefile $@
 
@@ -156,6 +158,23 @@ AFLAGS := $(DAVIXINCLUDE) -D__KERNEL__ \
 
 LDFLAGS :=
 
+ifeq ($(CONFIG_CHECKER),y)
+SPARSE := sparse
+SPARSEFLAGS := \
+	-std=gnu17 \
+	-nostdinc \
+	$(DAVIXINCLUDE) \
+	-Wall \
+	-Wsparse-all \
+	-Werror \
+	-Wsparse-error \
+	-Wno-declaration-after-statement \
+	-Wno-shadow \
+	-D__KERNEL__ \
+	'-DKERNELVERSION="$(KERNELVERSION)"' \
+	-ffreestanding
+endif
+
 extra-targets-y :=
 
 ifeq ($(CONFIG_DEBUG_BUILD),y)
@@ -169,6 +188,10 @@ endif
 include $(srctree)/arch/$(ARCH)/toolchain.include
 
 export CC CFLAGS AFLAGS
+
+ifeq ($(CONFIG_CHECKER),y)
+export SPARSE SPARSEFLAGS
+endif
 
 obj-y :=
 
@@ -209,6 +232,9 @@ built-ins := $(filter $(objtree)/%/built-in.a,$(real-obj-y))
 $(objtree)/%.c.o: $(srctree)/%.c
 	@mkdir -p $(dir $@)
 	@echo -e CC\\t$(current-subdir)$(notdir $<)
+ifeq ($(CONFIG_CHECKER),y)
+	$(Q)$(SPARSE) $(SPARSEFLAGS) $<
+endif
 	$(Q)$(CC) $(CFLAGS) $(CFLAGS-$(notdir $@)) -c -o $@ $< -MD -MP -MF $@.d
 
 $(objtree)/%.S.o: $(srctree)/%.S

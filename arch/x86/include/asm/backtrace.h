@@ -38,7 +38,7 @@ static inline int backtrace_check(struct stack_frame *frame)
 	if(addr < HHDM_OFFSET)
 		return 0;
 
-	if(addr > 0xffffffff80000000 && addr < 0xffffffffffdfffff)
+	if(addr > 0xffffffff80000000UL && addr < 0xffffffffffdfffffUL)
 		return 1;
 
 	if(addr > (l5_paging_enable

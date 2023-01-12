@@ -2,6 +2,28 @@
 
 mainmenu "Davix ($(ARCH)) configuration"
 
+menu "Compiler options"
+
+config CHECKER
+	bool "Run \"sparse\" on all C files."
+	default n
+	help
+		"sparse" is a Linux kernel development utility that employs
+		static analysis on C code to diagnose errors. It can however be
+		used by other projects too.
+
+		If you are a kernel developer, say "y".
+
+		Otherwise, say "n".
+
+config CROSS_COMPILE
+	string "Cross-prefix"
+	default "$(CROSS_COMPILE_DEFAULT)"
+	help
+		A string prefixed to all GCC and Binutils executables.
+
+endmenu
+
 source "arch/$(ARCH)/Kconfig"
 
 source "kernel/Kconfig"
