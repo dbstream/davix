@@ -14,6 +14,9 @@
 unsigned long HHDM_OFFSET;
 unsigned long PAGE_OFFSET;
 
+unsigned long VMAP_START;
+unsigned long VMAP_END;
+
 unsigned long max_phys_addr;
 
 int l5_paging_enable;
@@ -30,9 +33,14 @@ static void init_vmem_constants(void)
 
 	HHDM_OFFSET = 0xffff800000000000UL;
 	PAGE_OFFSET = 0xffffc00000000000UL;
+	VMAP_START = 0xffffc10000000000UL;
+	VMAP_END = 0xffffe10000000000UL;
+
 	if(l5_paging_enable) {
 		HHDM_OFFSET = 0xff00000000000000UL;
 		PAGE_OFFSET = 0xff80000000000000UL;
+		VMAP_START = 0xff82000000000000UL;
+		VMAP_END = 0xffc2000000000000UL;
 	}
 
 	unsigned long a, b, c, d, extmax;

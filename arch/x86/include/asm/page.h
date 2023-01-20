@@ -65,6 +65,9 @@ typedef p5e_t *p5d_t;
 extern unsigned long HHDM_OFFSET;	/* HHDM start */
 extern unsigned long PAGE_OFFSET;	/* ``struct page`` start */
 
+extern unsigned long VMAP_START;	/* Start of vmap() region. */
+extern unsigned long VMAP_END;		/* End of vmap() region. */
+
 extern unsigned long max_phys_addr;
 
 extern int l5_paging_enable;
@@ -93,5 +96,23 @@ struct page;
 #define page_to_virt(x) phys_to_virt(page_to_phys(x))
 
 #define PTE_VADDR(x)	phys_to_virt(PTE_ADDR(x))
+
+/*
+ * Get the best possible hugepage size for use when mapping phys_addr.
+ */
+static inline unsigned arch_hugepage_size(unsigned long phys_addr, unsigned long len)
+{
+	unsigned long x = phys_addr | len;
+	if(!l3_hugepage_enable)
+		goto no_huge_p3e;
+
+	if(!(x & (P3E_SIZE - 1)))
+		return 18;
+no_huge_p3e:
+	if(!(x & (P2E_SIZE - 1)))
+		return 9;
+
+	return 0;
+}
 
 #endif /* __ASM_PAGE_H */

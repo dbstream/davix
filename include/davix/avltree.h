@@ -8,7 +8,7 @@
  * AVL tree implementation.
  */
 
-#define AVLTREE_INIT(name) (struct avltree) { NULL };
+#define AVLTREE_INIT(name) (struct avltree) { NULL }
 
 /*
  * AVL tree child update callback.
