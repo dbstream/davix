@@ -142,19 +142,23 @@ void free_vmap_area(struct vm_area *area)
 		enable_interrupts();
 }
 
-void dump_kernel_vmap_areas(void)
+static void _dump_kernel_vmap_areas(void)
 {
 	info("Kernel vmap() areas:\n");
 	struct vm_area *vma;
-
-	int irqflag = interrupts_enabled();
-	disable_interrupts();
-	mm_lock(&kernelmode_mm);
-
 	list_for_each(vma, &kernelmode_mm.vma_list, list) {
 		info("        [mem %p - %p] hugepage shift %u\n",
 			vma->start, vma->end - 1, vma->hugepage_shift);
 	}
+}
+
+void dump_kernel_vmap_areas(void)
+{
+	int irqflag = interrupts_enabled();
+	disable_interrupts();
+	mm_lock(&kernelmode_mm);
+
+	_dump_kernel_vmap_areas();
 
 	mm_unlock(&kernelmode_mm);
 	if(irqflag)
@@ -205,10 +209,11 @@ void vunmap(void *mem)
 		if(vma->start == (unsigned long) mem)
 			goto has_vma;
 
-		node = vma->start > (unsigned long) mem
+		node = vma->start < (unsigned long) mem
 			? node->right
 			: node->left;
 	}
+	_dump_kernel_vmap_areas();
 	panic("vunmap(): Trying to unmap non-vmap() address %p\n", mem);
 
 has_vma:;
