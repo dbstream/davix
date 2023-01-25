@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT */
+#include <davix/acpi.h>
 #include <davix/printk.h>
 #include <davix/list.h>
 #include <davix/setup.h>
@@ -28,6 +29,34 @@ void x86_start_kernel(void)
 	start_kernel();
 }
 
+static void do_cool_ACPI_stuff(void)
+{
+	info("acpi_initialize_subsystem()\n");
+
+	acpi_status err = acpi_initialize_subsystem();
+	if(err != AE_OK) {
+		error("acpi_initialize_subsystem(): error %u\n", err);
+		return;
+	}
+
+	info("acpi_initialize_tables()\n");
+	err = acpi_initialize_tables(NULL, 0, 1);
+	if(err != AE_OK) {
+		error("acpi_initialize_tables(): error %u\n", err);
+		return;
+	}
+
+	struct acpi_table_madt *madt;
+	err = acpi_get_table(ACPI_SIG_MADT, 0, (struct acpi_table_header **) &madt);
+	if(err != AE_OK) {
+		error("acpi_get_table(): error %u\n", err);
+	}
+
+	info("madt: physical address of local APIC: %p\n", madt->address);
+
+	acpi_put_table((struct acpi_table_header *) madt);
+}
+
 void x86_setup_memory(void);	/* in arch/x86/mm/setup_memory.c */
 
 void arch_early_init(void)
@@ -55,4 +84,6 @@ void arch_early_init(void)
 			x86_boot_struct.initrd_start
 				+ x86_boot_struct.initrd_size - 1);
 	}
+
+	do_cool_ACPI_stuff();
 }

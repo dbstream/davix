@@ -199,6 +199,8 @@ ifeq ($(srctree),$(workdir))
 
 obj-y := arch/$(ARCH)/built-in.a kernel/built-in.a mm/built-in.a
 
+obj-$(CONFIG_ACPI) += acpi/built-in.a
+
 all: $(objtree)/davix-kernel $(extra-targets-y)
 
 $(objtree)/davix-kernel: $(objtree)/built-in.a

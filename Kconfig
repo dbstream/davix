@@ -29,3 +29,5 @@ source "arch/$(ARCH)/Kconfig"
 source "kernel/Kconfig"
 
 source "mm/Kconfig"
+
+source "acpi/Kconfig"

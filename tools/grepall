@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
-DIRS="include kernel tools doc"
+DIRS="acpi doc include kernel mm tools"
 if [ "$ARCH" != "" ]; then
 	DIRS="$DIRS arch/$ARCH"
 else

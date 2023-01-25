@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: MIT
+
+config ACPI
+	def_bool n

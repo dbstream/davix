@@ -65,15 +65,17 @@ struct packed mb2_memmap_entry {
 
 struct packed mb2_rsdp {
 	struct mb2_tag_hdr hdr;
-	char ac_sig[8];
-	u8 ac_chksum;
-	char ac_OEMID[6];
-	u8 ac_rev;
-	u32 ac_pRSDT;
-	u32 ac_len;
-	u64 ac_pXSDT;
-	u8 ac_xchksum;
-	u8 ac_reserved[3];
+	struct {
+		char ac_sig[8];
+		u8 ac_chksum;
+		char ac_OEMID[6];
+		u8 ac_rev;
+		u32 ac_pRSDT;
+		u32 ac_len;
+		u64 ac_pXSDT;
+		u8 ac_xchksum;
+		u8 ac_reserved[3];
+	} acpi_fields;
 };
 
 static inline struct mb2_tag_hdr *mb2_first(struct mb2_info *info)

@@ -548,11 +548,11 @@ unsigned long loader_main(struct mb2_info *multiboot)
 			if(has_xsdt)
 				continue;
 			struct mb2_rsdp *rsdp = (struct mb2_rsdp *) tag;
-			boot_struct->acpi_rsdp = rsdp->ac_pRSDT;
+			boot_struct->acpi_rsdp = (unsigned long) &rsdp->acpi_fields;
 		} else if(tag->type == MB2_TAG_XSDP) {
 			has_xsdt = 1;
 			struct mb2_rsdp *rsdp = (struct mb2_rsdp *) tag;
-			boot_struct->acpi_rsdp = rsdp->ac_pXSDT;
+			boot_struct->acpi_rsdp = (unsigned long) &rsdp->acpi_fields;
 		} else if(tag->type == MB2_TAG_MODULE) {
 			struct mb2_module *module = (struct mb2_module *) tag;
 			boot_struct->initrd_start = module->mod_start;

@@ -331,7 +331,7 @@ do_fmt:;
 					return 1;
 				break;
 			case 'X':
-				flag |= PR_CAPITALIZE;
+				flag |= PR_CAPITALIZE | PR_ZEROPAD;
 			case 'x':
 				if(do_unsigned(cb, flag, 16, w, ap))
 					return 1;
