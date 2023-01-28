@@ -4,7 +4,7 @@
 #include <davix/printk.h>
 #include <davix/panic.h>
 
-void print_madt(struct acpi_subtable_header *entry, void *arg)
+static void print_madt(struct acpi_subtable_header *entry, void *arg)
 {
 	(void) arg;
 
