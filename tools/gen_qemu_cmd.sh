@@ -22,6 +22,8 @@ _help() {
 	echo ''
 	echo '      --cpu=<cpu>                 Select CPU model of the guest.'
 	echo ''
+	echo '      --smp=<smp>                 Equivalent to QEMU -smp option.'
+	echo ''
 	echo '      --reboot={normal,shutdown}  Machine reboot action, also affects triple'
 	echo '                                  faults. (default: shutdown)'
 	echo ''
@@ -41,7 +43,7 @@ if [ $? -ne 4 ]; then
 	exit 1
 fi
 
-TEMP=$(getopt -o 'hdX:m:' --long 'help,debug,kvm,no-kvm,cpu:,mem:,reboot:,bios,uefi,firmware:' -n "$0" -- "$@")
+TEMP=$(getopt -o 'hdX:m:' --long 'help,debug,kvm,no-kvm,cpu:,smp:,mem:,reboot:,bios,uefi,firmware:' -n "$0" -- "$@")
 if [ $? -ne 0 ]; then
 	_help >&2
 	exit 1
@@ -57,6 +59,7 @@ QEXTRA=""
 QCPU="host"
 NO_REBOOT="y"
 FIRMWARE="UEFI"
+QSMP="1"
 
 while true; do
 	case "$1" in
@@ -82,6 +85,10 @@ while true; do
 		;;
 		'--cpu')
 			QCPU="$2"
+			shift 2
+		;;
+		'--smp')
+			QSMP="$2"
 			shift 2
 		;;
 		'-m'|'--mem')
@@ -152,9 +159,7 @@ if [ $FIRMWARE = "UEFI" ]; then
 	QEMU_COMMAND="$QEMU_COMMAND -drive file=$OVMF_PATH/OVMF.fd,if=pflash,index=0,read-only=on"
 fi
 
-QEMU_COMMAND="$QEMU_COMMAND -m $QMEM"
-
-QEMU_COMMAND="$QEMU_COMMAND -cpu $QCPU"
+QEMU_COMMAND="$QEMU_COMMAND -m $QMEM -cpu $QCPU -smp $QSMP"
 
 if [ $DEBUG = "y" ]; then
 	QEMU_COMMAND="$QEMU_COMMAND -S -s"
