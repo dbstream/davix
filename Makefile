@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-MAKEFLAGS += -Rr --no-print-directory
+MAKEFLAGS += -Rr --no-print-directory -j
 
 KERNELVERSION := 0.0.1
 
