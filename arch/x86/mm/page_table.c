@@ -366,6 +366,9 @@ static int pte_needs_flush(pte_t oldval, pte_t newval)
 	if((newval & __PG_NOEXEC) && !(oldval & __PG_NOEXEC))
 		return 1;
 
+	if(PTE_ADDR(oldval) != PTE_ADDR(newval))
+		return 1;
+
 	return 0;
 }
 
