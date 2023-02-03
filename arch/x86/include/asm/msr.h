@@ -10,6 +10,10 @@
 
 #define MSR_PAT 0x277
 
+#define MSR_FSBASE 0xc0000100
+#define MSR_GSBASE 0xc0000101
+#define MSR_KERNELGSBASE 0xc0000102
+
 #ifndef __ASSEMBLER__
 
 #include <davix/types.h>
