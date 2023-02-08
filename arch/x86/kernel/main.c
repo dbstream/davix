@@ -3,8 +3,10 @@
 #include <davix/printk.h>
 #include <davix/list.h>
 #include <davix/setup.h>
+#include <davix/smp.h>
 #include <asm/boot.h>
 #include <asm/entry.h>
+#include <asm/msr.h>
 #include "uart.h"
 
 struct boot_struct x86_boot_struct section(".bootstruct") = {
@@ -21,9 +23,20 @@ struct boot_struct x86_boot_struct section(".bootstruct") = {
 	.cmdline = NULL
 };
 
+static struct logical_cpu pre_smp_cpu = {
+	.cpulocal_offset = 0,
+	.id = 0,
+	.online = 1,
+	.possible = 1,
+	.present = 1
+};
+
+static struct logical_cpu *pre_smp_cpu_ptr = &pre_smp_cpu;
+
 void x86_start_kernel(void);
 void x86_start_kernel(void)
 {
+	write_msr(MSR_GSBASE, (unsigned long) &pre_smp_cpu_ptr);
 	x86_uart_init();
 	x86_setup_early_idt();
 	start_kernel();

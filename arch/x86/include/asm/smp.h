@@ -2,11 +2,19 @@
 #ifndef __ASM_SMP_H
 #define __ASM_SMP_H
 
-/*
- * Empty for now.
- *
- * Later on, this file will contain stuff like 'smp_self()' and other
- * SMP-related macros.
- */
+#include <davix/types.h>
+
+#define cpulocal section(".cpulocal")
+
+struct logical_cpu;
+
+extern struct logical_cpu *__smp_self cpulocal;
+
+static inline struct logical_cpu *smp_self(void)
+{
+	struct logical_cpu *ret;
+	asm volatile("movq %%gs:0, %0" : "=r"(ret) : : "memory");
+	return ret;
+}
 
 #endif /* __ASM_SMP_H */

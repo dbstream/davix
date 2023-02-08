@@ -3,6 +3,7 @@
 #include <davix/smp.h>
 #include <davix/printk.h>
 #include <davix/panic.h>
+#include <asm/msr.h>
 
 struct logical_cpu *cpu_slots = NULL;
 unsigned num_cpu_slots = 0;
@@ -67,6 +68,10 @@ common:;
 	cpu->present = present;
 }
 
+extern char __cpulocal_start[], __cpulocal_end[];
+
+struct logical_cpu *__smp_self cpulocal;
+
 void arch_init_smp(void);
 void arch_init_smp(void)
 {
@@ -89,12 +94,17 @@ void arch_init_smp(void)
 		panic("arch_init_smp(): no LAPIC entries in MADT.");
 
 	info("Max CPUs: %u\n", num_cpu_slots);
+
+	if(num_cpu_slots <= smp_self()->id)
+		panic("arch_init_smp(): Too few CPU slots! (num_cpu_slots: %u, BSP: %u)\n");
+
+	/* TODO: use something else than kmalloc() */
 	cpu_slots = kmalloc(num_cpu_slots * sizeof(struct logical_cpu));
 	if(!cpu_slots)
 		panic("arch_init_smp(): Couldn't allocate struct logical_cpu array.");
 
 	for_each_logical_cpu(cpu) {
-		cpu->id = cpu - cpu_slots;
+		cpu->id = cpu - cpu_slots;	/* magic pointer arithmetic */
 		cpu->online = 0;
 		cpu->possible = 0;
 		cpu->present = 0;
@@ -106,11 +116,35 @@ void arch_init_smp(void)
 	 */
 	acpi_parse_table(madt, madt_set_cpu_present, NULL);
 
-	/* Set the BSP to online (BSP will always be CPU0) */
-	cpu_slots[0].online = 1;
+	/* Set the BSP to online */
+	cpu_slots[smp_self()->id].online = 1;
 
 	/*
 	 * We are done with the MADT now.
 	 */
 	acpi_put_table((struct acpi_table_header *) madt);
+
+	for_each_logical_cpu(cpu) {
+		if(!cpu->possible)
+			continue;
+
+		if(cpu->online) {
+			/* An already onlined CPU must be the BSP. */
+			cpu->cpulocal_offset = 0;
+		} else {
+			/* TODO: use something else than kmalloc() */
+			void *mem = kmalloc(__cpulocal_end - __cpulocal_start);
+			if(!mem)
+				panic("x86/smp: Cannot allocate memory for CPU-local variables!\n");
+
+			cpu->cpulocal_offset = (unsigned long) mem - (unsigned long) __cpulocal_start;
+		}
+
+		rdwr_cpulocal_on(cpu, __smp_self) = cpu;
+
+		debug("Setting up CPU-local variables on CPU#%u... offset %p\n",
+			cpu->id, cpu->cpulocal_offset);
+	}
+
+	write_msr(MSR_GSBASE, (unsigned long) &__smp_self);
 }

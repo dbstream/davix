@@ -39,6 +39,11 @@ SECTIONS
 	.data :
 	{
 		*(.data)
+
+		. = ALIGN(64); /* Align to a common cacheline size. */
+		__cpulocal_start = .;
+		*(.cpulocal)
+		__cpulocal_end = .;
 	} :data
 	__data_end = .;
 

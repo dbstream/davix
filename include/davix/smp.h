@@ -6,7 +6,7 @@
 #include <asm/smp.h>
 
 struct logical_cpu {
-	void *cpuvar_mem;
+	unsigned long cpulocal_offset;
 	unsigned id;
 	bool online;
 	bool possible;
@@ -32,5 +32,12 @@ extern unsigned num_cpu_slots;
 		cpu < &cpu_slots[num_cpu_slots]; cpu++)
 
 void init_smp(void);
+
+#define cpulocal_address(cpu, var) \
+	((force typeof(var))((force unsigned long) (var) + (cpu)->cpulocal_offset))
+
+#define rdwr_cpulocal_on(cpu, var) (*(cpulocal_address((cpu), &(var))))
+
+#define rdwr_cpulocal(var) rdwr_cpulocal_on(smp_self(), (var))
 
 #endif /* __DAVIX_SMP_H */
