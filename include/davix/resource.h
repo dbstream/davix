@@ -59,6 +59,8 @@ struct resource {
 	};
 };
 
+extern struct resource system_memory;
+
 /*
  * Initializes all fields of a ``struct resource``.
  * Returns non-zero on failure.

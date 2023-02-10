@@ -185,7 +185,7 @@ static void map_mem_for_page_structs(unsigned long start, unsigned long end)
 	}
 }
 
-static struct resource system_memory;
+struct resource system_memory;
 
 /*
  * These are in 'arch/x86/mm/page_table.c'.

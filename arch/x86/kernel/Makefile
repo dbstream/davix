@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+obj-y += apic/built-in.a
 obj-y += early_idt.c.o
 obj-y += early_idt.S.o
 obj-y += main.c.o

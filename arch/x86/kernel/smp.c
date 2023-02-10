@@ -3,6 +3,7 @@
 #include <davix/smp.h>
 #include <davix/printk.h>
 #include <davix/panic.h>
+#include <asm/apic.h>
 #include <asm/msr.h>
 
 struct logical_cpu *cpu_slots = NULL;
@@ -84,6 +85,16 @@ void arch_init_smp(void)
 	 */
 	if(!madt)
 		panic("arch_init_smp(): no MADT table found.");
+
+	apic_init(madt);
+
+	/*
+	 * The BSP might not always be CPU#0...
+	 */
+	unsigned bsp = apic_read_id();
+	debug("smp: CPU#%u is the BSP.\n", bsp);
+
+	smp_self()->id = bsp;
 
 	/*
 	 * We need to know the highest logical CPU number to allocate the

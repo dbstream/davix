@@ -6,6 +6,10 @@
  * Please keep this list of MSRs sorted by address.
  */
 
+#define MSR_APIC_BASE 0x1b
+#define _APIC_BASE_X2APIC_MODE (1 << 10)
+#define _APIC_BASE_ENABLE (1 << 11)
+
 #define MSR_PAT 0x277
 
 #define MSR_EFER 0xc0000080
