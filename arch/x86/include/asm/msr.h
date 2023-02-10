@@ -2,13 +2,17 @@
 #ifndef __ASM_MSR_H
 #define __ASM_MSR_H
 
+/*
+ * Please keep this list of MSRs sorted by address.
+ */
+
+#define MSR_PAT 0x277
+
 #define MSR_EFER 0xc0000080
 #define _EFER_SCE (1 << 0)	/* enable syscall/sysret instructions */
 #define _EFER_LME (1 << 8)	/* long mode enable */
 #define _EFER_LMA (1 << 10)	/* long mode active (RO) */
 #define _EFER_NXE (1 << 11) 	/* no execute enable */
-
-#define MSR_PAT 0x277
 
 #define MSR_FSBASE 0xc0000100
 #define MSR_GSBASE 0xc0000101
