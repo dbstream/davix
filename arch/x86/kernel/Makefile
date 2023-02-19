@@ -5,4 +5,6 @@ obj-y += early_idt.S.o
 obj-y += main.c.o
 obj-y += main.S.o
 obj-y += smp.c.o
+obj-y += task.c.o
+obj-y += task_switch.S.o
 obj-y += uart.c.o

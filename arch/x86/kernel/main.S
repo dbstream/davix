@@ -14,7 +14,7 @@ _start:
 	 */
 
 	xorq %rbp, %rbp
-	movq $(early_kernel_stack + 0x1000), %rsp
+	movq $(kernel_stack + 0x1000), %rsp
 
 	subq $16, %rsp	/* allocate space on the stack */
 
@@ -22,7 +22,7 @@ _start:
 	 * Load the new GDT.
 	 */
 	movw $(GDT_SIZE - 1), (%rsp)
-	movq $early_kernel_gdt, 2(%rsp)
+	movq $x86_gdt, 2(%rsp)
 	lgdt (%rsp)
 
 	/*
@@ -55,14 +55,19 @@ _start:
 	pushq $0
 	jmp x86_start_kernel
 
-.section .data
+/*
+ * Make the GDT per-cpu.
+ */
+.section .cpulocal
 .balign 16
 
 /*
  * This should have the same layout as the "normal" kernel GDT.
  * It simplifies things.
  */
-early_kernel_gdt:
+.globl x86_gdt
+.type x86_gdt, @object
+x86_gdt:
 	/* NULL segment */
 	.quad 0
 
@@ -105,5 +110,8 @@ early_kernel_gdt:
 	.quad 0
 	.quad 0
 
-early_kernel_stack:
+.section .data
+.balign 16
+
+kernel_stack:
 	.fill 0x1000, 1, 0
