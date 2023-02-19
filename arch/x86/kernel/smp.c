@@ -152,9 +152,6 @@ void arch_init_smp(void)
 		}
 
 		rdwr_cpulocal_on(cpu, __smp_self) = cpu;
-
-		debug("Setting up CPU-local variables on CPU#%u... offset %p\n",
-			cpu->id, cpu->cpulocal_offset);
 	}
 
 	write_msr(MSR_GSBASE, (unsigned long) &__smp_self);
