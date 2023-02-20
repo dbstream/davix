@@ -5,6 +5,30 @@
 #include <davix/panic.h>
 #include <asm/apic.h>
 #include <asm/msr.h>
+#include <asm/segment.h>
+
+extern unsigned long x86_gdt[] cpulocal;
+extern struct x86_tss x86_tss cpulocal;
+
+static void install_tss(void)
+{
+	unsigned long addr =
+		(unsigned long) cpulocal_address(smp_self(), &x86_tss);
+
+	unsigned long limit = sizeof(struct x86_tss) - 1;
+	rdwr_cpulocal(x86_tss).iopb_offset = limit + 1;
+
+	rdwr_cpulocal(x86_gdt[__GDT_TSS]) =
+		((addr & 0xffffff) << 16)
+		| ((addr & 0xff000000) << 32)
+		| (limit & 0xffff)
+		| (limit & 0xf0000) << 32
+		| (0b1000UL << 52)
+		| (0b10001001UL << 40);
+	rdwr_cpulocal(x86_gdt[__GDT_TSS + 1]) = addr >> 32;
+
+	asm volatile("ltr %%ax" : : "a"(GDT_TSS) : "memory");
+}
 
 struct logical_cpu *cpu_slots = NULL;
 unsigned num_cpu_slots = 0;
@@ -155,4 +179,6 @@ void arch_init_smp(void)
 	}
 
 	write_msr(MSR_GSBASE, (unsigned long) &__smp_self);
+
+	install_tss();
 }

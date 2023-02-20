@@ -142,7 +142,7 @@ static inline void load_idt(unsigned long base, unsigned short limit)
  *
  *   ist5..7: unused
  */
-struct packed tss {
+struct packed x86_tss {
 	u32 reserved0;
 	u64 rsp0, rsp1, rsp2;
 	u64 reserved1;

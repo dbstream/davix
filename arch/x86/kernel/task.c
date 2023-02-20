@@ -3,6 +3,10 @@
 #include <davix/page_alloc.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <asm/segment.h>
+
+extern struct x86_tss x86_tss cpulocal;
+struct x86_tss x86_tss cpulocal;
 
 void x86_after_switch_from(struct task *from, struct task *to);
 void x86_after_switch_from(struct task *from, struct task *to)
