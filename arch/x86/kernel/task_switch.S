@@ -25,7 +25,7 @@ __switch_to:
 	/*
 	 * Call after_switch_from().
 	 */
-	call after_switch_from
+	call x86_after_switch_from
 
 	/*
 	 * Restore registers.

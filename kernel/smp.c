@@ -28,4 +28,6 @@ void init_smp(void)
 			return;
 		setup_sched_on(cpu);
 	}
+
+	sched_init();
 }

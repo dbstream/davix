@@ -3,6 +3,7 @@
 #include <davix/smp.h>
 #include <davix/printk.h>
 #include <davix/panic.h>
+#include <davix/page_alloc.h>
 #include <asm/apic.h>
 #include <asm/msr.h>
 #include <asm/segment.h>
@@ -170,15 +171,38 @@ void arch_init_smp(void)
 			/* TODO: use something else than kmalloc() */
 			void *mem = kmalloc(__cpulocal_end - __cpulocal_start);
 			if(!mem)
-				panic("x86/smp: Cannot allocate memory for CPU-local variables!\n");
+				panic("x86/smp: Cannot allocate memory for CPU-local variables!");
 
-			cpu->cpulocal_offset = (unsigned long) mem - (unsigned long) __cpulocal_start;
+			cpu->cpulocal_offset =
+				(unsigned long) mem - (unsigned long) __cpulocal_start;
 		}
 
 		rdwr_cpulocal_on(cpu, __smp_self) = cpu;
 	}
 
 	write_msr(MSR_GSBASE, (unsigned long) &__smp_self);
+
+	for_each_logical_cpu(cpu) {
+		if(!cpu->possible)
+			continue;
+
+		struct x86_tss *tss = cpulocal_address(cpu, &x86_tss);
+
+		struct page *page = alloc_page(ALLOC_KERNEL, 0);
+		if(!page)
+			panic("x86/smp: Cannot allocate memory for IRQ stack!");
+		tss->ist2 = page_to_virt(page) + PAGE_SIZE;
+
+		page = alloc_page(ALLOC_KERNEL, 0);
+		if(!page)
+			panic("x86/smp: Cannot allocate memory for double-fault stack!");
+		tss->ist3 = page_to_virt(page) + PAGE_SIZE;
+
+		page = alloc_page(ALLOC_KERNEL, 0);
+		if(!page)
+			panic("x86/smp: Cannot allocate memory for NMI stack!");
+		tss->ist4 = page_to_virt(page) + PAGE_SIZE;
+	}
 
 	install_tss();
 }
