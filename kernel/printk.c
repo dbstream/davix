@@ -2,6 +2,7 @@
 #include <davix/printk.h>
 #include <davix/printk_lib.h>
 #include <davix/spinlock.h>
+#include <davix/time.h>
 
 static struct console *atomic first_console = NULL;
 static spinlock_t console_lock = SPINLOCK_INIT(console_lock);
@@ -29,8 +30,15 @@ static void printk_emit(char loglevel, const char *str)
 
 void vprintk(char loglevel, const char *fmt, va_list ap)
 {
-	char buf[1024];
-	vsnprintk(buf, 1024, fmt, ap);
+	char buf[512];
+
+	usecs_t us = us_since_boot();
+	snprintk(buf, 512, "[ %4lu.%06u ] ",
+		us / 1000000, (unsigned int) (us % 1000000));
+
+	unsigned int i = strlen(buf);
+	vsnprintk(buf + i, 512 - i, fmt, ap);
+
 	printk_emit(loglevel, buf);
 }
 

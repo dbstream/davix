@@ -35,7 +35,7 @@ static inline void add_task_to_runqueue(struct task *task)
 	spin_release(&runqueue.rq_lock, irqflag);
 }
 
-void setup_sched_on(struct logical_cpu *cpu)
+static void setup_sched_on(struct logical_cpu *cpu)
 {
 	struct task *idle = kmalloc(sizeof(struct task));
 	if(!idle)
@@ -53,6 +53,11 @@ void setup_sched_on(struct logical_cpu *cpu)
 
 void sched_init(void)
 {
+	for_each_logical_cpu(cpu) {
+		if(!cpu->possible)
+			return;
+		setup_sched_on(cpu);
+	}
 	init_task.flags = 0;
 	init_task.task_state = TASK_RUNNING;
 	strncpy(init_task.comm, "init", COMM_LEN);

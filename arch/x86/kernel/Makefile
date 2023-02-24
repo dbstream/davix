@@ -7,4 +7,5 @@ obj-y += main.S.o
 obj-y += smp.c.o
 obj-y += task.c.o
 obj-y += task_switch.S.o
+obj-y += time.c.o
 obj-y += uart.c.o

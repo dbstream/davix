@@ -132,11 +132,6 @@ void arch_setup_init_task(struct task *task);
  */
 void switch_to(struct task *from, struct task *to);
 
-/*
- * Initialize basic scheduler data structures on a particular CPU.
- */
-void setup_sched_on(struct logical_cpu *cpu);
-
 void sched_init(void);
 
 /*

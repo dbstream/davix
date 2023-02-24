@@ -22,12 +22,4 @@ void init_smp(void)
 				cpu->present ? "present" : "hot-pluggable");
 		}
 	}
-
-	for_each_logical_cpu(cpu) {
-		if(!cpu->possible)
-			return;
-		setup_sched_on(cpu);
-	}
-
-	sched_init();
 }
