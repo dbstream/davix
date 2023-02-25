@@ -132,15 +132,13 @@ static inline void load_idt(unsigned long base, unsigned short limit)
  *
  *   rsp1..3: unused
  *
- *   ist1:    timer interrupt
+ *   ist1:    IRQ stack
  *
- *   ist2:    IRQ stack
+ *   ist2:    Double-fault stack
  *
- *   ist3:    Double-fault stack
+ *   ist3:    NMI & MCE stack
  *
- *   ist4:    NMI & MCE stack
- *
- *   ist5..7: unused
+ *   ist4..7: unused
  */
 struct packed x86_tss {
 	u32 reserved0;
@@ -172,5 +170,9 @@ struct packed x86_tss {
 #define GDT_TSS (8 * __GDT_TSS)
 
 #define GDT_SIZE (8 * __GDT_SIZE)
+
+#define IRQ_IST 1
+#define DOUBLEFAULT_IST 2
+#define NMI_IST 3
 
 #endif /* __ASM_SEGMENT_H */

@@ -13,4 +13,9 @@ void start_kernel(void);
  */
 void arch_early_init(void);
 
+/*
+ * Setup IRQ handling.
+ */
+void arch_setup_interrupts(void);
+
 #endif /* __DAVIX_SETUP_H */

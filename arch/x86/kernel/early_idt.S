@@ -12,7 +12,7 @@ repeat \what %(\from+1) \to
 .endm
 
 .macro isr excep_nr cfunc
-isr_\excep_nr:
+early_isr_\excep_nr:
 
 	/*
 	 * If the CPU pushed an error code, %rsp will be
@@ -28,11 +28,11 @@ isr_\excep_nr:
 	pushq %rax
 	movq $\cfunc, %rax /* later, we do a ``jmp *%rax`` to the C function */
 
-	jmp isr_stub_common
+	jmp early_isr_stub_common
 
 .endm
 
-isr_stub_common:
+early_isr_stub_common:
 
 	/*
 	 * Save register state to the irq_frame.
@@ -133,10 +133,10 @@ isr 31 __handle_early_exception	/* Reserved vector */
 .section .rodata
 
 .macro ivt_entry excep_nr
-.quad isr_\excep_nr
+.quad early_isr_\excep_nr
 .endm
 
-.global early_isr_stubs
+.globl early_isr_stubs
 .type early_isr_stubs, @object
 
 .balign 16

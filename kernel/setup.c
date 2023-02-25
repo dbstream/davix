@@ -22,5 +22,7 @@ void start_kernel(void)
 	init_smp();
 	sched_init();
 
+	arch_setup_interrupts();
+
 	panic("TODO: Implement the rest of the kernel.");
 }

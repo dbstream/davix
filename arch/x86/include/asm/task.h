@@ -50,14 +50,9 @@ struct arch_task_info {
 	struct page *kernel_stack;
 
 	/*
-	 * A separate timer interrupt stack for handling the timer interrupt.
-	 *
-	 * This task needs to be separate from the kernel stack, because on
-	 * interrupted syscalls before the kernel stack is loaded, CPL is 0
-	 * meaning that TSS::rsp0 is not loaded, therefore the interrupt uses a
-	 * garbage stack pointer, which is bad.
+	 * Used by interrupts.
 	 */
-	struct page *timer_stack;
+	struct page *irq_stack;
 };
 
 #endif /* __ASM_TASK_H */

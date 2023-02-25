@@ -41,9 +41,9 @@ void arch_init_idle_task(struct logical_cpu *cpu, struct task *task)
 	if(!task->arch_task_info.kernel_stack)
 		panic("arch_init_idle_task: Failed to allocate memory for the kernel stack.");
 
-	task->arch_task_info.timer_stack = alloc_page(ALLOC_KERNEL, 0);
-	if(!task->arch_task_info.timer_stack)
-		panic("arch_init_idle_task: Failed to allocate memory for the timer stack.");
+	task->arch_task_info.irq_stack = alloc_page(ALLOC_KERNEL, 0);
+	if(!task->arch_task_info.irq_stack)
+		panic("arch_init_idle_task: Failed to allocate memory for the IRQ stack.");
 
 	if(!cpu->online)
 		return;
@@ -71,11 +71,11 @@ void arch_setup_init_task(struct task *task)
 	if(!task->arch_task_info.kernel_stack)
 		panic("arch_setup_init_task: Failed to allocate memory for the kernel stack.");
 
-	task->arch_task_info.timer_stack = alloc_page(ALLOC_KERNEL, 0);
-	if(!task->arch_task_info.timer_stack)
-		panic("arch_setup_init_task: Failed to allocate memory for the timer stack.");
+	task->arch_task_info.irq_stack = alloc_page(ALLOC_KERNEL, 0);
+	if(!task->arch_task_info.irq_stack)
+		panic("arch_setup_init_task: Failed to allocate memory for the IRQ stack.");
 
 	struct x86_tss *tss = cpulocal_address(smp_self(), &x86_tss);
 	tss->rsp0 = page_to_virt(task->arch_task_info.kernel_stack) + PAGE_SIZE;
-	tss->ist1 = page_to_virt(task->arch_task_info.timer_stack) + PAGE_SIZE;
+	tss->ist1 = page_to_virt(task->arch_task_info.irq_stack) + PAGE_SIZE;
 }

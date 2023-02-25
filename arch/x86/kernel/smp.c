@@ -190,18 +190,13 @@ void arch_init_smp(void)
 
 		struct page *page = alloc_page(ALLOC_KERNEL, 0);
 		if(!page)
-			panic("x86/smp: Cannot allocate memory for IRQ stack!");
+			panic("x86/smp: Cannot allocate memory for double-fault stack!");
 		tss->ist2 = page_to_virt(page) + PAGE_SIZE;
 
 		page = alloc_page(ALLOC_KERNEL, 0);
 		if(!page)
-			panic("x86/smp: Cannot allocate memory for double-fault stack!");
-		tss->ist3 = page_to_virt(page) + PAGE_SIZE;
-
-		page = alloc_page(ALLOC_KERNEL, 0);
-		if(!page)
 			panic("x86/smp: Cannot allocate memory for NMI stack!");
-		tss->ist4 = page_to_virt(page) + PAGE_SIZE;
+		tss->ist3 = page_to_virt(page) + PAGE_SIZE;
 	}
 
 	install_tss();
