@@ -2,6 +2,8 @@
 #ifndef __ASM_APIC_H
 #define __ASM_APIC_H
 
+#include <davix/types.h>
+
 /*
  * APIC interface functions, only safe to call
  * from interrupt-disabled environments.
@@ -27,6 +29,11 @@ struct apic {
 	 * Read the APIC ID.
 	 */
 	unsigned (*read_id)(void);
+
+	u32 (*read)(unsigned long offset);
+	void (*write)(unsigned long offset, u32 value);
+
+	void (*write_icr)(u32 value, u32 dst);
 };
 
 #define APIC_ID 0x20
@@ -61,5 +68,40 @@ static inline unsigned apic_read_id(void)
 {
 	return active_apic_interface->read_id();
 }
+
+static inline u32 apic_read(unsigned long offset)
+{
+	return active_apic_interface->read(offset);
+}
+
+static inline void apic_write(unsigned long offset, u32 value)
+{
+	active_apic_interface->write(offset, value);
+}
+
+static inline void apic_write_icr(u32 value, u32 dst)
+{
+	active_apic_interface->write_icr(value, dst);
+}
+
+/*
+ * ICR::Delivery Mode
+ */
+#define APIC_ICR_FIXED (0 << 8)
+#define APIC_ICR_SMI (2 << 8)
+#define APIC_ICR_NMI (4 << 8)
+#define APIC_ICR_INIT (5 << 8)
+#define APIC_ICR_SIPI (6 << 8)
+
+/*
+ * ICR::Level and ICR::Trigger Mode
+ */
+#define APIC_ICR_ASSERT (1 << 14)
+#define APIC_ICR_LEVEL (1 << 15)
+
+/*
+ * ICR::Destination Shorthand
+ */
+#define APIC_ICR_SELF (1 << 18)
 
 #endif /* __ASM_APIC_H */

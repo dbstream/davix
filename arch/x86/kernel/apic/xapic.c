@@ -8,12 +8,12 @@
 
 static void *xapic_map_address;
 
-static inline u32 xapic_read(unsigned long offset)
+static u32 xapic_read(unsigned long offset)
 {
 	return *(volatile u32 *) ((unsigned long) xapic_map_address + offset);
 }
 
-static inline void xapic_write(unsigned long offset, u32 value)
+static void xapic_write(unsigned long offset, u32 value)
 {
 	*(volatile u32 *) ((unsigned long) xapic_map_address + offset) = value;
 }
@@ -40,8 +40,25 @@ static unsigned xapic_read_id(void)
 	return xapic_read(APIC_ID) >> 24;
 }
 
+static void xapic_write_icr(u32 value, u32 dst)
+{
+	xapic_write(APIC_ICR_HIGH, dst << 24);
+	xapic_write(APIC_ICR_LOW, value);
+
+	/*
+	 * Perhaps we should do this in the inverse order? i.e. wait for the
+	 * ICR to be idle before writing to it.
+	 */
+	do {
+		relax();
+	} while(xapic_read(APIC_ICR_LOW) & (1 << 12));
+}
+
 struct apic xapic_impl = {
 	.init = xapic_init,
 	.init_other = xapic_init_other,
-	.read_id = xapic_read_id
+	.read_id = xapic_read_id,
+	.read = xapic_read,
+	.write = xapic_write,
+	.write_icr = xapic_write_icr
 };
