@@ -123,7 +123,7 @@ void arch_setup_interrupts(void)
 	 * ... except for NMI, MCE and doublefault.
 	 */
 	IDT(2, NMI_IST);
-	IDT(8, DOUBLEFAULT_IST,;
+	IDT(8, DOUBLEFAULT_IST);
 	IDT(18, NMI_IST);
 
 	/*
