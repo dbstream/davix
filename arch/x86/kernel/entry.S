@@ -73,7 +73,7 @@ isr_common:
 	pushq $0
 	movq %rsp, %rbp
 
-	cmpw $GDT_KERNEL_CS, 168(%rsp)
+	cmpw $GDT_KERNEL_CS, 160(%rsp)
 	jne 1f /* userspace - always swapgs */
 
 	movq %rax, %r8 /* stash cfunc in r8 as it gets overwritten by rdmsr */
@@ -149,8 +149,9 @@ repeat hwirq 92 127
 repeat hwirq 128 159
 repeat hwirq 160 191
 repeat hwirq 192 223
-repeat hwirq 224 254
+repeat hwirq 224 253
 
+isr 254 x86_timer
 isr 255 x86_spurious
 
 .macro ivt_entry nr
