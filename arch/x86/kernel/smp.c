@@ -34,22 +34,28 @@ static void install_tss(void)
 struct logical_cpu *cpu_slots = NULL;
 unsigned num_cpu_slots = 0;
 
+unsigned *acpi_cpu_to_lapic_id;
+static unsigned num_acpi_cpus = 0;
+
 static void madt_calc_max_cpu(struct acpi_subtable_header *hdr, void *arg)
 {
 	(void) arg;
 
 	unsigned no;
+	unsigned acpino;
 	switch(hdr->type) {
 	case ACPI_MADT_TYPE_LOCAL_APIC: do {
 		struct acpi_madt_local_apic *apic =
 			(struct acpi_madt_local_apic *) hdr;
 		no = apic->id;
+		acpino = apic->processor_id;
 		goto common;
 	} while (0);
 	case ACPI_MADT_TYPE_LOCAL_X2APIC: do {
 		struct acpi_madt_local_x2apic *apic =
 			(struct acpi_madt_local_x2apic *) hdr;
 		no = apic->local_apic_id;
+		acpino = apic->uid;
 		goto common;
 	} while(0);
 	default:
@@ -59,6 +65,8 @@ static void madt_calc_max_cpu(struct acpi_subtable_header *hdr, void *arg)
 common:
 	if(no + 1 > num_cpu_slots)
 		num_cpu_slots = no + 1;
+	if(acpino + 1 > num_acpi_cpus)
+		num_acpi_cpus = acpino + 1;
 }
 
 static void madt_set_cpu_present(struct acpi_subtable_header *hdr, void *arg)
@@ -67,6 +75,7 @@ static void madt_set_cpu_present(struct acpi_subtable_header *hdr, void *arg)
 
 	bool present = 0;
 	unsigned no;
+	unsigned acpino;
 	switch(hdr->type) {
 	case ACPI_MADT_TYPE_LOCAL_APIC: do {
 		struct acpi_madt_local_apic *apic =
@@ -74,6 +83,7 @@ static void madt_set_cpu_present(struct acpi_subtable_header *hdr, void *arg)
 		if(apic->lapic_flags & 0b11)
 			present = 1;
 		no = apic->id;
+		acpino = apic->processor_id;
 		goto common;
 	} while (0);
 	case ACPI_MADT_TYPE_LOCAL_X2APIC: do {
@@ -82,6 +92,7 @@ static void madt_set_cpu_present(struct acpi_subtable_header *hdr, void *arg)
 		if(apic->lapic_flags & 0b11)
 			present = 1;
 		no = apic->local_apic_id;
+		acpino = apic->uid;
 		goto common;
 	} while(0);
 	default:
@@ -92,6 +103,8 @@ common:;
 	struct logical_cpu *cpu = &cpu_slots[no];
 	cpu->possible = 1;
 	cpu->present = present;
+
+	acpi_cpu_to_lapic_id[acpino] = no;
 }
 
 extern char __cpulocal_start[], __cpulocal_end[];
@@ -138,6 +151,10 @@ void arch_init_smp(void)
 	cpu_slots = kmalloc(num_cpu_slots * sizeof(struct logical_cpu));
 	if(!cpu_slots)
 		panic("arch_init_smp(): Couldn't allocate struct logical_cpu array.");
+
+	acpi_cpu_to_lapic_id = kmalloc(num_acpi_cpus * sizeof(unsigned));
+	if(!acpi_cpu_to_lapic_id)
+		panic("arch_init_smp(): Couldn't allocate ACPI CPU => LAPIC ID conversion array.");
 
 	for_each_logical_cpu(cpu) {
 		cpu->id = cpu - cpu_slots;	/* magic pointer arithmetic */

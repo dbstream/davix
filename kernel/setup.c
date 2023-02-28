@@ -23,6 +23,8 @@ void start_kernel(void)
 	sched_init();
 
 	arch_setup_interrupts();
+	enable_interrupts();
 
-	panic("TODO: Implement the rest of the kernel.");
+	for(;;)
+		relax();
 }

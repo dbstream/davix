@@ -17,4 +17,6 @@ static inline struct logical_cpu *smp_self(void)
 	return ret;
 }
 
+extern unsigned *acpi_cpu_to_lapic_id;
+
 #endif /* __ASM_SMP_H */

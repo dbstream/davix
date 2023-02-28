@@ -2,6 +2,8 @@
 #include <davix/setup.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <davix/time.h>
+#include <asm/apic.h>
 #include <asm/entry.h>
 #include <asm/segment.h>
 
@@ -73,6 +75,14 @@ void x86_irq(struct irq_frame *frame);
 void x86_irq(struct irq_frame *frame)
 {
 	debug("entry: Interrupt vector %u called.\n", frame->excep_nr);
+	apic_send_eoi();
+}
+
+void x86_timer(struct irq_frame *frame);
+void x86_timer(struct irq_frame *frame)
+{
+	apic_send_eoi();
+	timer_interrupt();
 }
 
 void x86_spurious(struct irq_frame *frame);
@@ -86,12 +96,12 @@ extern unsigned long x86_isr_stubs[];
 static struct idt_entry idt[256];
 
 static void set_idt_gate(unsigned int idx, unsigned long addr,
-	unsigned long ist, bool trap)
+	unsigned long ist)
 {
 	idt[idx] = (struct idt_entry) {
 		.offset1 = addr,
 		.cs = GDT_KERNEL_CS,
-		.attribs = 0b10001110 | trap,
+		.attribs = 0b10001110,
 		.ist_entry = 0,
 		.reserved = 0,
 		.offset2 = addr >> 16,
@@ -101,28 +111,31 @@ static void set_idt_gate(unsigned int idx, unsigned long addr,
 
 void arch_setup_interrupts(void)
 {
-#define IDT(i, ist, trap) set_idt_gate(i, x86_isr_stubs[i], ist, trap)
+#define IDT(i, ist) set_idt_gate(i, x86_isr_stubs[i], ist)
 
 	/*
 	 * Exceptions...
 	 */
 	for(unsigned int i = 0; i < 32; i++)
-		IDT(i, 0, 1);
+		IDT(i, 0);
 
 	/*
 	 * ... except for NMI, MCE and doublefault.
 	 */
-	IDT(2, NMI_IST, 0);
-	IDT(8, DOUBLEFAULT_IST, 0);
-	IDT(18, NMI_IST, 0);
+	IDT(2, NMI_IST);
+	IDT(8, DOUBLEFAULT_IST,;
+	IDT(18, NMI_IST);
 
 	/*
 	 * Hardware IRQ vectors and similar.
 	 */
 	for(unsigned int i = 32; i < 256; i++)
-		IDT(i, IRQ_IST, 0);
+		IDT(i, IRQ_IST);
 
 #undef IDT
 
 	load_idt((unsigned long) &idt[0], sizeof(idt) - 1);
+
+	/* now we are ready to handle the timer interrupt */
+	apic_configure();
 }

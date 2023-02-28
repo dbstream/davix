@@ -2,6 +2,8 @@
 #ifndef __DAVIX_TIME_H
 #define __DAVIX_TIME_H
 
+#define TIMER_HZ 1 /* How often is timer_interrupt() called? */
+
 /*
  * Why 'unsigned long long'?
  *
@@ -53,5 +55,12 @@ static inline void mdelay(msecs_t ms)
  * since boot.
  */
 void time_init(void);
+
+/*
+ * Timer interrupt, called periodically by arch.
+ * The exact time interval does not matter, as the scheduler/timer subsystem
+ * uses ns_since_boot() to determine how much time has passed.
+ */
+void timer_interrupt(void);
 
 #endif /* __DAVIX_TIME_H */

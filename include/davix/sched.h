@@ -155,4 +155,12 @@ void schedule(void);
  */
 bool sched_wake(struct task *task);
 
+/*
+ * For now, preempt will always be enabled.
+ */
+static inline bool preempt_enabled(void)
+{
+	return 1;
+}
+
 #endif /* __DAVIX_SCHED_H */

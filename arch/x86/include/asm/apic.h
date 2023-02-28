@@ -54,6 +54,23 @@ struct apic {
 #define APIC_TIMER_COUNT 0x390
 #define APIC_TIMER_DIV 0x3e0
 
+#define APIC_TGM_LEVEL (1 << 15)
+#define APIC_POLARITY_LOW (1 << 13)
+
+#define APIC_DM_FIXED (0)
+#define APIC_DM_SMI (2 << 8)
+#define APIC_DM_NMI (4 << 8)
+#define APIC_DM_INIT (5 << 8)
+#define APIC_DM_ExtINT (7 << 8)
+
+#define APIC_IRQ_MASKED (1 << 16) /* masked - i.e. disabled */
+
+#define APIC_TIMER_MASKED (1 << 16) /* masked - i.e. disabled */
+
+#define APIC_TIMER_ONESHOT (0)
+#define APIC_TIMER_PERIODIC (1 << 17)
+#define APIC_TIMER_DEADLINE (2 << 17)
+
 extern struct apic xapic_impl;
 extern struct apic x2apic_impl;
 
@@ -63,6 +80,8 @@ extern unsigned long apic_base;
 struct acpi_table_madt;
 
 void apic_init(struct acpi_table_madt *madt);
+
+void apic_configure(void); /* configure the APIC and start the timer */
 
 static inline unsigned apic_read_id(void)
 {
@@ -82,6 +101,11 @@ static inline void apic_write(unsigned long offset, u32 value)
 static inline void apic_write_icr(u32 value, u32 dst)
 {
 	active_apic_interface->write_icr(value, dst);
+}
+
+static inline void apic_send_eoi(void)
+{
+	active_apic_interface->write(APIC_EOI, 0);
 }
 
 /*
