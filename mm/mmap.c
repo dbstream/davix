@@ -4,6 +4,7 @@
  */
 #include <davix/errno.h>
 #include <davix/mm.h>
+#include <davix/panic.h>
 #include <asm/page.h>
 
 static unsigned long get_unmapped_area_bottomup(struct mm *mm,
@@ -189,4 +190,10 @@ void vma_avl_update_callback(struct avlnode *node)
 	}
 
 	vma->biggest_gap_to_prev = gap;
+}
+
+void destroy_mm(struct mm *mm)
+{
+	(void) mm;
+	panic("destroy_mm() unimplemented.");
 }

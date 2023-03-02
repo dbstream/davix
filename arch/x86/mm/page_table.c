@@ -430,3 +430,8 @@ has_pteval:;
 	p1d_t p1d = (p1d_t) PTE_VADDR(p2d[P2E(addr)]);
 	update_pte(pgop, addr, &p1d[P1E(addr)], pteval);
 }
+
+void switch_to_mm(struct mm *mm)
+{
+	write_cr3(virt_to_phys(mm->page_tables));
+}

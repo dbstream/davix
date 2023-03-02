@@ -8,6 +8,13 @@
 
 const char *kernel_cmdline;
 
+void mt_test(void *arg);
+void mt_test(void *arg)
+{
+	(void) arg;
+	info("\"Hello, World!\" from a kernel task!\n");
+}
+
 void start_kernel(void)
 {
 	info("Starting Davix kernel, version %s%s...\n",
@@ -24,6 +31,8 @@ void start_kernel(void)
 
 	arch_setup_interrupts();
 	enable_interrupts();
+
+	create_kernel_task("kernel task", mt_test, NULL);
 
 	for(;;)
 		relax();

@@ -2,6 +2,7 @@
 #ifndef __DAVIX_ATOMIC_H
 #define __DAVIX_ATOMIC_H
 
+#include <davix/types.h>
 #include <asm/atomic.h>
 
 /*
@@ -34,5 +35,17 @@ typedef enum memory_order {
 #define atomic_fetch_or __atomic_fetch_or
 #define atomic_fetch_xor __atomic_fetch_xor
 #define atomic_fetch_and __atomic_fetch_and
+
+typedef atomic unsigned long refcnt_t;
+
+static inline void grab(refcnt_t *refcnt)
+{
+	atomic_fetch_add(refcnt, 1, memory_order_relaxed);
+}
+
+static inline bool drop(refcnt_t *refcnt)
+{
+	return atomic_fetch_sub(refcnt, 1, memory_order_relaxed) == 1;
+}
 
 #endif /* __DAVIX_ATOMIC_H */

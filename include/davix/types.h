@@ -75,17 +75,17 @@ typedef __u64 u64;
 
 #define warn_unused __attribute__((warn_unused_result))
 
-#define strlen __builtin_strlen
-#define strcmp __builtin_strcmp
-#define strncmp __builtin_strncmp
-#define strcpy __builtin_strcpy
-#define strncpy __builtin_strncpy
-#define strcat __builtin_strcat
-#define strncat __builtin_strncat
-#define memcmp __builtin_memcmp
-#define memcpy __builtin_memcpy
-#define memset __builtin_memset
-#define memmove __builtin_memmove
+unsigned long strlen(const char *s);
+int strcmp(const char *a, const char *b);
+int strncmp(const char *a, const char *b, unsigned long n);
+char *strcpy(char *dst, const char *src);
+char *strncpy(char *dst, const char *src, unsigned long n);
+char *strcat(char *dst, const char *src);
+char *strncat(char *dst, const char *src, unsigned long n);
+int memcmp(const void *mem1, const void *m2, unsigned long n);
+void *memcpy(void *dst, const void *src, unsigned long n);
+void *memset(void *dst, int value, unsigned long n);
+void *memmove(void *dst, const void *src, unsigned long n);
 
 typedef __builtin_va_list va_list;
 #define va_start __builtin_va_start

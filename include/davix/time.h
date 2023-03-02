@@ -2,7 +2,7 @@
 #ifndef __DAVIX_TIME_H
 #define __DAVIX_TIME_H
 
-#define TIMER_HZ 1 /* How often is timer_interrupt() called? */
+#define TIMER_HZ 100 /* How often is timer_interrupt() called? */
 
 /*
  * Why 'unsigned long long'?

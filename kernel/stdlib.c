@@ -44,8 +44,8 @@ char *strncpy(char *dst, const char *src, unsigned long n);
 char *strncpy(char *dst, const char *src, unsigned long n)
 {
         char *dst_old = dst;
-        for(; n && *src; src++, n--)
-                *dst = *src;
+        for(; n && (n - 1) && *src; src++, n--)
+                *(dst++) = *src;
         for(; n; dst++, n--)
                 *dst = 0;
         return dst_old;

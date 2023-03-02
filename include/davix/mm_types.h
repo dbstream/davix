@@ -148,6 +148,8 @@ struct mm {
 	 * NOTE: pgop_end() must come before unlock(vma);
 	 */
 	spinlock_t mm_lock;
+
+	refcnt_t refcnt;
 };
 
 typedef enum pgcachemode {

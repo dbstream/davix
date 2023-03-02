@@ -14,11 +14,14 @@
 #include <davix/spinlock.h>
 #include <asm/task.h>
 
+struct mm;
+
 typedef bitwise unsigned int task_flags_t;
 #define __TF(x) ((force task_flags_t) (1 << x))
 
 #define TASK_IDLE __TF(0) /* The task is an idle task. */
-#define TASK_GOING_TO_SLEEP __TF(0) /* Postpone sched_wake() */
+#define TASK_GOING_TO_SLEEP __TF(1) /* Postpone sched_wake() */
+#define TASK_NEED_RESCHED __TF(2)
 
 /*
  * These are the possible states of an alive task.
@@ -72,8 +75,57 @@ struct task {
 	 */
 	struct list rq_list;
 
+	/*
+	 * Most likely the first 15 chars of what was passed to execve().
+	 */
 	char comm[COMM_LEN];
+
+	/*
+	 * VMM for the task.
+	 * NOTE: The task holds a reference to this. Therefore, the CPU that is
+	 * actively using this MM does not need to hold a reference to it.
+	 */
+	struct mm *mm;
 };
+
+/*
+ * Reschedule if it is needed.
+ * This is called on kernel->user return, IRQ return and
+ * outermost preempt-enables.
+ */
+void maybe_resched(void);
+
+extern unsigned long preempt_disabled cpulocal;
+
+static inline void preempt_disable(void)
+{
+	bool irqs = interrupts_enabled();
+	disable_interrupts();
+
+	rdwr_cpulocal(preempt_disabled)++;
+
+	if(irqs)
+		enable_interrupts();
+}
+
+static inline void preempt_enable(void)
+{
+	rdwr_cpulocal(preempt_disabled)--;
+	maybe_resched();
+}
+
+static inline bool preempt_enabled(void)
+{
+	bool irqs = interrupts_enabled();
+	disable_interrupts();
+
+	unsigned long value = rdwr_cpulocal(preempt_disabled);
+
+	if(irqs)
+		enable_interrupts();
+
+	return value == 0;
+}
 
 static inline void set_task_flag(struct task *task, task_flags_t flag)
 {
@@ -107,14 +159,19 @@ extern struct task *idle_task cpulocal;
 
 extern struct task *__current_task cpulocal;
 
+/*
+ * Safely read the current task.
+ *
+ * NOTE: Using this should be avoided from within scheduler code, because
+ * it has a preempt_{disable/enable} pair, which might lead to the scheduler
+ * calling into itself, thereby leading to infinite recursion.
+ */
 static inline struct task *current_task(void)
 {
-	return rdwr_cpulocal(__current_task);
-}
-
-static inline void set_current_task(struct task *task)
-{
-	rdwr_cpulocal(__current_task) = task;
+	preempt_disable();
+	struct task *ret = rdwr_cpulocal(__current_task);
+	preempt_enable();
+	return ret;
 }
 
 /*
@@ -123,9 +180,20 @@ static inline void set_current_task(struct task *task)
 void arch_init_idle_task(struct logical_cpu *cpu, struct task *task);
 
 /*
+ * Setup architecture-specific state of a task that will cause it to call
+ * 'function' with 'arg'.
+ */
+int arch_setup_task(struct task *task, void (*function)(void *), void *arg);
+
+/*
  * Perform architecture-specific initialization of the init task.
  */
 void arch_setup_init_task(struct task *task);
+
+/*
+ * Free architecture-specific task resources.
+ */
+void arch_task_died(struct task *task);
 
 /*
  * Perform the context switch to a new task.
@@ -139,6 +207,12 @@ void sched_init(void);
  * task switched to.
  */
 void sched_after_task_switch(struct task *from, struct task *to);
+
+/*
+ * Architectures must call this function as the first thing they call in a new
+ * task.
+ */
+void sched_after_fork(void);
 
 /*
  * schedule() - switch task to the next task in the runqueue.
@@ -155,12 +229,9 @@ void schedule(void);
  */
 bool sched_wake(struct task *task);
 
-/*
- * For now, preempt will always be enabled.
- */
-static inline bool preempt_enabled(void)
-{
-	return 1;
-}
+void handle_dead_task(struct task *task);
+
+void sched_start_task(struct task *task);
+int create_kernel_task(const char *name, void (*function)(void *), void *arg);
 
 #endif /* __DAVIX_SCHED_H */

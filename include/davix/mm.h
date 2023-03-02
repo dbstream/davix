@@ -25,6 +25,8 @@
 
 extern struct mm kernelmode_mm;
 
+void destroy_mm(struct mm *mm);
+
 static inline void mm_lock(struct mm *mm)
 {
 	_spin_acquire(&mm->mm_lock);
@@ -106,5 +108,7 @@ void *vmap(unsigned long phys_addr, unsigned long len,
 	pgmode_t mode, pgcachemode_t cachemode);
 
 void vunmap(void *mem);
+
+void switch_to_mm(struct mm *mm);
 
 #endif /* __DAVIX_MM_H */

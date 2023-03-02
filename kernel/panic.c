@@ -2,6 +2,7 @@
 #include <davix/atomic.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <davix/sched.h>
 #include <asm/irq.h>
 
 static atomic unsigned long in_panic = 0;
@@ -27,6 +28,7 @@ static inline void enter_panic(void)
 void vpanic_frame(struct stack_frame *frame, const char *fmt, va_list *ap)
 {
 	disable_interrupts();
+	preempt_disable(); /* stay safe */
 
 	enter_panic();
 	printk_bust_locks();

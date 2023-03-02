@@ -17,7 +17,8 @@ struct mm kernelmode_mm = {
 	.mm_lock = SPINLOCK_INIT(kernelmode_mm.mm_lock),
 	.page_tables = NULL,
 	.vma_list = LIST_INIT(kernelmode_mm.vma_list),
-	.vma_tree = AVLTREE_INIT(kernelmode_mm.vma_tree)
+	.vma_tree = AVLTREE_INIT(kernelmode_mm.vma_tree),
+	.refcnt = 1
 };
 
 static inline void insert_into_kernelmode_mm(struct vm_area *area)

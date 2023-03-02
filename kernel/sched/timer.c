@@ -5,7 +5,8 @@
 
 void timer_interrupt(void)
 {
-	debug("timer interrupt\n");
-	if(preempt_enabled())
-		schedule();
+	/*
+	 * This is literally how we decide when tasks need to switch.
+	 */
+	set_task_flag(current_task(), TASK_NEED_RESCHED);
 }

@@ -3,9 +3,20 @@
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/time.h>
+#include <davix/sched.h>
 #include <asm/apic.h>
 #include <asm/entry.h>
 #include <asm/segment.h>
+
+/*
+ * NOTE on preempt_{disable/enable} usage:
+ *
+ * preempt_enable() will call maybe_resched(). This means that, if there is a
+ * preempt_{disable/enable} pair within any code path in an interrupt handler
+ * and preemption wasn't disabled when the interrupt was delivered, we might
+ * potentially reschedule right in the middle of an interrupt handler, which
+ * would be bad.
+ */
 
 static inline struct stack_frame create_fake_frame(unsigned long rbp,
 	unsigned long rip)
@@ -74,21 +85,30 @@ void x86_mce(struct irq_frame *frame)
 void x86_irq(struct irq_frame *frame);
 void x86_irq(struct irq_frame *frame)
 {
+	preempt_disable();
 	debug("entry: Interrupt vector %u called.\n", frame->excep_nr);
+
 	apic_send_eoi();
+	preempt_enable(); /* This will call maybe_resched() for us. */
 }
 
 void x86_timer(struct irq_frame *frame);
 void x86_timer(struct irq_frame *frame)
 {
+	preempt_disable();
+
 	apic_send_eoi();
 	timer_interrupt();
+
+	preempt_enable();
 }
 
 void x86_spurious(struct irq_frame *frame);
 void x86_spurious(struct irq_frame *frame)
 {
+	preempt_disable();
 	debug("entry: Spurious interrupt called.\n");
+	preempt_enable();
 }
 
 extern unsigned long x86_isr_stubs[];
