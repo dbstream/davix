@@ -79,3 +79,33 @@ The preferred license for kernel code is the MIT license. However, other
 licenses are acceptable, and sometimes necessary. For example, all code under
 tools/kconfig is copied from the Linux kernel v6.0 (scripts/kconfig, with slight
 modifications), and is under the GPL-2.0 license.
+
+Contributing
+============
+
+If you, for some odd reason, find yourself in a position where you have the
+energy and the will to contribute to the kernel, here are some useful things to
+know:
+
+Enable debug builds in ``make nconfig -> General kernel options`` when you
+compile your code. It will define a macro, ``CONFIG_DEBUG_BUILD``, causing a
+number of additional flags to be passed to ``gcc``. If you have the Linux kernel
+utility ``sparse`` installed, you should also enable ``sparse`` usage in
+``make nconfig -> Compiler options``.
+
+TODO: Expand this list.
+
+Credits
+=======
+
+A lot of valuable insights have been gained from a number of places, notably:
+
+* Linux kernel documentation and papers, such as Mel Gorman's very good book on
+  the Linux kernel memory management subsystem.
+
+* The OS development discord server, where many interesting discussions have
+  taken place.
+
+* The OSdev wiki.
+
+* Intel's Intel64 SDM, also known as the Good Book (TM), and AMD's AMD64 vol. 3.
