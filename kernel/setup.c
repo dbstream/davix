@@ -32,6 +32,13 @@ void start_kernel(void)
 	arch_setup_interrupts();
 	enable_interrupts();
 
+	/*
+	 * start_kernel() is entered with a preempt_disabled count of 1. Now that
+	 * interrupt handling is setup and the scheduler is ready, we can enable
+	 * kernel preemption.
+	 */
+	preempt_enable();
+
 	create_kernel_task("kernel task", mt_test, NULL);
 
 	for(;;)

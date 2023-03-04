@@ -33,9 +33,9 @@ static inline struct task *get_task_from_runqueue(void)
 
 static inline void add_task_to_runqueue(struct task *task)
 {
-	int irqflag = spin_acquire(&runqueue.rq_lock);
+	int irqflag = spin_acquire_irq(&runqueue.rq_lock);
 	list_radd(&runqueue.tasks, &task->rq_list);
-	spin_release(&runqueue.rq_lock, irqflag);
+	spin_release_irq(&runqueue.rq_lock, irqflag);
 }
 
 static void setup_sched_on(struct logical_cpu *cpu)

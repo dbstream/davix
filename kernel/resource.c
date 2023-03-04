@@ -48,7 +48,7 @@ int init_resource(struct resource *resource,
 
 static void __dump_resource(struct resource *resource, int depth)
 {
-	int irqflag = spin_acquire(&resource->lock);
+	spin_acquire(&resource->lock);
 	info("resource: %*s[0x%lx - 0x%lx] %s\n", 8 * depth, "",
 		resource->start, resource->end - 1, resource->name);
 
@@ -58,7 +58,7 @@ static void __dump_resource(struct resource *resource, int depth)
 				container_of(node, struct resource, avl);
 			__dump_resource(subresource, depth + 1);
 	}
-	spin_release(&resource->lock, irqflag);
+	spin_release(&resource->lock);
 }
 
 void dump_resource(struct resource *resource)
@@ -209,8 +209,8 @@ static struct resource *__alloc_resource_at(struct resource *parent,
 struct resource *alloc_resource_at(struct resource *parent,
 	unsigned long addr, unsigned long size, const char *name)
 {
-	int irqflag = spin_acquire(&parent->lock);
+	spin_acquire(&parent->lock);
 	struct resource *ret = __alloc_resource_at(parent, addr, size, name);
-	spin_release(&parent->lock, irqflag);
+	spin_release(&parent->lock);
 	return ret;
 }

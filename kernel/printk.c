@@ -10,12 +10,12 @@ static spinlock_t console_lock = SPINLOCK_INIT(console_lock);
 void printk_add_console(struct console *console)
 {
 	console->link = &first_console;
-	int irqflag = spin_acquire(&console_lock);
+	int irqflag = spin_acquire_irq(&console_lock);
 	atomic_store(&console->next, first_console, memory_order_seq_cst);
 	if(first_console)
 		first_console->link = &console->next;
 	atomic_store(&first_console, console, memory_order_seq_cst);
-	spin_release(&console_lock, irqflag);
+	spin_release_irq(&console_lock, irqflag);
 }
 
 static void printk_emit(char loglevel, const char *str)

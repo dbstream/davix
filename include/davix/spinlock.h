@@ -3,6 +3,7 @@
 #define __DAVIX_SPINLOCK_H
 
 #include <davix/atomic.h>
+#include <davix/entry.h>
 #include <davix/types.h>
 #include <asm/irq.h>
 
@@ -46,10 +47,22 @@ static inline void _spin_release(spinlock_t *lock)
 	atomic_store(&lock->contended, 0, memory_order_release);
 }
 
+static inline void spin_acquire(spinlock_t *lock) acquires(lock)
+{
+	preempt_disable();
+	_spin_acquire(lock);
+}
+
+static inline void spin_release(spinlock_t *lock) releases(lock)
+{
+	_spin_release(lock);
+	preempt_enable();
+}
+
 /*
- * Return value: interrupt enable flag to be passed to spin_release().
+ * Return value: interrupt enable flag to be passed to spin_release_irq().
  */
-static inline warn_unused int spin_acquire(spinlock_t *lock) acquires(lock)
+static inline warn_unused int spin_acquire_irq(spinlock_t *lock) acquires(lock)
 {
 	int ret = interrupts_enabled();
 	disable_interrupts();
@@ -58,12 +71,12 @@ static inline warn_unused int spin_acquire(spinlock_t *lock) acquires(lock)
 }
 
 /*
- * Pass the interrupt enable flag from spin_acquire().
+ * Pass the interrupt enable flag from spin_acquire_irq().
  */
-static inline void spin_release(spinlock_t *lock, int irqflag) releases(lock)
+static inline void spin_release_irq(spinlock_t *lock, int flag) releases(lock)
 {
 	_spin_release(lock);
-	if(irqflag)
+	if(flag)
 		enable_interrupts();	
 }
 

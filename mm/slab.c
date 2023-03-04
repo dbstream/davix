@@ -96,7 +96,7 @@ must_hold(&alloc->lock)
 void *slab_allocate(struct slab_alloc *alloc)
 {
 	struct free_slab_object *ret = NULL;
-	int irqflag = spin_acquire(&alloc->lock);
+	int irqflag = spin_acquire_irq(&alloc->lock);
 	struct page *slab;
 	if(list_empty(&alloc->slab_list)) {
 		/* no slabs available, create a new slab */
@@ -119,7 +119,7 @@ void *slab_allocate(struct slab_alloc *alloc)
 	alloc->free_obs--;
 
 out:
-	spin_release(&alloc->lock, irqflag);
+	spin_release_irq(&alloc->lock, irqflag);
 	return (void *) ret;
 }
 
@@ -135,7 +135,7 @@ void slab_free(void *mem)
 {
 	struct page *slab = slab_of(mem);
 	struct slab_alloc *alloc = slab->slab.allocator;
-	int irqflag = spin_acquire(&alloc->lock);
+	int irqflag = spin_acquire_irq(&alloc->lock);
 
 	alloc->free_obs++;
 
@@ -156,5 +156,5 @@ void slab_free(void *mem)
 		slab->slab.ob_head = (void *) ob;
 	}
 
-	spin_release(&alloc->lock, irqflag);
+	spin_release_irq(&alloc->lock, irqflag);
 }

@@ -3,7 +3,7 @@
 
 int sem_try_wait(struct semaphore *sem)
 {
-	int irqflag = spin_acquire(&sem->lock);
+	int irqflag = spin_acquire_irq(&sem->lock);
 
 	int ret;
 	if(sem->count) {
@@ -13,7 +13,7 @@ int sem_try_wait(struct semaphore *sem)
 		ret = 0;
 	}
 
-	spin_release(&sem->lock, irqflag);
+	spin_release_irq(&sem->lock, irqflag);
 
 	return ret;
 }
@@ -28,7 +28,7 @@ void sem_wait(struct semaphore *sem)
 
 void sem_signal(struct semaphore *sem)
 {
-	int irqflag = spin_acquire(&sem->lock);
+	int irqflag = spin_acquire_irq(&sem->lock);
 	sem->count++;
-	spin_release(&sem->lock, irqflag);
+	spin_release_irq(&sem->lock, irqflag);
 }

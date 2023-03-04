@@ -38,11 +38,11 @@ void dump_kmalloc_slabs(void)
 		sz = slab->ob_size;
 		slab_objs = slab->obs_per_slab;
 		slab_order = slab->slab_order;
-		int irqflag = spin_acquire(&slab->lock);
+		int irqflag = spin_acquire_irq(&slab->lock);
 		total = slab->total_obs;
 		totfree = slab->free_obs;
 		nslab = slab->total_slabs;
-		spin_release(&slab->lock, irqflag);
+		spin_release_irq(&slab->lock, irqflag);
 		debug("  kmalloc-%-4lu %11lu %7lu %7lu %7lu %11lu %lu\n",
 			sz, total, total - totfree, totfree, nslab, slab_objs, slab_order);
 	}

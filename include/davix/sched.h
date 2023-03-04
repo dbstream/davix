@@ -10,6 +10,7 @@
  */
 
 #include <davix/atomic.h>
+#include <davix/entry.h>
 #include <davix/smp.h>
 #include <davix/spinlock.h>
 #include <asm/task.h>
@@ -87,45 +88,6 @@ struct task {
 	 */
 	struct mm *mm;
 };
-
-/*
- * Reschedule if it is needed.
- * This is called on kernel->user return, IRQ return and
- * outermost preempt-enables.
- */
-void maybe_resched(void);
-
-extern unsigned long preempt_disabled cpulocal;
-
-static inline void preempt_disable(void)
-{
-	bool irqs = interrupts_enabled();
-	disable_interrupts();
-
-	rdwr_cpulocal(preempt_disabled)++;
-
-	if(irqs)
-		enable_interrupts();
-}
-
-static inline void preempt_enable(void)
-{
-	rdwr_cpulocal(preempt_disabled)--;
-	maybe_resched();
-}
-
-static inline bool preempt_enabled(void)
-{
-	bool irqs = interrupts_enabled();
-	disable_interrupts();
-
-	unsigned long value = rdwr_cpulocal(preempt_disabled);
-
-	if(irqs)
-		enable_interrupts();
-
-	return value == 0;
-}
 
 static inline void set_task_flag(struct task *task, task_flags_t flag)
 {

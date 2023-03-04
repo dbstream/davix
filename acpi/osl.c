@@ -125,12 +125,12 @@ void acpi_os_delete_lock(acpi_spinlock lock)
 
 acpi_cpu_flags acpi_os_acquire_lock(acpi_spinlock lock)
 {
-	return spin_acquire(lock);
+	return spin_acquire_irq(lock);
 }
 
-void acpi_os_release_lock(acpi_spinlock lock, acpi_cpu_flags irqflag)
+void acpi_os_release_lock(acpi_spinlock lock, acpi_cpu_flags flag)
 {
-	spin_release(lock, irqflag);
+	spin_release_irq(lock, flag);
 }
 
 acpi_status acpi_os_predefined_override(const struct acpi_predefined_names
