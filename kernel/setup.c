@@ -41,6 +41,17 @@ void start_kernel(void)
 
 	create_kernel_task("kernel task", mt_test, NULL);
 
+	info("Waiting for a sched timer...\n");
+	struct sched_timer timer;
+	create_sched_timer(&timer, ns_since_boot() + 1000000000UL);
+	preempt_disable();
+	set_task_flag(current_task(), TASK_GOING_TO_SLEEP);
+	set_task_state(current_task(), TASK_UNINTERRUPTIBLE);
+	sched_timer_wait(&timer);
+	preempt_enable();
+	destroy_sched_timer(&timer);
+	info("Waited for a sched timer.\n");
+
 	for(;;)
 		relax();
 }

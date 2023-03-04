@@ -4,6 +4,10 @@
 
 #define TIMER_HZ 100 /* How often is timer_interrupt() called? */
 
+#include <davix/types.h>
+
+struct logical_cpu;
+
 /*
  * Why 'unsigned long long'?
  *
@@ -62,5 +66,62 @@ void time_init(void);
  * uses ns_since_boot() to determine how much time has passed.
  */
 void timer_interrupt(void);
+
+/*
+ * This is a *really* low-level timer API.
+ *
+ * A "raw" timer is a timer which simply calls a function when it expires. These
+ * are kept in CPU-local lists. Usually, you will want to use a higher-level API
+ * that builds upon raw timers, such as sched timers.
+ */
+struct raw_timer {
+	struct avlnode node;
+	struct logical_cpu *on_cpu;
+	void (*fn)(struct raw_timer *);
+	nsecs_t expiry_at;
+	bool expired;
+};
+
+/*
+ * Register/deregister a raw timer.
+ */
+void register_timer(struct raw_timer *timer);
+void deregister_timer(struct raw_timer *timer);
+
+/*
+ * Sched timers are a high-level timer API that allow you to block the current
+ * task until a timer expires. These are meant to live on the stack and only
+ * work for a single task.
+ *
+ * Possible usage includes:
+ *   Time-outs for mutex & semaphore acquiring.
+ *   Sleeping for some specified time.
+ */
+struct sched_timer {
+	struct raw_timer raw;
+	struct task *task;
+};
+
+/*
+ * Create a sched timer that expires at 'at'.
+ */
+void create_sched_timer(struct sched_timer *timer, nsecs_t at);
+
+/*
+ * Wait for a timer at the current task state. This always returns with
+ * TASK_RUNNING as the current task state.
+ *
+ * May return for a number of reasons, namely:
+ *   1) Timer expired.
+ *   2) Task was interrupted by a signal.
+ *
+ * Return value: did the timer expire?
+ */
+bool sched_timer_wait(struct sched_timer *timer);
+
+/*
+ * Destroy a sched timer.
+ */
+void destroy_sched_timer(struct sched_timer *timer);
 
 #endif /* __DAVIX_TIME_H */

@@ -5,6 +5,7 @@
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/printk_lib.h>
+#include <davix/avltree.h>
 #include <davix/list.h>
 
 unsigned long preempt_disabled cpulocal = 0;
@@ -55,6 +56,9 @@ static void setup_sched_on(struct logical_cpu *cpu)
 	rdwr_cpulocal_on(cpu, idle_task) = idle;
 	if(!cpu->online)
 		rdwr_cpulocal_on(cpu, preempt_disabled) = 0;
+
+	rdwr_cpulocal_on(cpu, timer_list) = (struct avltree) { NULL };
+	spinlock_init(cpulocal_address(cpu, &timer_list_lock));
 }
 
 void sched_init(void)

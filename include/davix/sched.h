@@ -196,4 +196,10 @@ void handle_dead_task(struct task *task);
 void sched_start_task(struct task *task);
 int create_kernel_task(const char *name, void (*function)(void *), void *arg);
 
+/*
+ * ... how I'd like to have this in 'time.h'...
+ */
+extern struct avltree timer_list cpulocal;
+extern spinlock_t timer_list_lock cpulocal;
+
 #endif /* __DAVIX_SCHED_H */
