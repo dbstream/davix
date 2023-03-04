@@ -36,8 +36,11 @@ static void x86_idle_task(void)
 	/*
 	 * A really simple idle task which just loops indefinitely.
 	 */
-	for(;;)
-		relax();
+	for(;;) {
+		if(!interrupts_enabled())
+			panic("x86_idle_task: Interrupts were disabled!");
+		asm volatile("hlt");
+	}
 }
 
 void arch_init_idle_task(struct logical_cpu *cpu, struct task *task)
