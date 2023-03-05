@@ -69,6 +69,10 @@ struct irq_frame {
 
 void x86_setup_early_idt(void);
 
+void x86_load_idt_ap(void);
+
+void x86_idle_task(void);
+
 /*
  * Vector numbers for architectural exceptions.
  */

@@ -4,6 +4,7 @@
 #include <davix/page_alloc.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <asm/entry.h>
 #include <asm/segment.h>
 
 extern struct x86_tss x86_tss cpulocal;
@@ -30,7 +31,7 @@ void switch_to(struct task *from, struct task *to)
 	__switch_to(from, to);
 }
 
-static void x86_idle_task(void)
+void x86_idle_task(void)
 {
 	sched_after_fork();
 	/*

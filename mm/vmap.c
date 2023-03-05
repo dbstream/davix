@@ -58,7 +58,8 @@ static inline void delete_from_kernelmode_mm(struct vm_area *area)
 			vma_avl_update_callback);
 }
 
-struct vm_area *alloc_vmap_area(unsigned long size, unsigned shift)
+struct vm_area *alloc_vmap_area_at(unsigned long size, unsigned shift,
+	unsigned long at_start, unsigned long at_end)
 {
 	if(!has_hugepage_size(shift)) {
 		warn("vmap: An allocation attempt was made with unsupported hugepage size %u. Caller: %p\n",
@@ -85,8 +86,8 @@ struct vm_area *alloc_vmap_area(unsigned long size, unsigned shift)
 
 	struct get_unmapped_area_info info = {
 		.align = PAGE_SIZE << shift,
-		.start = VMAP_START,
-		.end = VMAP_END,
+		.start = at_start,
+		.end = at_end,
 		.topdown = 0
 	};
 
@@ -121,6 +122,11 @@ struct vm_area *alloc_vmap_area(unsigned long size, unsigned shift)
 		enable_interrupts();
 
 	return area;
+}
+
+struct vm_area *alloc_vmap_area(unsigned long size, unsigned shift)
+{
+	return alloc_vmap_area_at(size, shift, VMAP_START, VMAP_END);
 }
 
 void free_vmap_area(struct vm_area *area)
@@ -166,8 +172,9 @@ void dump_kernel_vmap_areas(void)
 		enable_interrupts();
 }
 
-void *vmap(unsigned long phys_addr, unsigned long len,
-	pgmode_t mode, pgcachemode_t cachemode)
+void *vmap_at(unsigned long phys_addr, unsigned long len,
+	pgmode_t mode, pgcachemode_t cachemode,
+	unsigned long at_start, unsigned long at_end)
 {
 
 	if(len & (PAGE_SIZE - 1) || phys_addr & (PAGE_SIZE - 1)) {
@@ -180,7 +187,7 @@ void *vmap(unsigned long phys_addr, unsigned long len,
 	disable_interrupts();
 
 	unsigned shift = arch_hugepage_size(phys_addr, len);
-	struct vm_area *vma = alloc_vmap_area(len, shift);
+	struct vm_area *vma = alloc_vmap_area_at(len, shift, at_start, at_end);
 
 	if(!vma)
 		return NULL;
@@ -195,6 +202,12 @@ void *vmap(unsigned long phys_addr, unsigned long len,
 		enable_interrupts();
 
 	return (void *) vma->start;
+}
+
+void *vmap(unsigned long phys_addr, unsigned long len,
+	pgmode_t mode, pgcachemode_t cachemode)
+{
+	return vmap_at(phys_addr, len, mode, cachemode, VMAP_START, VMAP_END);
 }
 
 void vunmap(void *mem)

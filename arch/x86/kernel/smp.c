@@ -1,12 +1,20 @@
 /* SPDX-License-Identifier: MIT */
 #include <davix/acpi.h>
+#include <davix/sched.h>
+#include <davix/time.h>
 #include <davix/smp.h>
 #include <davix/printk.h>
 #include <davix/panic.h>
 #include <davix/page_alloc.h>
+#include <davix/mm.h>
 #include <asm/apic.h>
+#include <asm/boot.h>
+#include <asm/entry.h>
 #include <asm/msr.h>
 #include <asm/segment.h>
+
+struct page *x86_smpboot_page;
+extern char x86_smp_trampoline[];
 
 extern unsigned long x86_gdt[] cpulocal;
 extern struct x86_tss x86_tss cpulocal;
@@ -192,6 +200,9 @@ void arch_init_smp(void)
 
 			cpu->cpulocal_offset =
 				(unsigned long) mem - (unsigned long) __cpulocal_start;
+
+			memcpy(cpulocal_address(cpu, &x86_gdt[0]),
+				&x86_gdt[0], GDT_SIZE);
 		}
 
 		rdwr_cpulocal_on(cpu, __smp_self) = cpu;
@@ -217,4 +228,113 @@ void arch_init_smp(void)
 	}
 
 	install_tss();
+
+	if(!x86_smpboot_page)
+		panic("x86/smp: No page for the smpboot trampoline!");
+
+	if(page_to_phys(x86_smpboot_page) > 255 * PAGE_SIZE)
+		panic("x86/smp: smpboot trampoline page too high!");
+
+	debug("x86/smp: smpboot trampoline at %p\n",
+		page_to_phys(x86_smpboot_page));
+
+	if(!vmap_at(page_to_phys(x86_smpboot_page), PAGE_SIZE,
+		PG_READABLE | PG_WRITABLE | PG_EXECUTABLE, PG_WRITEBACK,
+		page_to_phys(x86_smpboot_page),
+		page_to_phys(x86_smpboot_page) + PAGE_SIZE))
+			panic("x86/smp: Couldn't vmap() the smpboot trampoline page!");
+}
+
+static spinlock_t smpboot_lock = SPINLOCK_INIT(smpboot_lock);
+static struct logical_cpu *currently_booting;
+
+static bool reached_c;
+
+void x86_smp_fixup_gdt(unsigned long gdtptr);
+
+void x86_smp_cpu_setupcode(void);
+void x86_smp_cpu_setupcode(void)
+{
+	atomic_store(&reached_c, 1, memory_order_seq_cst);
+	x86_smp_fixup_gdt((unsigned long) cpulocal_address(currently_booting, &x86_gdt[0]));
+	write_msr(MSR_GSBASE, (unsigned long)
+		cpulocal_address(currently_booting, &__smp_self));
+	rdwr_cpulocal(preempt_disabled) = 1;
+	info("\"Hello, World!\" from CPU#%u\n", smp_self()->id);
+	install_tss();
+	x86_load_idt_ap();
+	active_apic_interface->init_other();
+	apic_configure();
+	smp_self()->online = 1;
+	x86_idle_task();
+}
+
+void smp_boot_cpu(struct logical_cpu *cpu)
+{
+	info("smpboot: Booting CPU#%u...\n", cpu->id);
+	if(current_task()->mm != &kernelmode_mm)
+		panic("smpboot: smpboot can only be done on kernelmode MM!");
+
+	spin_acquire(&smpboot_lock);
+
+	if(cpu->online) {
+		warn("smpboot: trying to boot already onlined CPU#%u\n",
+			cpu->id);
+		spin_release(&smpboot_lock);
+		return;
+	}
+
+	reached_c = 0;
+	currently_booting = cpu;
+
+	unsigned long kernel_stack =
+		page_to_virt(rdwr_cpulocal_on(cpu,
+		idle_task)->arch_task_info.kernel_stack) + PAGE_SIZE;
+
+	memcpy((void *) page_to_phys(x86_smpboot_page),
+		x86_smp_trampoline, PAGE_SIZE);
+
+	/*
+	 * Fill in the '$imm32' in the 'movl $imm32, %eax'.
+	 */
+	*(u32 *) (page_to_phys(x86_smpboot_page)
+		+ 2) = page_to_phys(x86_smpboot_page);
+
+	u32 *sp = (u32 *) (page_to_phys(x86_smpboot_page) + PAGE_SIZE);
+	*(--sp) = (kernel_stack >> 32);
+	*(--sp) = kernel_stack;
+	*(--sp) = read_cr0();
+	*(--sp) = read_msr(MSR_EFER) & ~_EFER_LMA;
+	*(--sp) = read_cr3();
+	*(--sp) = read_cr4();
+
+	apic_write_icr(APIC_ICR_INIT | APIC_ICR_LEVEL | APIC_ICR_ASSERT, cpu->id);
+	apic_write_icr(APIC_ICR_INIT | APIC_ICR_LEVEL, cpu->id);
+
+	udelay(500);
+
+	for(int i = 0; i < 2; i++) {
+		apic_write_icr(APIC_ICR_SIPI | page_to_pfn(x86_smpboot_page), cpu->id);
+
+		udelay(500);
+
+		apic_write(APIC_ESR, 0);
+		u32 apic_error = apic_read(APIC_ESR);
+		if(apic_error)
+			panic("APIC error 0x%x when starting CPU#%u\n",
+				apic_error, cpu->id);
+
+		if(atomic_load(&reached_c, memory_order_seq_cst))
+			goto done;
+	}
+
+	mdelay(10);
+	if(!atomic_load(&reached_c, memory_order_seq_cst))
+		panic("Failed to start CPU#%u", cpu->id);
+
+done:
+	do {
+		asm volatile("pause");
+	} while(!*(volatile bool *) &cpu->online);
+	spin_release(&smpboot_lock);
 }

@@ -95,6 +95,9 @@ void vma_avl_update_callback(struct avlnode *node);
  * `shift` is the hugepage shift. The allocation will be
  * aligned to `PAGE_SIZE << shift` bytes.
  */
+struct vm_area *alloc_vmap_area_at(unsigned long size, unsigned shift,
+	unsigned long at_start, unsigned long at_end);
+
 struct vm_area *alloc_vmap_area(unsigned long size, unsigned shift);
 
 /*
@@ -103,6 +106,10 @@ struct vm_area *alloc_vmap_area(unsigned long size, unsigned shift);
 void free_vmap_area(struct vm_area *area);
 
 void dump_kernel_vmap_areas(void);
+
+void *vmap_at(unsigned long phys_addr, unsigned long len,
+	pgmode_t mode, pgcachemode_t cachemode,
+	unsigned long at_start, unsigned long at_end);
 
 void *vmap(unsigned long phys_addr, unsigned long len,
 	pgmode_t mode, pgcachemode_t cachemode);

@@ -251,16 +251,29 @@ void x86_setup_memory(void)
 
 	init_pagezones();
 
+	/*
+	 * We need a really low page, <= 1MiB, to be able to do smpboot.
+	 */
+	struct page *lowest_page = NULL;
 	struct early_pagealloc_info *info, *tmp;
 	list_for_each_safe(info, &early_pagealloc_list, list, tmp) {
 		unsigned long phys = virt_to_phys(info);
 		unsigned long count = info->count;
 		list_del(&info->list);
-		while(count) {
-			count--;
+		while(--count) {
 			free_page(phys_to_page(phys + count * PAGE_SIZE), 0);
 		}
+		struct page *page = phys_to_page(phys);
+		if(lowest_page && (page_to_phys(lowest_page) < phys)) {
+			free_page(page, 0);
+		} else {
+			if(lowest_page)
+				free_page(lowest_page, 0);
+			lowest_page = page;
+		}
 	}
+
+	x86_smpboot_page = lowest_page;
 
 	init_kmalloc();
 

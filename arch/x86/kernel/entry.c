@@ -159,3 +159,8 @@ void arch_setup_interrupts(void)
 	/* now we are ready to handle the timer interrupt */
 	apic_configure();
 }
+
+void x86_load_idt_ap(void)
+{
+	load_idt((unsigned long) &idt[0], sizeof(idt) - 1);
+}

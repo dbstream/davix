@@ -23,7 +23,7 @@ struct apic {
 	 * NOTE: This includes the BSP if it is offlined and onlined by
 	 * CPU hotplug support.
 	 */
-	void (*init_other);
+	void (*init_other)();
 
 	/*
 	 * Read the APIC ID.

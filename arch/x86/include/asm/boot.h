@@ -103,6 +103,8 @@ struct boot_struct {
 
 extern struct boot_struct x86_boot_struct section(".bootstruct");
 
+extern struct page *x86_smpboot_page;
+
 #endif
 
 #endif /* __ASM_BOOT_H */

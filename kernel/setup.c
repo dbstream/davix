@@ -39,6 +39,15 @@ void start_kernel(void)
 	 */
 	preempt_enable();
 
+	for_each_logical_cpu(cpu) {
+		if(!cpu->possible)
+			continue;
+		if(cpu->online)
+			continue;
+
+		smp_boot_cpu(cpu);
+	}
+
 	create_kernel_task("kernel task", mt_test, NULL);
 
 	struct sched_timer timer;

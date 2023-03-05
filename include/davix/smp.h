@@ -33,6 +33,8 @@ extern unsigned num_cpu_slots;
 
 void init_smp(void);
 
+void smp_boot_cpu(struct logical_cpu *cpu);
+
 #define cpulocal_address(cpu, var) \
 	((force typeof(var))((force unsigned long) (var) + (cpu)->cpulocal_offset))
 

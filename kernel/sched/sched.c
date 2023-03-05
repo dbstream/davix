@@ -54,8 +54,10 @@ static void setup_sched_on(struct logical_cpu *cpu)
 
 	arch_init_idle_task(cpu, idle);
 	rdwr_cpulocal_on(cpu, idle_task) = idle;
-	if(!cpu->online)
+	if(!cpu->online) {
+		rdwr_cpulocal_on(cpu, __current_task) = idle;
 		rdwr_cpulocal_on(cpu, preempt_disabled) = 0;
+	}
 
 	rdwr_cpulocal_on(cpu, timer_list) = (struct avltree) { NULL };
 	spinlock_init(cpulocal_address(cpu, &timer_list_lock));
