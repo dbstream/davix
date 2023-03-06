@@ -92,6 +92,15 @@ void x86_irq(struct irq_frame *frame)
 	preempt_enable(); /* This will call maybe_resched() for us. */
 }
 
+void x86_smp_notified(void);
+void x86_smp_notified(void)
+{
+	preempt_disable();
+	smp_notified();
+	apic_send_eoi();
+	preempt_enable();
+}
+
 void x86_timer(struct irq_frame *frame);
 void x86_timer(struct irq_frame *frame)
 {

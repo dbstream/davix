@@ -80,8 +80,6 @@ struct vm_area *alloc_vmap_area_at(unsigned long size, unsigned shift,
 	area->mm = &kernelmode_mm;
 	area->hugepage_shift = shift;
 
-	int irqflag = interrupts_enabled();
-	disable_interrupts();
 	mm_lock(&kernelmode_mm);
 
 	struct get_unmapped_area_info info = {
@@ -94,8 +92,6 @@ struct vm_area *alloc_vmap_area_at(unsigned long size, unsigned shift,
 	unsigned long start = get_unmapped_area(&kernelmode_mm, size, info);
 	if(IS_ERROR(start)) {
 		mm_unlock(&kernelmode_mm);
-		if(irqflag)
-			enable_interrupts();
 		kfree(area);
 		return NULL;
 	}
@@ -110,16 +106,12 @@ struct vm_area *alloc_vmap_area_at(unsigned long size, unsigned shift,
 
 	if(err) {
 		mm_unlock(&kernelmode_mm);
-		if(irqflag)
-			enable_interrupts();
 		kfree(area);
 		return NULL;
 	}
 
 	insert_into_kernelmode_mm(area);
 	mm_unlock(&kernelmode_mm);
-	if(irqflag)
-		enable_interrupts();
 
 	return area;
 }
@@ -131,8 +123,6 @@ struct vm_area *alloc_vmap_area(unsigned long size, unsigned shift)
 
 void free_vmap_area(struct vm_area *area)
 {
-	int irqflag = interrupts_enabled();
-	disable_interrupts();
 	mm_lock(&kernelmode_mm);
 
 	struct pgop pgop;
@@ -145,8 +135,6 @@ void free_vmap_area(struct vm_area *area)
 
 	delete_from_kernelmode_mm(area);
 	mm_unlock(&kernelmode_mm);
-	if(irqflag)
-		enable_interrupts();
 }
 
 static void _dump_kernel_vmap_areas(void)
@@ -161,15 +149,11 @@ static void _dump_kernel_vmap_areas(void)
 
 void dump_kernel_vmap_areas(void)
 {
-	int irqflag = interrupts_enabled();
-	disable_interrupts();
 	mm_lock(&kernelmode_mm);
 
 	_dump_kernel_vmap_areas();
 
 	mm_unlock(&kernelmode_mm);
-	if(irqflag)
-		enable_interrupts();
 }
 
 void *vmap_at(unsigned long phys_addr, unsigned long len,
@@ -183,14 +167,15 @@ void *vmap_at(unsigned long phys_addr, unsigned long len,
 		return NULL;
 	}
 
-	int irqflag = interrupts_enabled();
-	disable_interrupts();
+	preempt_disable();
 
 	unsigned shift = arch_hugepage_size(phys_addr, len);
 	struct vm_area *vma = alloc_vmap_area_at(len, shift, at_start, at_end);
 
-	if(!vma)
+	if(!vma) {
+		preempt_enable();
 		return NULL;
+	}
 
 	struct pgop pgop;
 	pgop_begin(&pgop, &kernelmode_mm, shift);
@@ -198,9 +183,7 @@ void *vmap_at(unsigned long phys_addr, unsigned long len,
 		set_pte(&pgop, i + vma->start, i + phys_addr, cachemode, mode);
 	pgop_end(&pgop);
 
-	if(irqflag)
-		enable_interrupts();
-
+	preempt_enable();
 	return (void *) vma->start;
 }
 
@@ -212,8 +195,6 @@ void *vmap(unsigned long phys_addr, unsigned long len,
 
 void vunmap(void *mem)
 {
-	int irqflag = interrupts_enabled();
-	disable_interrupts();
 	mm_lock(&kernelmode_mm);
 
 	struct vm_area *vma = NULL;
@@ -241,6 +222,4 @@ has_vma:;
 
 	delete_from_kernelmode_mm(vma);
 	mm_unlock(&kernelmode_mm);
-	if(irqflag)
-		enable_interrupts();
 }

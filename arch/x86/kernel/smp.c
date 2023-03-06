@@ -12,6 +12,7 @@
 #include <asm/entry.h>
 #include <asm/msr.h>
 #include <asm/segment.h>
+#include <asm/vector.h>
 
 struct page *x86_smpboot_page;
 extern char x86_smp_trampoline[];
@@ -337,4 +338,11 @@ done:
 		asm volatile("pause");
 	} while(!*(volatile bool *) &cpu->online);
 	spin_release(&smpboot_lock);
+}
+
+void arch_smp_notify(struct logical_cpu *cpu)
+{
+	preempt_disable();
+	apic_write_icr(APIC_ICR_FIXED | SMP_NOTIFY_VECTOR, cpu->id);
+	preempt_enable();
 }

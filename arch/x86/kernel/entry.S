@@ -149,8 +149,9 @@ repeat hwirq 92 127
 repeat hwirq 128 159
 repeat hwirq 160 191
 repeat hwirq 192 223
-repeat hwirq 224 253
+repeat hwirq 224 252
 
+isr 253 x86_smp_notified
 isr 254 x86_timer
 isr 255 x86_spurious
 

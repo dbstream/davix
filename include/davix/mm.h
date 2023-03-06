@@ -29,22 +29,22 @@ void destroy_mm(struct mm *mm);
 
 static inline void mm_lock(struct mm *mm)
 {
-	_spin_acquire(&mm->mm_lock);
+	spin_acquire(&mm->mm_lock);
 }
 
 static inline void mm_unlock(struct mm *mm)
 {
-	_spin_release(&mm->mm_lock);
+	spin_release(&mm->mm_lock);
 }
 
 static inline void vma_lock(struct vm_area *vma)
 {
-	_spin_acquire(&vma->vma_lock);
+	spin_acquire(&vma->vma_lock);
 }
 
 static inline void vma_unlock(struct vm_area *vma)
 {
-	_spin_acquire(&vma->vma_lock);
+	spin_acquire(&vma->vma_lock);
 }
 
 static inline struct vm_area *vma_prev(struct mm *mm, struct vm_area *vma)

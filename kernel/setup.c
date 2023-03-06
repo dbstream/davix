@@ -15,6 +15,12 @@ void mt_test(void *arg)
 	info("\"Hello, World!\" from a kernel task!\n");
 }
 
+static void smpcall_test(void *arg)
+{
+	struct logical_cpu *me = smp_self();
+	info("smp_on_each_cpu test: CPU#%u responds.\n", me->id);
+}
+
 void start_kernel(void)
 {
 	info("Starting Davix kernel, version %s%s...\n",
@@ -60,6 +66,8 @@ void start_kernel(void)
 	info("Waited for a sched timer.\n");
 	preempt_enable();
 	destroy_sched_timer(&timer);
+
+	smp_on_each_cpu(smpcall_test, NULL);
 
 	set_task_state(current_task(), TASK_UNINTERRUPTIBLE);
 	schedule();
