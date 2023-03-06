@@ -19,10 +19,21 @@ static void x2apic_write(unsigned long offset, u32 value)
 static void x2apic_init_other(void)
 {
 	/*
-	 * For whatever reason, this needs to be done as two separate writes.
+	 * The rules for APIC state transitions is that:
+	 * 1) a direct transition from disabled to x2APIC mode is illegal.
+	 * 2) a direct transition from x2APIC mode to xAPIC mode is illegal.
+	 *   (Intel SDM)
 	 */
+	unsigned long val = read_msr(MSR_APIC_BASE);
+	if(val & _APIC_BASE_X2APIC_MODE)
+		return;
+
+	if(val & _APIC_BASE_ENABLE)
+		goto already_xapic;
+
 	write_msr(MSR_APIC_BASE,
 		apic_base | _APIC_BASE_ENABLE);
+already_xapic:
 	write_msr(MSR_APIC_BASE,
 		apic_base | _APIC_BASE_ENABLE | _APIC_BASE_X2APIC_MODE);
 }
