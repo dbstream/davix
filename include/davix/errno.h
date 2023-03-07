@@ -14,6 +14,7 @@
 	(int) -__x; \
 })
 
-#define ENOMEM 1
+#define ENOMEM	1
+#define ETIME	2
 
 #endif /* __DAVIX_ERRNO_H */

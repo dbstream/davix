@@ -1,4 +1,6 @@
 #include <davix/acpi.h>
+#include <davix/time.h>
+#include <davix/sched.h>
 #include <davix/printk.h>
 #include <davix/printk_lib.h>
 #include <davix/mm.h>
@@ -88,16 +90,18 @@ acpi_status acpi_os_wait_semaphore(acpi_semaphore sem, u32 units, u16 timeout)
 	if(units != 1)
 		return AE_SUPPORT;
 
-	if(sem_try_wait(sem))
+	if(timeout == 0xffff) {
+		sem_wait(sem);
 		return AE_OK;
-
-	if(timeout != 0xffff) {
-		warn("acpi_os_wait_semaphore() with timeout unimplemented.\n");
-		return AE_SUPPORT;
 	}
 
-	sem_wait(sem);
-	return AE_OK;
+	if(timeout == 0) {
+		return sem_try_wait(sem)
+			? AE_OK
+			: AE_TIME;
+	}
+
+	return sem_wait_timeout(sem, timeout * 1000000) ? AE_TIME : AE_OK;
 }
 
 acpi_status acpi_os_signal_semaphore(acpi_semaphore sem, u32 units)
@@ -177,12 +181,21 @@ void acpi_os_unmap_memory(void *mem, acpi_size size)
 
 void acpi_os_sleep(u64 msecs)
 {
-	warn("acpi_os_sleep() unimplemented.\n");
+	struct sched_timer timer;
+	create_sched_timer(&timer, ns_since_boot() + 1000000 * msecs);
+	preempt_disable();
+	struct task *me = current_task();
+	do {
+		set_task_flag(me, TASK_GOING_TO_SLEEP);
+		set_task_state(me, TASK_UNINTERRUPTIBLE);
+	} while(!sched_timer_wait(&timer));
+	preempt_enable();
+	destroy_sched_timer(&timer);
 }
 
 void acpi_os_stall(u32 usecs)
 {
-	warn("acpi_os_stall() unimplemented.\n");
+	udelay(usecs);
 }
 
 acpi_status acpi_os_install_interrupt_handler(u32 irq,
