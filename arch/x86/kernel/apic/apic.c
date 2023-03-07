@@ -98,11 +98,6 @@ void apic_configure(void)
 		if(nmi->cpu != 0xffffffff && nmi->cpu != me)
 			continue;
 
-		debug("apic: route CPU%u.LINT%hhu to NMI (%s %s)\n",
-			me, nmi->lint,
-			nmi->pol_low ? "active-low" : "active-high",
-			nmi->tgm_level ? "level" : "edge");
-
 		apic_write(nmi->lint ? APIC_LINT1 : APIC_LINT0, APIC_DM_NMI
 			| (nmi->pol_low ? APIC_POLARITY_LOW : 0)
 			| (nmi->tgm_level ? APIC_TGM_LEVEL : 0));
@@ -111,9 +106,6 @@ void apic_configure(void)
 	apic_write(APIC_SPR_VECTOR, (1 << 8) | SPURIOUS_VECTOR);
 
 	unsigned long apic_hz = calibrate_timer();
-	debug("apic: CPU%u timer: %lu.%01ukhz\n",
-		me, apic_hz / 1000, (apic_hz % 1000) / 100);
-
 	apic_write(APIC_TIMER, APIC_TIMER_PERIODIC | TIMER_VECTOR);
 	apic_write(APIC_TIMER_DIV, 3);
 	apic_write(APIC_TIMER_INITIAL_COUNT, apic_hz / TIMER_HZ);

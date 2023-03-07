@@ -88,8 +88,6 @@ void sched_after_task_switch(struct task *from, struct task *to)
 	if(from->mm != to->mm)
 		switch_to_mm(to->mm);
 
-	debug("sched: switched from \"%s\" to \"%s\".\n", from->comm, to->comm);
-
 	task_state_t old_task_state = read_task_state(from);
 	if(old_task_state == TASK_RUNNING) {
 		/*
