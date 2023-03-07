@@ -28,7 +28,7 @@ static void tlb_flush_local(struct pgop *pgop)
 
 void tlb_flush(struct pgop *pgop)
 {
-	tlb_flush_local(pgop);
+	smp_on_each_cpu((void (*)(void *)) tlb_flush_local, (void *) pgop);
 
 	struct page *page, *tmp;
 	list_for_each_safe(page, &pgop->delayed_pages,

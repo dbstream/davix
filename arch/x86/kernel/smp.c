@@ -178,8 +178,11 @@ void arch_init_smp(void)
 	 */
 	acpi_parse_table(madt, madt_set_cpu_present, NULL);
 
-	/* Set the BSP to online */
+	/* Set the BSP to online and setup cpu-local state */
 	cpu_slots[smp_self()->id].online = 1;
+	cpu_slots[smp_self()->id].cpulocal_offset = 0;
+	__smp_self = &cpu_slots[smp_self()->id];
+	write_msr(MSR_GSBASE, (unsigned long) &__smp_self);
 
 	/*
 	 * We are done with the MADT now.
@@ -189,27 +192,18 @@ void arch_init_smp(void)
 	for_each_logical_cpu(cpu) {
 		if(!cpu->possible)
 			continue;
-
-		if(cpu->online) {
-			/* An already onlined CPU must be the BSP. */
-			cpu->cpulocal_offset = 0;
-		} else {
-			/* TODO: use something else than kmalloc() */
-			void *mem = kmalloc(__cpulocal_end - __cpulocal_start);
-			if(!mem)
-				panic("x86/smp: Cannot allocate memory for CPU-local variables!");
-
-			cpu->cpulocal_offset =
-				(unsigned long) mem - (unsigned long) __cpulocal_start;
-
-			memcpy(cpulocal_address(cpu, &x86_gdt[0]),
-				&x86_gdt[0], GDT_SIZE);
-		}
-
+		if(cpu->online)
+			continue;
+		/* TODO: use something else than kmalloc() */
+		void *mem = kmalloc(__cpulocal_end - __cpulocal_start);
+		if(!mem)
+			panic("x86/smp: Cannot allocate memory for CPU-local variables!");
+		cpu->cpulocal_offset =
+			(unsigned long) mem - (unsigned long) __cpulocal_start;
+		memcpy(cpulocal_address(cpu, &x86_gdt[0]),
+			&x86_gdt[0], GDT_SIZE);
 		rdwr_cpulocal_on(cpu, __smp_self) = cpu;
 	}
-
-	write_msr(MSR_GSBASE, (unsigned long) &__smp_self);
 
 	for_each_logical_cpu(cpu) {
 		if(!cpu->possible)
