@@ -258,9 +258,9 @@ void x86_smp_cpu_setupcode(void)
 	info("\"Hello, World!\" from CPU#%u\n", smp_self()->id);
 	install_tss();
 	x86_load_idt_ap();
+	smp_self()->online = 1;
 	active_apic_interface->init_other();
 	apic_configure();
-	smp_self()->online = 1;
 	x86_idle_task();
 }
 
