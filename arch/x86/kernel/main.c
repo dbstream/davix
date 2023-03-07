@@ -37,6 +37,8 @@ void x86_start_kernel(void);
 void x86_start_kernel(void)
 {
 	write_msr(MSR_GSBASE, (unsigned long) &pre_smp_cpu_ptr);
+	cpu_slots = &pre_smp_cpu;
+	num_cpu_slots = 1;
 	rdwr_cpulocal(preempt_disabled) = 1;
 	x86_uart_init();
 	x86_setup_early_idt();
