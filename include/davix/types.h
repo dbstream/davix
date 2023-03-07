@@ -162,4 +162,17 @@ typedef unsigned long bitwise alloc_flags_t;
 #define RET_ADDR __builtin_extract_return_addr(__builtin_return_address(0))
 
 #endif /* __KERNEL__ */
+
+static_assert(sizeof(__i8) == 1, "sizeof(i8)");
+static_assert(sizeof(__i16) == 2, "sizeof(i16)");
+static_assert(sizeof(__i32) == 4, "sizeof(i32)");
+static_assert(sizeof(__i64) == 8, "sizeof(i64)");
+static_assert(sizeof(__u8) == 1, "sizeof(u8)");
+static_assert(sizeof(__u16) == 2, "sizeof(u16)");
+static_assert(sizeof(__u32) == 4, "sizeof(u32)");
+static_assert(sizeof(__u64) == 8, "sizeof(u64)");
+
+static_assert(sizeof(int) == sizeof(i32), "sizeof(int)");
+static_assert(sizeof(long) == sizeof(void *), "sizeof(long)");
+
 #endif /* __DAVIX_TYPES_H */
