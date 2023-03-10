@@ -10,6 +10,7 @@
 #include <asm/apic.h>
 #include <asm/boot.h>
 #include <asm/entry.h>
+#include <asm/ioapic.h>
 #include <asm/msr.h>
 #include <asm/segment.h>
 #include <asm/vector.h>
@@ -116,6 +117,19 @@ common:;
 	acpi_cpu_to_lapic_id[acpino] = no;
 }
 
+static void madt_ioapics(struct acpi_subtable_header *hdr, void *arg)
+{
+	(void) arg;
+
+	if(hdr->type != ACPI_MADT_TYPE_IO_APIC)
+		return;
+
+	struct acpi_madt_io_apic *ioapic =
+		(struct acpi_madt_io_apic *) hdr;
+
+	register_ioapic(ioapic->address, ioapic->global_irq_base);
+}
+
 extern char __cpulocal_start[], __cpulocal_end[];
 
 struct logical_cpu *__smp_self cpulocal;
@@ -183,6 +197,8 @@ void arch_init_smp(void)
 	cpu_slots[smp_self()->id].cpulocal_offset = 0;
 	__smp_self = &cpu_slots[smp_self()->id];
 	write_msr(MSR_GSBASE, (unsigned long) &__smp_self);
+
+	acpi_parse_table(madt, madt_ioapics, NULL);
 
 	/*
 	 * We are done with the MADT now.

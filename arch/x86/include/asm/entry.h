@@ -96,4 +96,17 @@ void x86_idle_task(void);
 #define X86_TRAP_SIMD_FP 19
 #define X86_TRAP_CONTROL_PROT 21
 
+struct vector_info {
+	struct list handlers;
+	unsigned int gsi;
+	bool allocated;
+};
+
+struct interrupt_handler {
+	struct list list;
+	void (*handle_irq)(void *);
+	void *arg;
+	unsigned long count; /* Handlers are refcounted, because... reasons. */
+};
+
 #endif /* __ASM_ENTRY_H */
