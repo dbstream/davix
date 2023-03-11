@@ -9,4 +9,9 @@ void vpanic_frame(struct stack_frame *frame, const char *fmt, va_list *ap);
 void panic_frame(struct stack_frame *frame, const char *fmt, ...);
 void panic(const char *fmt, ...);
 
+/*
+ * Call this instead of 'panic()' from NMIs.
+ */
+void panic_nmi(struct stack_frame *frame, const char *fmt, ...);
+
 #endif

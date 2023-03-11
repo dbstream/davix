@@ -72,4 +72,9 @@ void smp_call_on(struct logical_cpu *cpu, void (*function)(void *), void *arg);
  */
 void smp_on_each_cpu(void (*function)(void *), void *arg);
 
+/*
+ * Send a NMI to another CPU.
+ */
+void smp_send_nmi(struct logical_cpu *cpu);
+
 #endif /* __DAVIX_SMP_H */

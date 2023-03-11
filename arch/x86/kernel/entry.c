@@ -71,7 +71,7 @@ void x86_nmi(struct irq_frame *frame);
 void x86_nmi(struct irq_frame *frame)
 {
 	struct stack_frame bt_frame = create_fake_frame(frame->rbp, frame->rip);
-	panic_frame(&bt_frame, "Caught non-maskable interrupt");
+	panic_nmi(&bt_frame, "Caught non-maskable interrupt");
 }
 
 void x86_mce(struct irq_frame *frame);

@@ -44,6 +44,8 @@ static void install_tss(void)
 struct logical_cpu *cpu_slots = NULL;
 unsigned num_cpu_slots = 0;
 
+static unsigned real_num_cpu_slots = 0;
+
 unsigned *acpi_cpu_to_lapic_id;
 static unsigned num_acpi_cpus = 0;
 
@@ -73,8 +75,8 @@ static void madt_calc_max_cpu(struct acpi_subtable_header *hdr, void *arg)
 	}
 
 common:
-	if(no + 1 > num_cpu_slots)
-		num_cpu_slots = no + 1;
+	if(no + 1 > real_num_cpu_slots)
+		real_num_cpu_slots = no + 1;
 	if(acpino + 1 > num_acpi_cpus)
 		num_acpi_cpus = acpino + 1;
 }
@@ -162,18 +164,20 @@ void arch_init_smp(void)
 	 * 'struct logical_cpu' array.
 	 */
 	acpi_parse_table(madt, madt_calc_max_cpu, NULL);
-	if(!num_cpu_slots)
+	if(!real_num_cpu_slots)
 		panic("arch_init_smp(): no LAPIC entries in MADT.");
 
-	info("Max CPUs: %u\n", num_cpu_slots);
+	info("Max CPUs: %u\n", real_num_cpu_slots);
 
-	if(num_cpu_slots <= smp_self()->id)
+	if(real_num_cpu_slots <= smp_self()->id)
 		panic("arch_init_smp(): Too few CPU slots! (num_cpu_slots: %u, BSP: %u)\n");
 
 	/* TODO: use something else than kmalloc() */
-	cpu_slots = kmalloc(num_cpu_slots * sizeof(struct logical_cpu));
+	cpu_slots = kmalloc(real_num_cpu_slots * sizeof(struct logical_cpu));
 	if(!cpu_slots)
 		panic("arch_init_smp(): Couldn't allocate struct logical_cpu array.");
+
+	num_cpu_slots = real_num_cpu_slots;
 
 	acpi_cpu_to_lapic_id = kmalloc(num_acpi_cpus * sizeof(unsigned));
 	if(!acpi_cpu_to_lapic_id)
@@ -355,4 +359,13 @@ void arch_smp_notify(struct logical_cpu *cpu)
 	preempt_disable();
 	apic_write_icr(APIC_ICR_FIXED | SMP_NOTIFY_VECTOR, cpu->id);
 	preempt_enable();
+}
+
+void smp_send_nmi(struct logical_cpu *cpu)
+{
+	/*
+	 * This is only called from panic(), so we have already
+	 * disabled preemption.
+	 */
+	apic_write_icr(APIC_ICR_NMI, cpu->id);
 }
