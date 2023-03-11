@@ -199,7 +199,7 @@ if [ $FIRMWARE = "UEFI" ]; then
 	QEMU_COMMAND="$QEMU_COMMAND -drive file=$OVMF_PATH/OVMF.fd,if=pflash,index=0,read-only=on"
 fi
 
-QEMU_COMMAND="$QEMU_COMMAND -m $QMEM -cpu $QCPU -smp $QSMP -cdrom /tmp/bootable-davix.iso -serial stdio -nic none"
+QEMU_COMMAND="$QEMU_COMMAND -m $QMEM -cpu $QCPU -smp $QSMP -cdrom /tmp/bootable-davix.iso -serial stdio -nic none $QEXTRA"
 
 if [ $DEBUG = "y" ]; then
 	QEMU_COMMAND="$QEMU_COMMAND -S -s"
