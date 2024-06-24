@@ -51,7 +51,7 @@ free_page_table (int level, pgtable_t *table);
 static inline pgtable_t *
 __pgtable_install (pgtable_t *entry, pgtable_t **new_table, bool kernel)
 {
-	unsigned long expected = 0, desired = (unsigned long) *new_table;
+	unsigned long expected = 0, desired = virt_to_phys (*new_table);
 	desired |= kernel ? PAGE_KERNEL_PGTABLE : PAGE_USER_PGTABLE;
 
 	if (atomic_cmpxchg_acqrel_acq (entry, &expected, desired)) {
