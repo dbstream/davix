@@ -1,0 +1,6 @@
+# Project .gitignore
+# If you have personal artifacts in the project directory, preferably add them
+# to ~/.config/git/ignore as per <https://git-scm.com/docs/gitignore>.
+
+# Ignore the default build directory.
+build/

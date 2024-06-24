@@ -1,0 +1,221 @@
+#!/bin/sh
+
+# Provide a variable if it is not already defined
+provide() {
+	if [ "$(eval echo \$$1)" == "" ]; then
+		eval "$1=$2"
+	fi
+}
+
+# Allow the user to change defaults in this file by providing a .env file, which
+# is really just a shell script that we source.
+if [ -f .env ]; then
+	. ./.env
+fi
+
+# To boot using UEFI, a path to the firmware needs to be provided. By default,
+# we use this path.
+provide OVMF_PATH "/usr/share/ovmf/x64"
+
+_help() {
+	echo "Usage: $0 [options]"
+	echo 'options:'
+	echo '  -h, --help                       Show this information.'
+	echo ''
+	echo '  -d, --debug                      Equivalent of `qemu-system-x86_64 -S -s`.'
+	echo ''
+	echo '  -X <option>                      Pass <option> directly to QEMU.'
+	echo ''
+	echo '  -m, --mem=<memory>               Set the amount of memory provided to a guest.'
+	echo '                                   (default: 256M)'
+	echo ''
+	echo '  -M, --machine=<machine>          Set the emulated machine type, equivalent to'
+	echo '                                   `qemu-system-x86_64 -M <machine>`. (default:'
+	echo '                                   pc)'
+	echo ''
+	echo '      --kvm                        Enable KVM acceleration of the guest. (enabled'
+	echo '                                   by default)'
+	echo '      --no-kvm                     Disable KVM acceleration of the guest.'
+	echo ''
+	echo '      --cpu=<cpu>                  Select CPU model of the guest.'
+	echo ''
+	echo '      --smp=<smp>                  Equivalent to QEMU -smp option.'
+	echo ''
+	echo '      --reboot={normal,shutdown}   Machine reboot action, also affects triple'
+	echo '                                   faults. (default: shutdown)'
+	echo ''
+	echo '      --bios'
+	echo '      --uefi'
+	echo '      --firmware={BIOS, UEFI}      Switch between BIOS and UEFI firmware.'
+	echo '                                   (default: UEFI)'
+	echo '                                   By default, OVMF firmware is searched for in'
+	echo '                                   the directory "/usr/share/ovmf/x64". This can'
+	echo '                                   be overridden by providing the environment'
+	echo '                                   variable "OVMF_PATH".'
+}
+
+# We require GNU enhanced getopt(1) for long options to be supported. Check for
+# it.
+getopt -T
+if [ $? -ne 4 ]; then
+	echo "GNU enhanced getopt(1) is required for long options support." >&2
+	exit 1
+fi
+
+# Get our command line arguments.
+TEMP=$(getopt -o 'hdX:m:M:' --long 'help,debug,kvm,no-kvm,cpu:,smp:,mem:,machine:,reboot:,bios,uefi,firmware:,grub,limine,bootloader:' -n "$0" -- "$@")
+if [ $? -ne 0 ]; then
+	_help >&2
+	exit 1
+fi
+
+eval set -- "$TEMP"
+unset TEMP
+
+provide DEBUG "n"
+provide USE_KVM "y"
+provide QMEM "256M"
+provide QEXTRA ""
+provide QCPU "host"
+provide NO_REBOOT "y"
+provide FIRMWARE "UEFI"
+provide QSMP "1"
+provide QMACHINE "pc"
+
+# Parse the command line arguments.
+while true; do
+	case "$1" in
+		'-h'|'--help')
+			_help >&2
+			exit 1
+		;;
+		'-d'|'--debug')
+			DEBUG="y"
+			shift
+		;;
+		'-X')
+			QEXTRA="$QEXTRA $2"
+			shift 2
+		;;
+		'--kvm')
+			USE_KVM='y'
+			shift
+		;;
+		'--no-kvm')
+			USE_KVM='n'
+			shift
+		;;
+		'--cpu')
+			QCPU="$2"
+			shift 2
+		;;
+		'--smp')
+			QSMP="$2"
+			shift 2
+		;;
+		'-m'|'--mem')
+			QMEM="$2"
+			shift 2
+		;;
+		'-M'|'--machine')
+			QMACHINE="$2"
+			shift 2
+		;;
+		'--reboot')
+			if [ "$2" == "normal" ]; then
+				NO_REBOOT="n"
+			elif [ "$2" == "shutdown" ]; then
+				NO_REBOOT="y"
+			else
+				echo "Unrecognized reboot behaviour: \"$2\"" >&2
+				_help
+				exit 1
+			fi
+			shift 2
+		;;
+		'--bios')
+			FIRMWARE="BIOS"
+			shift
+		;;
+		'--uefi')
+			FIRMWARE='UEFI'
+			shift
+		;;
+		'--firmware')
+			case "$2" in
+				'bios'|'BIOS')
+					FIRMWARE="BIOS"
+				;;
+				'uefi'|'UEFI')
+					FIRMWARE="UEFI"
+				;;
+				*)
+					echo "Unrecognized firmware type: \"$2\" (supported are: bios, uefi)" >&2
+					_help >&2
+					exit 1
+				;;
+			esac
+			shift 2
+		;;
+		'--')
+			shift
+			break
+		;;
+		*)
+			echo "getopt(1) error (Are you using the GNU enhanced version?)" >&2
+			exit 1
+		;;
+	esac
+done
+
+# Build the QEMU command line by appending stuff to the qemu-system-x86_64
+# invocation.
+QEMU_COMMAND="qemu-system-x86_64"
+if [ $USE_KVM = "y" ]; then
+	QEMU_COMMAND="$QEMU_COMMAND -enable-kvm"
+fi
+if [ $NO_REBOOT = "y" ]; then
+	QEMU_COMMAND="$QEMU_COMMAND -no-reboot"
+fi
+if [ $FIRMWARE = "UEFI" ]; then
+	QEMU_COMMAND="$QEMU_COMMAND -drive file=$OVMF_PATH/OVMF.fd,if=pflash,index=0,read-only=on"
+fi
+QEMU_COMMAND="$QEMU_COMMAND -M $QMACHINE -m $QMEM -cpu $QCPU -smp $QSMP -cdrom /tmp/bootable.iso -debugcon stdio -nic none $QEXTRA"
+if [ $DEBUG = "y" ]; then
+	QEMU_COMMAND="$QEMU_COMMAND -S -s"
+fi
+
+# From this point on, we don't handle any errors in any other way than exiting.
+set -e
+
+make -j
+
+# Build our .iso file.
+if [ -d /tmp/isodir ]; then
+	rm -r /tmp/isodir
+fi
+mkdir /tmp/isodir
+cp build/davix /tmp/isodir/davix
+
+mkdir -p /tmp/isodir/boot/grub
+cat << EOF >> /tmp/isodir/boot/grub/grub.cfg
+insmod fat
+insmod efi_gop
+
+set default=0
+set timeout=1
+
+menuentry "Davix kernel" {
+	echo "Loading multiboot2 image..."
+	multiboot2 /davix
+	echo "Booting..."
+	boot
+}
+
+EOF
+grub-mkrescue -o /tmp/bootable.iso /tmp/isodir
+rm -r /tmp/isodir
+
+# Invoke QEMU now.
+printf '%s\n' "$QEMU_COMMAND"
+$QEMU_COMMAND
