@@ -63,7 +63,13 @@ __cpulocal_offset:	.quad 0
 	.size __this_cpu_id, 4
 __this_cpu_id:		.long 0
 
-			.fill 28, 1, 0
+	.globl __preempt_state
+	.type __preempt_state, @object
+	.size __preempt_state, 4
+__preempt_state:
+			.long 0
+
+			.fill 24, 1, 0
 
 	.globl __stack_canary
 	.type __stack_canary, @object

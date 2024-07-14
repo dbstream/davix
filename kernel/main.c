@@ -2,6 +2,7 @@
  * Kernel main() function.
  * Copyright (C) 2024  dbstream
  */
+#include <davix/context.h>
 #include <davix/cpuset.h>
 #include <davix/initmem.h>
 #include <davix/main.h>

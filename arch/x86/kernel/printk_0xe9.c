@@ -6,6 +6,7 @@
  * an easy form of writing output for kernel debugging purposes.
  */
 #include <davix/console.h>
+#include <davix/context.h>
 #include <davix/snprintf.h>
 #include <davix/stddef.h>
 #include <asm/io.h>
@@ -42,6 +43,8 @@ arch_printk_emit (int level, usecs_t msg_time, const char *msg)
 	bool flag = irq_save ();
 	write_string ("\e[32m");
 	write_string (buf);
+	if (in_nmi ())	write_string ("\e[1mNMI ");
+	if (in_irq ())	write_string ("\e[1mIRQ ");
 	write_string (msg_prefix[level]);
 	write_string (msg);
 	write_string ("\e[0m");

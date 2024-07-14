@@ -9,9 +9,6 @@ the QEMU debugcon port (port 0xe9).
 
 Planned features, in rough order of implementation:
 
-- 'include/davix/context.h', tracking the current execution context (such as if
-  we are running at task/IRQ/NMI level)
-
 - Local APIC interrupts (APIC timer)
 
 - Very simple RR-style task scheduler

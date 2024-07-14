@@ -3,6 +3,7 @@
  * Copyright (C) 2024  dbstream
  */
 #include <davix/atomic.h>
+#include <davix/context.h>
 #include <davix/cpuset.h>
 #include <davix/spinlock.h>
 #include <davix/stdarg.h>
@@ -101,6 +102,7 @@ static void
 enter_panic (void)
 {
 	irq_disable ();
+	preempt_off ();
 
 	unsigned int expected = -1U;
 	if (!atomic_cmpxchg_relaxed (&panic_cpu, &expected, this_cpu_id ()))

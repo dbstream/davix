@@ -10,6 +10,7 @@
 #define DAVIX_SPINLOCK_H 1
 
 #include <davix/atomic.h>
+#include <davix/context.h>
 #include <davix/stdbool.h>
 #include <asm/irq.h>
 
@@ -100,6 +101,20 @@ spin_unlock_irq (spinlock_t *lock, bool flag)
 {
 	__spin_unlock (lock);
 	irq_restore (flag);
+}
+
+static inline void
+spin_lock (spinlock_t *lock)
+{
+	preempt_off ();
+	__spin_lock (lock);
+}
+
+static inline void
+spin_unlock (spinlock_t *lock)
+{
+	__spin_unlock (lock);
+	preempt_on ();
 }
 
 #endif /* DAVIX_SPINLOCK_H */
