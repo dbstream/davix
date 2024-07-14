@@ -53,10 +53,25 @@ _Static_assert (__atomic_always_lock_free (sizeof(long), 0), "bad atomics");
 #define atomic_add_fetch(p, val, mo)	__atomic_add_fetch((p), (val), (mo))
 #define atomic_sub_fetch(p, val, mo)	__atomic_sub_fetch((p), (val), (mo))
 
+#define atomic_fetch_and(p, val, mo)	__atomic_fetch_and((p), (val), (mo))
+#define atomic_fetch_or(p, val, mo)	__atomic_fetch_or((p), (val), (mo))
+#define atomic_and_fetch(p, val, mo)	__atomic_and_fetch((p), (val), (mo))
+#define atomic_or_fetch(p, val, mo)	__atomic_or_fetch((p), (val), (mo))
+
 #define atomic_fetch_inc(p, mo)		atomic_fetch_add((p), 1, (mo))
 #define atomic_fetch_dec(p, mo)		atomic_fetch_sub((p), 1, (mo))
 #define atomic_inc_fetch(p, mo)		atomic_add_fetch((p), 1, (mo))
 #define atomic_dec_fetch(p, mo)		atomic_sub_fetch((p), 1, (mo))
+
+#define atomic_fetch_and_relaxed(p, val)	atomic_fetch_and((p), (val), memory_order_relaxed)
+#define atomic_fetch_or_relaxed(p, val)		atomic_fetch_or((p), (val), memory_order_relaxed)
+#define atomic_and_fetch_relaxed(p, val)	atomic_and_fetch((p), (val), memory_order_relaxed)
+#define atomic_or_fetch_relaxed(p, val)		atomic_or_fetch((p), (val), memory_order_relaxed)
+
+#define atomic_fetch_inc_relaxed(p)	atomic_fetch_inc((p), memory_order_relaxed)
+#define atomic_fetch_dec_relaxed(p)	atomic_fetch_dec((p), memory_order_relaxed)
+#define atomic_inc_fetch_relaxed(p)	atomic_inc_fetch((p), memory_order_relaxed)
+#define atomic_dec_fetch_relaxed(p)	atomic_dec_fetch((p), memory_order_relaxed)
 
 typedef _Bool atomic_flag_t;
 
