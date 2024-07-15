@@ -244,7 +244,7 @@ asm_irq_common:
 	 * Rules for atomic_entry and atomic_exit:
 	 * - atomic_entry and atomic_exit must be called after registers are
 	 *   pushed and before registers are popped.
-	 * - The value of %rbx must be preserved for corresponding atomic_entry
+	 * - The value of %rbp must be preserved for corresponding atomic_entry
 	 *   and atomic_exit pairs.
 	 */
 
@@ -271,17 +271,17 @@ atomic_entry:
 
 	/* we are on user GSBASE, swapgs here and in atomic_exit */
 	swapgs
-	movl $1, %ebx
+	movl $1, %ebp
 	ret
 
 1:	/* we are on kernel GSBASE, don't swapgs */
-	xorq %rbx, %rbx
+	xorq %rbp, %rbp
 	ret
 	.cfi_endproc
 	.size atomic_entry, . - atomic_entry
 
 	/**
-	 * Look at %rbx to determine if GSBASE was swapped by atomic_entry, and
+	 * Look at %rbp to determine if GSBASE was swapped by atomic_entry, and
 	 * swap back if necessary.
 	 */
 	.type atomic_exit, @function
@@ -289,7 +289,7 @@ atomic_entry:
 atomic_exit:
 	.cfi_startproc
 
-	testq %rbx, %rbx
+	testq %rbp, %rbp
 	jnz 1f
 	ret
 1:
