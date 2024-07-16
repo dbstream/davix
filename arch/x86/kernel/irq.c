@@ -45,3 +45,14 @@ handle_IRQ_spurious (struct entry_regs *regs)
 
 	preempt_leave_IRQ (state);
 }
+
+void
+handle_PIC_IRQ (struct entry_regs *regs)
+{
+	preempt_state_t state = preempt_enter_IRQ ();
+
+	(void) regs;
+	printk (PR_WARN "Spurious 8259 PIC interrupt on CPU%u\n", this_cpu_id ());
+
+	preempt_leave_IRQ (state);
+}

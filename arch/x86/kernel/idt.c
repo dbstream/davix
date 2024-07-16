@@ -123,6 +123,8 @@ extern char asm_handle_MCE[];
 extern char asm_handle_APIC_timer[];
 extern char asm_handle_IRQ_spurious[];
 
+extern char asm_handle_PIC_IRQ[];
+
 extern void *asm_idtentry_irq_array[];
 
 __INIT_TEXT
@@ -139,6 +141,9 @@ x86_trap_init (void)
 
 	set_idt_entry (VECTOR_APIC_TIMER, asm_handle_APIC_timer, __IST_NONE, 0);
 	set_idt_entry (VECTOR_SPURIOUS, asm_handle_IRQ_spurious, __IST_NONE, 0);
+
+	for (int i = 32; i < 40; i++)
+		set_idt_entry (i, asm_handle_PIC_IRQ, __IST_NONE, 0);
 
 	for (int i = 0; i < IRQ_VECTORS_PER_CPU; i++)
 		set_idt_entry (IRQ_VECTORS_OFFSET + i,

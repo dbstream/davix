@@ -307,6 +307,8 @@ idtentry_atomic asm_handle_MCE 0 0 handle_MCE
 idtentry_explicit asm_handle_APIC_timer handle_APIC_timer
 idtentry_explicit asm_handle_IRQ_spurious handle_IRQ_spurious
 
+idtentry_explicit asm_handle_PIC_IRQ handle_PIC_IRQ
+
 .set i, 0
 .rept IRQ_VECTORS_PER_CPU
 	idtentry_irq %i
