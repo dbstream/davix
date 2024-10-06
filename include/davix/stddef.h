@@ -21,4 +21,12 @@ typedef unsigned long size_t;
 	t _b = (b);		\
 	_a > _b ? _a : _b; })
 
+static inline void *
+__struct_parent (void *p, unsigned long offset)
+{
+	return (void *) ((unsigned long) p - offset);
+}
+
+#define struct_parent(tp, name, entry) ((tp *) __struct_parent ((entry), offsetof (tp, name)))
+
 #endif /* _DAVIX_STDDEF_H */

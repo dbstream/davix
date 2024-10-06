@@ -6,6 +6,7 @@
  */
 #include <davix/context.h>
 #include <davix/printk.h>
+#include <davix/timer.h>
 #include <asm/apic.h>
 #include <asm/entry.h>
 #include <asm/smp.h>
@@ -30,6 +31,8 @@ handle_APIC_timer (struct entry_regs *regs)
 	(void) regs;
 	printk (PR_INFO "APIC timer interrupt on CPU%u\n", this_cpu_id ());
 	apic_eoi ();
+
+	local_timer_tick ();
 
 	preempt_leave_IRQ (state);
 }

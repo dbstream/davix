@@ -3,6 +3,7 @@
  * Copyright (C) 2024  dbstream
  */
 #include <davix/printk.h>
+#include <davix/timer.h>
 #include <asm/cpulocal.h>
 #include <asm/features.h>
 #include <asm/hpet.h>
@@ -36,6 +37,19 @@ set_tsc_conv (uint64_t tsc, uint64_t ns)
 	 * the generation counter.
 	 */
 	this_cpu_write (&tsc_conv, conv);
+}
+
+/**
+ * Update the tsc_conv with the recalibrated TSC frequency.
+ */
+static void
+update_tsc_conv (void)
+{
+	struct tsc_conv conv = this_cpu_read (&tsc_conv);
+	uint64_t tsc = rdtsc ();
+	uint64_t ns = conv.ns_offset + (1000000UL * tsc) / conv.khz;
+
+	set_tsc_conv (tsc, ns);
 }
 
 static uint64_t
@@ -105,6 +119,46 @@ hpet_calibrate_tsc_early (void)
 		(tsc_hz / 1000UL) % 1000UL);
 }
 
+static struct ktimer tsc_calibration_timer;
+
+static void
+tsc_calibration_callback (struct ktimer *t)
+{
+	(void) t;
+
+	static uint64_t tsc1, tsc2, hpet1, hpet2;
+	static bool is_first = true;
+
+	if (is_first) {
+		is_first = false;
+
+		tsc1 = read_tsc_hpet (&hpet1);
+		if (!tsc1)
+			return;
+
+		tsc_calibration_timer.expiry = ns_since_boot () + 1000000000ULL;
+		ktimer_add (&tsc_calibration_timer);
+		return;
+	}
+
+	tsc2 = read_tsc_hpet (&hpet2);
+	if (!tsc2)
+		return;
+
+	uint64_t tsc_delta = tsc2 - tsc1;
+	uint64_t hpet_delta = hpet2 - hpet1;
+
+	uint64_t ns = hpet_delta * hpet_period_ns;
+	ns += (hpet_delta * hpet_period_frac) / 1000000UL;
+
+	tsc_hz = calculate_tsc_hz (tsc_delta, ns);
+	printk (PR_NOTICE "Slow TSC calibration using HPET: %lu.%06luMHz\n",
+		tsc_hz / 1000000UL,
+		tsc_hz % 1000000UL);
+
+	update_tsc_conv ();
+}
+
 bool
 x86_init_tsc (bool use_hpet)
 {
@@ -124,6 +178,10 @@ x86_init_tsc (bool use_hpet)
 		return false;
 
 	set_tsc_conv (rdtsc (), 0);
+
+	tsc_calibration_timer.callback = tsc_calibration_callback;
+	tsc_calibration_timer.expiry = 0;
+	ktimer_add (&tsc_calibration_timer);
 	return true;
 }
 
