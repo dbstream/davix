@@ -6,6 +6,7 @@
 #define _ASM_PGTABLE_H 1
 
 #include <davix/atomic.h>
+#include <davix/stdbool.h>
 #include <davix/stddef.h>
 #include <asm/page_defs.h>
 
