@@ -29,9 +29,8 @@ handle_APIC_timer (struct entry_regs *regs)
 	preempt_state_t state = preempt_enter_IRQ ();
 
 	(void) regs;
-	printk (PR_INFO "APIC timer interrupt on CPU%u\n", this_cpu_id ());
-	apic_eoi ();
 
+	apic_eoi ();
 	local_timer_tick ();
 
 	preempt_leave_IRQ (state);

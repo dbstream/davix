@@ -69,7 +69,13 @@ __this_cpu_id:		.long 0
 __preempt_state:
 			.long 0
 
-			.fill 24, 1, 0
+	.globl __current_task
+	.type __current_task, @object
+	.size __current_task, 8
+__current_task:
+			.quad 0
+
+			.fill 16, 1, 0
 
 	.globl __stack_canary
 	.type __stack_canary, @object

@@ -15,5 +15,7 @@ kobjs += printk_0xe9.o
 kobjs += setup.o
 kobjs += smp.o
 kobjs += startup64.o
+kobjs += task_switch.o
+kobjs += task.o
 kobjs += time.o
 kobjs += tsc.o

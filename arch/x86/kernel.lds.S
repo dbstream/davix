@@ -88,6 +88,7 @@ SECTIONS
 	. = ASSERT(__cpulocal_offset == 0, "__cpulocal_offset must be 0");
 	. = ASSERT(__this_cpu_id == 8, "__this_cpu_id must be 8");
 	. = ASSERT(__preempt_state == 12, "__preempt_state must be 12");
+	. = ASSERT(__current_task == 16, "__current_task must be 16");
 	. = ASSERT(__stack_canary == 40, "__stack_canary must be 40");
 
 	/DISCARD/	:					{

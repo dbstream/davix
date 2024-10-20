@@ -4,6 +4,7 @@
  */
 #include <davix/context.h>
 #include <davix/printk.h>
+#include <davix/sched.h>
 #include <davix/stdbool.h>
 #include <asm/cpulocal.h>
 
@@ -20,7 +21,7 @@ preempt_resched (void)
 		 */
 		set_preempt_state (get_preempt_state () | PREEMPT_NO_RESCHED);
 
-		printk (PR_INFO "preempt_resched reschedule event (stub)\n");
+		schedule ();
 	} while (preempt_on_atomic ());
 }
 
