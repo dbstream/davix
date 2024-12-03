@@ -6,6 +6,7 @@
 #include <davix/sched.h>
 #include <davix/slab.h>
 #include <davix/snprintf.h>
+#include <davix/string.h>
 #include <davix/task_api.h>
 
 static struct slab *tasks_slab;
@@ -37,9 +38,12 @@ create_idle_task (unsigned int cpu)
 	if (!task)
 		panic ("Failed to create idle task for CPU%u\n", cpu);
 
+	memset (task, 0, sizeof (*task));
+
 	snprintf (task->comm, sizeof (task->comm), "idle-%u", cpu);
 
 	task->flags = TF_IDLE;
+	task->state = TASK_RUNNABLE;
 	return task;
 }
 
@@ -49,6 +53,8 @@ create_kernel_task (const char *name, void (*start_function)(void *), void *arg)
 	struct task *task = alloc_task_struct ();
 	if (!task)
 		return NULL;
+
+	memset (task, 0, sizeof (*task));
 
 	if (arch_create_task (task, start_function, arg) != ESUCCESS) {
 		free_task_struct (task);

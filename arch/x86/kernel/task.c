@@ -18,7 +18,9 @@ arch_create_task (struct task *task, void (*start_function) (void *), void *arg)
 		return ENOMEM;
 
 	task->arch.stack_ptr = (struct x86_idle_stack *)
-		((unsigned long) task->arch.stack_mem + TASK_STK_SIZE - 8);
+		((unsigned long) task->arch.stack_mem + TASK_STK_SIZE
+			- sizeof (struct x86_idle_stack) - 8);
+
 	task->arch.stack_ptr->ip = (unsigned long) start_function;
 	task->arch.stack_ptr->rdi = (unsigned long) arg;
 	return 0;
