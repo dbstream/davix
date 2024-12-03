@@ -15,7 +15,7 @@ fi
 
 # To boot using UEFI, a path to the firmware needs to be provided. By default,
 # we use this path.
-provide OVMF_PATH "/usr/share/ovmf/x64"
+provide OVMF_PATH "/usr/share/edk2/x64/OVMF.4m.fd"
 
 _help() {
 	echo "Usage: $0 [options]"
@@ -178,7 +178,7 @@ if [ $NO_REBOOT = "y" ]; then
 	QEMU_COMMAND="$QEMU_COMMAND -no-reboot"
 fi
 if [ $FIRMWARE = "UEFI" ]; then
-	QEMU_COMMAND="$QEMU_COMMAND -drive file=$OVMF_PATH/OVMF.fd,if=pflash,index=0,read-only=on"
+	QEMU_COMMAND="$QEMU_COMMAND -drive file=$OVMF_PATH,if=pflash,index=0,read-only=on"
 fi
 QEMU_COMMAND="$QEMU_COMMAND -M $QMACHINE -m $QMEM -cpu $QCPU -smp $QSMP -cdrom /tmp/bootable.iso -debugcon stdio -nic none $QEXTRA"
 if [ $DEBUG = "y" ]; then
