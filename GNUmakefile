@@ -63,6 +63,7 @@ endif
 CPPFLAGS :=					\
 	-Iinclude				\
 	-Iarch/$(ARCH)/include			\
+	-Iuser					\
 	-include include/builtin_config.h
 CFLAGS :=					\
 	-Wall					\
@@ -83,6 +84,7 @@ export CC AS LD OBJCOPY CPPFLAGS CFLAGS AFLAGS
 kobjs += acpi/
 kobjs += arch/$(ARCH)/
 kobjs += kernel/
+kobjs += ktest/
 kobjs += mm/
 kobjs += util/
 

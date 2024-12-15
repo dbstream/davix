@@ -4,6 +4,7 @@
  */
 #include <davix/context.h>
 #include <davix/cpuset.h>
+#include <davix/ktest.h>
 #include <davix/main.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
@@ -26,6 +27,8 @@ start_init (void *arg)
 
 	sched_begin_task ();
 	printk (PR_INFO "start_init()\n");
+
+	run_ktests ();
 
 	irq_disable ();
 	get_current_task ()->state = TASK_ZOMBIE;

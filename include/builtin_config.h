@@ -22,3 +22,13 @@
 #ifndef CONFIG_MAX_NR_CPUS
 #define CONFIG_MAX_NR_CPUS	256
 #endif
+
+/* Whether to run ktests or not. */
+#ifndef CONFIG_KTESTS
+#define CONFIG_KTESTS		0
+#endif
+
+/* Run ktests for the VMA tree. */
+#ifndef CONFIG_KTEST_VMATREE
+#define CONFIG_KTEST_VMATREE	0
+#endif

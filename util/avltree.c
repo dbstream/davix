@@ -163,7 +163,9 @@ __avl_remove (struct avl_tree *tree, struct avl_node *node)
 	while (avl_left (Z));
 
 	struct avl_node *Y = Z->parent;
-	Y->child[0] = NULL;
+	Y->child[0] = Z->child[1];
+	if (Y->child[0])
+		Y->child[0]->parent = Y;
 
 	Z->parent = parent;
 	if (parent)

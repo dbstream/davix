@@ -3,5 +3,6 @@
 
 kobjs += avltree.o
 kobjs += bitmap.o
+kobjs += vma_tree.o
 kobjs += snprintf.o
 kobjs += string.o

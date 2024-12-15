@@ -4,3 +4,6 @@
 
 # Ignore the default build directory.
 build/
+
+# Ignore the directory with user-provided files.
+user/

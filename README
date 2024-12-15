@@ -30,3 +30,9 @@ and launch QEMU. This requires GRUB to be installed. The './run' script is
 quite sophisticated, run './run --help' for details about what it can do.
 
 Do not run the kernel on real hardware.
+
+	Configuring the kernel
+
+To configure the kernel, create a 'user' directory and put a file named
+'config.h' in it. In 'config.h', it is possible to override macros defined in
+'include/builtin_config.h'.
