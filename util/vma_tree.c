@@ -462,10 +462,13 @@ vma_tree_remove (struct vma_tree *tree, struct vma_node *node)
 			parent->children[parent->children[1] == node] = Z;
 		else
 			tree->vma_tree = Z;
-		if (Z)
-			Z->parent = parent;
 
-		fixup_tree (tree, Z);
+		if (Z) {
+			Z->parent = parent;
+			fixup_tree (tree, Z);
+		} else
+			fixup_tree (tree, parent);
+
 		return;
 	}
 
@@ -495,11 +498,28 @@ vma_tree_remove (struct vma_tree *tree, struct vma_node *node)
 	else
 		tree->vma_tree = Z;
 
+	/**
+	 * Tree structure:
+	 *     before                  after
+	 *     node, Y                 Z
+	 *   A         Z            A     B
+	 */
 	if (Y == node) {
 		/** The successor is the direct child of @node.  */
 		fixup_tree (tree, Z);
 		return;
 	}
+
+	/**
+	 * Tree structure:
+	 *    before                   after
+	 *    node                     Z
+	 *  A          (...         A      (...
+	 *            ...)                ...)
+	 *          Y                   Y
+	 *        Z                   B
+	 *          B
+	 */
 
 	/** We need to be careful with the right subtree of @node.  */
 	Y->children[0] = Z->children[1];
