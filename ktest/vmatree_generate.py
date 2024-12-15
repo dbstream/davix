@@ -105,7 +105,7 @@ def find_free (size, align, low, high, bottomup):
 
 		gap_start = max (low, gap_start)
 		if high != None:
-			gap_end = min (high, gap_end)
+			gap_end = min (high + 1, gap_end)
 
 		gap_start = align_up (gap_start, align)
 		if gap_start + size <= gap_end:
