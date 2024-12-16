@@ -9,8 +9,6 @@
 #include <davix/align.h>
 #include <davix/vma_tree.h>
 
-#include <davix/printk.h>
-
 bool
 vma_tree_find (struct vma_tree_iterator *it,
 	struct vma_tree *tree, unsigned long addr)
