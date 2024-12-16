@@ -12,6 +12,8 @@ run_ktests (void);
 
 #else
 
+static inline void run_ktests (void) {}
+
 #endif
 
 #endif /* __DAVIX_KTEST_H */
