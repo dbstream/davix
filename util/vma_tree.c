@@ -454,6 +454,12 @@ vma_tree_remove (struct vma_tree *tree, struct vma_node *node)
 
 	list_delete (&node->vma_list);
 
+	/**
+	 * Tree structure:
+	 *      before            after
+	 *      node              Z
+	 *    Z
+	 */
 	if (!node->children[1]) {
 		/** Our right child is NULL.  */
 		/** This guarantees that the successor is in the fixup chain. */
@@ -472,6 +478,15 @@ vma_tree_remove (struct vma_tree *tree, struct vma_node *node)
 		return;
 	}
 
+	/**
+	 * Tree structure:
+	 *      before            after
+	 *      node             (Z
+	 *           (Z         ...
+	 *          ...       ...)
+	 *        ...)        successor
+	 *        successor
+	 */
 	if (!node->children[0]) {
 		/** Our successor is contained in the right subtree.  */
 		/** Start fixup from the successor. */
@@ -503,6 +518,7 @@ vma_tree_remove (struct vma_tree *tree, struct vma_node *node)
 	 *     before                  after
 	 *     node, Y                 Z
 	 *   A         Z            A     B
+	 *               B
 	 */
 	if (Y == node) {
 		/** The successor is the direct child of @node.  */
@@ -540,6 +556,8 @@ vma_tree_adjust (struct vma_tree *tree, struct vma_node *node)
 	struct vma_node *predecessor = prev_node (tree, node);
 	if (predecessor)
 		node->prev_gap = node->first - predecessor->last - 1;
+	else
+		node->prev_gap = node->first;
 
 	struct vma_node *successor = node->children[1];
 	if (successor) {
