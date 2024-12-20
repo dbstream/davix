@@ -85,6 +85,10 @@ pgtable_addr_index (unsigned long addr, int level)
 extern unsigned long min_mapped_addr;
 extern unsigned long max_mapped_addr;
 
+/* Low and high range for vmap. */
+extern unsigned long KERNEL_VMAP_LOW;
+extern unsigned long KERNEL_VMAP_HIGH;
+
 /**
  * Conversions between physical and virtual memory.
  */

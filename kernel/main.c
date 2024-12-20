@@ -11,6 +11,7 @@
 #include <davix/sched.h>
 #include <davix/smp.h>
 #include <davix/task_api.h>
+#include <davix/vmap.h>
 #include <asm/irq.h>
 #include <asm/page.h>
 #include <asm/sections.h>
@@ -52,6 +53,8 @@ main (void)
 	arch_init ();
 	arch_init_pfn_entry ();
 	smp_init ();
+
+	vmap_init ();
 
 	irq_enable ();
 

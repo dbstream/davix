@@ -4,3 +4,4 @@
 kobjs += initmem.o
 kobjs += pfn_slab.o
 kobjs += pgalloc.o
+kobjs += vmap.o

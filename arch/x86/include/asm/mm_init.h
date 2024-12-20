@@ -23,4 +23,8 @@ x86_paging_init (void);
 extern void
 map_hhdm_range (unsigned long start, unsigned long end);
 
+/* Insert implicit areas into vmap. */
+extern void
+arch_insert_vmap_areas (void (*pfn_insert) (unsigned long, unsigned long, const char *));
+
 #endif /* _ASM_MM_INIT_H */

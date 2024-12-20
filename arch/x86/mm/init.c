@@ -23,6 +23,8 @@ int max_pgtable_level;
 unsigned long HHDM_OFFSET;
 unsigned long PFN_OFFSET;
 
+static unsigned long HHDM_END, PFN_END;
+
 unsigned long PG_WT = __PG_PWT;
 unsigned long PG_UC_MINUS = __PG_PCD;
 unsigned long PG_UC = __PG_PCD | __PG_PWT;
@@ -30,6 +32,9 @@ unsigned long PG_WC = __PG_PCD;
 
 unsigned long min_mapped_addr = 0;
 unsigned long max_mapped_addr = 0;
+
+unsigned long KERNEL_VMAP_LOW;
+unsigned long KERNEL_VMAP_HIGH;
 
 __DATA_PAGE_ALIGNED __attribute__ ((aligned (PAGE_SIZE)))
 unsigned long kernel_page_tables[512];
@@ -113,14 +118,38 @@ __INIT_TEXT
 void
 x86_pgtable_init (void)
 {
+	/**
+	 * memory layout with 48-bit virtual addresses:
+	 *   0x0 .. 0x7fffffffffff			128 TiB	userspace
+	 *   0xffff800000000000 .. 0xffffbfffffffffff	64 TiB	direct mappings of all physical memory
+	 *   0xffffc00000000000 .. 0xffffc0ffffffffff	1 TiB	memory for struct pfn_entry
+	 *   0xffffe00000000000 .. 0xffffefffffffffff	16 TiB	kernel vmap space
+	 *   0xffffffff80000000 .. 0xffffffffffdfffff	~2 GiB	kernel and modules
+	 *
+	 * memory layout with 57-bit virtual addresses:
+	 *   0x0 .. 0xffffffffffffff			64 PiB	userspace
+	 *   0xff00000000000000 .. 0xff7fffffffffffff	32 PiB	direct mappings of all physical memory
+	 *   0xff80000000000000 .. 0xff81ffffffffffff	512 TiB	memory for struct pfn_entry
+	 *   0xff90000000000000 .. 0xffcfffffffffffff	16 PiB	kernel vmap space
+	 *   0xffffffff80000000 .. 0xffffffffffdfffff	~2 GiB	kernel and modules
+	 */
+
 	if (bsp_has (FEATURE_LA57)) {
 		max_pgtable_level = 5;
 		HHDM_OFFSET = 0xff00000000000000UL;
+		HHDM_END = 0xff7fffffffffffff;
 		PFN_OFFSET = 0xff80000000000000UL;
+		PFN_END = 0xff81ffffffffffffUL;
+		KERNEL_VMAP_LOW = 0xff90000000000000UL;
+		KERNEL_VMAP_HIGH = 0xffcfffffffffffffUL;
 	} else {
 		max_pgtable_level = 4;
 		HHDM_OFFSET = 0xffff800000000000UL;
+		HHDM_END = 0xffffbfffffffffffUL;
 		PFN_OFFSET = 0xffffc00000000000UL;
+		PFN_END = 0xffffc0ffffffffffUL;
+		KERNEL_VMAP_LOW = 0xffffe00000000000UL;
+		KERNEL_VMAP_HIGH = 0xffffefffffffffffUL;
 	}
 
 	if (bsp_has (FEATURE_NX)) {
@@ -387,4 +416,16 @@ arch_init_pfn_entry (void)
 		for (; start < end; start += PAGE_SIZE)
 			populate_page (start, PAGE_KERNEL_DATA);
 	}
+}
+
+void
+arch_insert_vmap_areas (void (*pfn_insert) (unsigned long, unsigned long, const char *))
+{
+	pfn_insert (HHDM_OFFSET, HHDM_END, "[higher-half direct map]");
+	pfn_insert (PFN_OFFSET, PFN_END, "[struct pfn_entry]");
+	pfn_insert ((unsigned long) __text_start, (unsigned long) __text_end - 1, "text(davix)");
+	pfn_insert ((unsigned long) __rodata_start, (unsigned long) __rodata_end - 1, "rodata(davix)");
+	pfn_insert ((unsigned long) __data_start, (unsigned long) __data_end - 1, "data(davix)");
+	pfn_insert ((unsigned long) __cpulocal_virt_start, (unsigned long) __cpulocal_virt_end - 1, "cpulocal(davix)");
+	pfn_insert ((unsigned long) __init_start, (unsigned long) __init_end - 1, "init(davix)");
 }
