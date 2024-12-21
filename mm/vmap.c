@@ -179,7 +179,7 @@ vmap_phys_explicit (const char *name,
 	unsigned long addr, unsigned long size, pte_flags_t prot,
 	unsigned long align, unsigned long low, unsigned long high)
 {
-	unsigned long offset = addr & PAGE_SIZE;
+	unsigned long offset = addr & (PAGE_SIZE - 1);
 
 	size = ALIGN_UP (addr + size, PAGE_SIZE);
 	addr = ALIGN_DOWN (addr, PAGE_SIZE);
