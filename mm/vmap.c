@@ -12,6 +12,8 @@
 #include <davix/vmap.h>
 #include <asm/mm_init.h>
 #include <asm/page_defs.h>
+#include <asm/pgtable.h>
+#include <asm/tlb.h>
 
 static struct slab *vmap_slab;
 
@@ -87,6 +89,11 @@ allocate_vmap_area (const char *name,
 	unsigned long size, unsigned long align,
 	unsigned long low, unsigned long high)
 {
+	/**
+	 * Make sure that area->vma_node.last + 1 never overflows.
+	 */
+	high = min (unsigned long, high, -2UL);
+
 	size = ALIGN_UP (size, PAGE_SIZE);
 	align = max (unsigned long, align, PAGE_SIZE);
 	if (!size || !align)
@@ -113,4 +120,89 @@ allocate_vmap_area (const char *name,
 
 	spin_unlock (&vmap_lock);
 	return area;
+}
+
+void
+free_vmap_area (struct vmap_area *area)
+{
+	spin_lock (&vmap_lock);
+	vma_tree_remove (&vmap_tree, &area->vma_node);
+	spin_unlock (&vmap_lock);
+
+	slab_free (area);
+}
+
+static pgtable_t *
+get_pgtable_entry (unsigned long addr, int level)
+{
+	int current = max_pgtable_level;
+	pgtable_t *pgtable = get_vmap_page_table ();
+	pgtable += pgtable_addr_index (addr, current);
+
+	while (current > level) {
+		pte_t entry = *pgtable;
+		if (pte_is_present (current, entry))
+			pgtable = pte_pgtable (current, entry);
+		else {
+			pgtable_t *new_table = alloc_page_table (current - 1);
+			if (!new_table)
+				return NULL;
+
+			pgtable = __pgtable_install (pgtable, &new_table, true);
+			if (new_table)
+				free_page_table (current - 1, new_table);
+		}
+
+		pgtable += pgtable_addr_index (addr, --current);
+	}
+
+	return pgtable;
+}
+
+static bool
+map_phys_range (unsigned long virt_addr,
+	unsigned long addr, unsigned long size, pte_flags_t prot)
+{
+	for (; size; addr += PAGE_SIZE, virt_addr += PAGE_SIZE, size -= PAGE_SIZE) {
+		pgtable_t *entry = get_pgtable_entry (virt_addr, 1);
+		if (!entry)
+			return false;
+
+		__pte_install_always (entry, make_pte (1, addr, prot));
+	}
+
+	return true;
+}
+
+void *
+vmap_phys_explicit (const char *name,
+	unsigned long addr, unsigned long size, pte_flags_t prot,
+	unsigned long align, unsigned long low, unsigned long high)
+{
+	unsigned long offset = addr & PAGE_SIZE;
+
+	size = ALIGN_UP (addr + size, PAGE_SIZE);
+	addr = ALIGN_DOWN (addr, PAGE_SIZE);
+	size -= addr;
+
+	struct vmap_area *area = allocate_vmap_area (name, size, align, low, high);
+	if (!area)
+		return NULL;
+
+	if (map_phys_range (area->vma_node.first, addr, size, prot))
+		return (void *) (area->vma_node.first + offset);
+
+	/** TODO: properly unmap the range and flush the TLB on failure */
+
+	strncpy (area->purpose, "[failed vmap_phys]", sizeof (area->purpose));
+	area->purpose[sizeof (area->purpose) - 1] = 0;
+	return NULL;
+}
+
+void *
+vmap_phys (const char *name,
+	unsigned long addr, unsigned long size, pte_flags_t prot)
+{
+	return vmap_phys_explicit (name, addr, size, prot,
+		PAGE_SIZE, KERNEL_VMAP_LOW, KERNEL_VMAP_HIGH);
 }

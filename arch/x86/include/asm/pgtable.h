@@ -38,6 +38,12 @@ alloc_page_table (int level);
 extern void
 free_page_table (int level, pgtable_t *table);
 
+/**
+ * Get the root page table to be used for vmap operations.
+ */
+extern pgtable_t *
+get_vmap_page_table (void);
+
 	/* Functions for manipulating page tables. */
 
 /**
@@ -64,6 +70,15 @@ __pgtable_install (pgtable_t *entry, pgtable_t **new_table, bool kernel)
 }
 
 /**
+ * Unconditionally install 'desired' into 'entry'.
+ */
+static inline void
+__pte_install_always (pgtable_t *entry, pte_t desired)
+{
+	atomic_store_release (entry, desired);
+}
+
+/**
  * Install 'desired' into 'entry', which currently holds the value 'expected'.
  * Returns the pre-existing value of *entry. If it doesn't match with what was
  * expected, 'desired' was not installed.
@@ -84,6 +99,28 @@ make_pte (int level, unsigned long phys_addr, unsigned long flags)
 	if (level > 1)
 		flags |= (flags & __PG_PAT) ? __PG_PAT_HUGE : __PG_HUGE;
 	return phys_addr | flags;
+}
+
+static inline bool
+pte_is_present (int level, pte_t pte)
+{
+	(void) level;
+	return (pte & __PG_PRESENT) ? true : false;
+}
+
+static inline bool
+pte_is_pgtable (int level, pte_t pte)
+{
+	if (level == 1)
+		return false;
+	return (pte & __PG_HUGE) ? false : true;
+}
+
+static inline pgtable_t *
+pte_pgtable (int level, pte_t pte)
+{
+	(void) level;
+	return (pgtable_t *) phys_to_virt (pte & __PG_ADDR_MASK);
 }
 
 #endif /* _ASM_PGTABLE_H */
