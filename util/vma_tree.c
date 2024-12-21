@@ -62,7 +62,10 @@ vma_tree_find_free_bottomup (unsigned long *out, struct vma_tree *tree,
 	if (!size)
 		return false;
 
-	if (max_addr < min_addr || max_addr < size || max_addr - min_addr < size)
+	if (max_addr < min_addr || max_addr < size)
+		return false;
+
+	if ((max_addr != -1UL || min_addr != 0UL) && max_addr - min_addr + 1 < size)
 		return false;
 
 	if (!current)
@@ -154,7 +157,10 @@ vma_tree_find_free_topdown (unsigned long *out, struct vma_tree *tree,
 	if (!size)
 		return false;
 
-	if (max_addr < min_addr || max_addr < size || max_addr - min_addr < size)
+	if (max_addr < min_addr || max_addr < size)
+		return false;
+
+	if ((max_addr != -1UL || min_addr != 0UL) && max_addr - min_addr + 1 < size)
 		return false;
 
 	if (current) {
