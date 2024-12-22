@@ -29,6 +29,8 @@ start_init (void *arg)
 	sched_begin_task ();
 	printk (PR_INFO "start_init()\n");
 
+	smp_boot_cpus ();
+
 	run_ktests ();
 
 	irq_disable ();
@@ -55,6 +57,7 @@ main (void)
 	smp_init ();
 
 	vmap_init ();
+	smpboot_init ();
 
 	irq_enable ();
 

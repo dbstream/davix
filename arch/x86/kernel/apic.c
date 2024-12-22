@@ -96,7 +96,7 @@ apic_write_icr (uint32_t value, uint32_t target)
 		 * is written but before APIC_ICR_LOW is written.
 		 */
 		uint32_t old = APIC_REG (APIC_ICR_HIGH);
-		APIC_REG (APIC_ICR_HIGH) = target;
+		APIC_REG (APIC_ICR_HIGH) = target << 24;
 		APIC_REG (APIC_ICR_LOW) = value;
 		APIC_REG (APIC_ICR_HIGH) = old;
 	}

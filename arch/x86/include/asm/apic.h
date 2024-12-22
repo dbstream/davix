@@ -44,6 +44,7 @@
 #define APIC_DST_LOGICAL	(1U << 11)
 
 #define APIC_POLARITY_LOW	(1U << 13)
+#define APIC_LEVEL_ASSERT	(1U << 14)
 #define APIC_TRIGGER_MODE_LEVEL	(1U << 15)
 #define APIC_IRQ_MASK		(1U << 16)
 

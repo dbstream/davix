@@ -8,4 +8,13 @@
 extern void
 smp_init (void);
 
+extern void
+smpboot_init (void);
+
+/**
+ * Bring other CPUs online.
+ */
+extern void
+smp_boot_cpus (void);
+
 #endif /* _DAVIX_SMP_H */

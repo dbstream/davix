@@ -8,7 +8,7 @@
 #define _FEATURES_ENUM_H 1
 
 /* Feature word 0: CPUID 01h ecx */
-#define FEATURE_X2APIC		(32 * 0		+ 1)
+#define FEATURE_X2APIC		(32 * 0		+ 21)
 
 /* Feature word 1: CPUID 01h edx */
 #define FEATURE_TSC		(32 * 1		+ 4)

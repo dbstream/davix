@@ -39,12 +39,6 @@ unsigned long KERNEL_VMAP_HIGH;
 __DATA_PAGE_ALIGNED __attribute__ ((aligned (PAGE_SIZE)))
 unsigned long kernel_page_tables[512];
 
-extern pgtable_t *
-get_vmap_page_table (void)
-{
-	return (pgtable_t *) &kernel_page_tables[0];
-}
-
 /**
  * This defines an initial number of page tables which are allocated as part
  * of the kernel image. It needs to be large enough to map enough memory to
@@ -65,6 +59,12 @@ static unsigned long
 ktext_pa (void *p)
 {
 	return kernel_load_offset + (unsigned long) p - __KERNEL_START;
+}
+
+extern pgtable_t *
+get_vmap_page_table (void)
+{
+	return (pgtable_t *) phys_to_virt (ktext_pa (&kernel_page_tables[0]));
 }
 
 static unsigned long
