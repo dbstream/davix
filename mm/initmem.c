@@ -20,6 +20,7 @@
 #include <davix/initmem.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <davix/spinlock.h>
 #include <davix/stdbool.h>
 #include <davix/stddef.h>
 #include <davix/string.h>
@@ -27,6 +28,9 @@
 #include <asm/sections.h>
 
 bool mm_is_early = true;
+
+__INIT_DATA
+static spinlock_t initmem_lock;
 
 #if __SIZEOF_LONG__ > 4
 #define BOTTOMUP_ALLOCATION_THRESHOLD	0x100000000UL	/* 4GiB */
@@ -78,9 +82,13 @@ __INIT_TEXT
 void
 initmem_dump (struct initmem_vector *vector)
 {
+	bool flag = spin_lock_irq (&initmem_lock);
+
 	printk (PR_INFO "Dump of %s:\n", vector->name);
 	for (unsigned long i = 0; i < vector->num_entries; i++)
 		initmem_print (vector->name, &vector->entries[i]);
+
+	spin_unlock_irq (&initmem_lock, flag);
 }
 
 static bool initmem_extending;
@@ -288,6 +296,8 @@ initmem_register (unsigned long start, unsigned long size,
 {
 	validate (flags);
 
+	bool flag = spin_lock_irq (&initmem_lock);
+
 	struct initmem_range range = {
 		.start = start,
 		.end = start + size,
@@ -302,18 +312,14 @@ initmem_register (unsigned long start, unsigned long size,
 		initmem_cond_try_extend (&initmem_usable_ram);
 		initmem_append (&initmem_usable_ram, &range);
 	}
+
+	spin_unlock_irq (&initmem_lock, flag);
 }
 
-/**
- * Add a memory range to the reserved list.
- */
-__INIT_TEXT
-void
-initmem_reserve (unsigned long start, unsigned long size,
+static void
+__initmem_reserve  (unsigned long start, unsigned long size,
 	initmem_flags_t flags)
 {
-	validate (flags);
-
 	struct initmem_range range = {
 		.start = start,
 		.end = start + size,
@@ -326,12 +332,31 @@ initmem_reserve (unsigned long start, unsigned long size,
 }
 
 /**
+ * Add a memory range to the reserved list.
+ */
+__INIT_TEXT
+void
+initmem_reserve (unsigned long start, unsigned long size,
+	initmem_flags_t flags)
+{
+	validate (flags);
+
+	bool flag = spin_lock_irq (&initmem_lock);
+
+	__initmem_reserve (start, size, flags);
+
+	spin_unlock_irq (&initmem_lock, flag);
+}
+
+/**
  * Iterate over memory regions which are free (i.e. regions in initmem_usable
  * that are not INITMEM_DONT_ALLOCATE_MASK and which don't overlap with
  * initmem_reserved). Returns true for each new entry, false when finished.
  *
  * 'it_a' and 'it_b' are pointers to iterator variables that should be
  * initialized to zero, then kept as is.
+ *
+ * XXX no locking :-(
  */
 __INIT_TEXT
 int
@@ -430,6 +455,8 @@ initmem_alloc_phys_range (unsigned long size, unsigned long align,
 	/* Be conservative. */
 	unsigned long pgalign = max(unsigned long, align, PAGE_SIZE);
 
+	bool flag = spin_lock_irq (&initmem_lock);
+
 	/**
 	 * We rely on the fact that initmem_next_free_align returns ranges
 	 * with aligned ends.
@@ -465,7 +492,9 @@ initmem_alloc_phys_range (unsigned long size, unsigned long align,
 	}
 
 	if (found)
-		initmem_reserve (found, size, INITMEM_KERN_RESERVED);
+		__initmem_reserve (found, size, INITMEM_KERN_RESERVED);
+
+	spin_unlock_irq (&initmem_lock, flag);
 	return found;
 }
 
@@ -508,8 +537,12 @@ __INIT_TEXT
 void
 initmem_free_phys (unsigned long start, unsigned long size)
 {
+	bool flag = spin_lock_irq (&initmem_lock);
+
 	initmem_delete (&initmem_reserved, start, size);
 	initmem_cond_try_extend (&initmem_reserved);
+
+	spin_unlock_irq (&initmem_lock, flag);
 }
 
 /**
