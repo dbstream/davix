@@ -1,0 +1,14 @@
+/**
+ * Interprocessor interrupts. (calling functions on other CPUs)
+ * Copyright (C) 2024  dbstream
+ */
+#ifndef __ASM_IPI_H
+#define __ASM_IPI_H 1
+
+/**
+ * Architecture-specific function to stop all other CPUs on panic.
+ */
+extern void
+arch_panic_stop_others (void);
+
+#endif /* __ASM_IPI_H */

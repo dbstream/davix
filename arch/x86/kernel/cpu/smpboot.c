@@ -2,10 +2,12 @@
  * Processor bringup on SMP systems.
  * Copyright (C) 2024  dbstream
  */
+#include <davix/cpuset.h>
 #include <davix/initmem.h>
 #include <davix/page.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <davix/sched.h>
 #include <davix/smp.h>
 #include <davix/spinlock.h>
 #include <davix/string.h>
@@ -13,10 +15,13 @@
 #include <davix/vmap.h>
 #include <asm/apic.h>
 #include <asm/cregs.h>
+#include <asm/fence.h>
 #include <asm/msr.h>
-#include <asm/pgtable.h>
+#include <asm/smp.h>
 #include <asm/smpboot.h>
 #include <asm/task.h>
+#include <asm/tsc.h>
+#include <asm/trap.h>
 
 static inline void
 udelay (uint64_t microseconds)
@@ -87,27 +92,64 @@ arch_smpboot_init (void)
 	return ESUCCESS;
 }
 
+extern void *__startup_rsp;
+extern void *__startup_rip;
+
+static int booting_cpu;
+
+void
+startup64_ap_initialize_cpu (void)
+{
+	write_msr (MSR_GSBASE, __cpulocal_offsets[booting_cpu]);
+}
+
+static bool sync_point_0;
+static bool sync_point_1;
+static bool sync_point_2;
+
 static void
+start_additional_processor (void)
+{
+	mb ();
+
+	atomic_store_relaxed (&sync_point_0, true);
+
+	do
+		arch_relax ();
+	while (atomic_load_relaxed (&sync_point_1) != true);
+
+	x86_synchronize_tsc_victim ();
+	x86_setup_local_traps ();
+	apic_init_ap ();
+
+	set_cpu_online (this_cpu_id ());	
+	atomic_store_release (&sync_point_2, true);
+
+	printk ("Hello from another CPU!\n");
+
+	irq_enable ();
+	sched_idle ();
+}
+
+static spinlock_t smpboot_lock;
+
+static bool
 startup_cpu_using_APIC (unsigned int target, unsigned int vector)
 {
 	apic_send_IPI (APIC_DM_INIT | APIC_TRIGGER_MODE_LEVEL | APIC_LEVEL_ASSERT, target);
 	udelay (10000);
 	apic_send_IPI (APIC_DM_INIT | APIC_TRIGGER_MODE_LEVEL, target);
-	asm volatile ("mfence" ::: "memory");
-	apic_send_IPI (APIC_DM_SIPI | vector, target);
-	udelay (300);
-}
+	mb();
 
-extern void *__startup_rsp;
-extern void *__startup_rip;
+	for (int i = 0; i < 2; i++) {
+		apic_send_IPI (APIC_DM_SIPI | vector, target);
+		udelay (300);
 
-static void
-start_additional_processor (void)
-{
-	asm volatile ("mfence" ::: "memory");
+		if (atomic_load_relaxed (&sync_point_0))
+			return true;
+	}
 
-	for (;;)
-		arch_relax ();
+	return false;
 }
 
 errno_t
@@ -117,6 +159,24 @@ arch_smp_boot_cpu (unsigned int cpu)
 
 	if (disable_smpboot)
 		return ENOTSUP;
+
+	bool flag = irq_save ();
+	if (!spin_trylock (&smpboot_lock)) {
+		irq_restore (flag);
+		return EAGAIN;
+	}
+
+	if (disable_smpboot) {
+		spin_unlock (&smpboot_lock);
+		irq_restore (flag);
+		return ENOTSUP;
+	}
+
+	// mfence in startup_cpu_using_APIC will make these visible
+	booting_cpu = cpu;
+	sync_point_0 = false;
+	sync_point_1 = false;
+	sync_point_2 = false;
 
 	unsigned long stack_top = 0;
 	if (mm_is_early)
@@ -128,15 +188,34 @@ arch_smp_boot_cpu (unsigned int cpu)
 			stack_top = pfn_entry_to_virt (stack_page);
 	}
 
-	if (!stack_top)
+	if (!stack_top) {
+		spin_unlock (&smpboot_lock);
+		irq_restore (flag);
 		return ENOMEM;
+	}
 
 	stack_top += TASK_STK_SIZE;
 	__startup_rsp = (void *) stack_top;
 	__startup_rip = start_additional_processor;
 
 	printk ("smp: booting CPU%u\n", cpu);
-	startup_cpu_using_APIC (cpu_to_apicid[cpu], (unsigned long) smpboot_page >> 12);
+	if (!startup_cpu_using_APIC (cpu_to_apicid[cpu], (unsigned long) smpboot_page >> 12)) {
+		printk (PR_ERR "smp: failed to boot CPU%u; disabling smpboot...\n", cpu);
+		disable_smpboot = true;
+		spin_unlock (&smpboot_lock);
+		irq_restore (flag);
+		return EIO;
+	}
 
+	atomic_store_relaxed (&sync_point_1, true);
+
+	x86_synchronize_tsc_control ();
+
+	do
+		arch_relax ();
+	while (!atomic_load_acquire (&sync_point_2));
+
+	spin_unlock (&smpboot_lock);
+	irq_restore (flag);
 	return ESUCCESS;
 }

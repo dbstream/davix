@@ -34,6 +34,7 @@ start_init (void *arg)
 	run_ktests ();
 
 	irq_disable ();
+
 	get_current_task ()->state = TASK_ZOMBIE;
 	schedule ();
 }

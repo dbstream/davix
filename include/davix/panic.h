@@ -50,6 +50,9 @@ in_panic (void);
 extern void
 panic_nmi_handler (void);
 
+extern void
+panic_stop_self (void);
+
 /**
  * Trigger a kernel panic.
  */

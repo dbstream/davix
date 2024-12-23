@@ -19,6 +19,7 @@ typedef int errno_t;
 #define ENOMEM 1
 #define EIO 2
 #define ENOTSUP 3
+#define EAGAIN 4
 
 #endif /* _DAVIX_ERRNO_H */
 

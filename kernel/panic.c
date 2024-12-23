@@ -10,6 +10,8 @@
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/snprintf.h>
+#include <asm/fence.h>
+#include <asm/ipi.h>
 #include <asm/irq.h>
 #include <asm/smp.h>
 
@@ -63,12 +65,13 @@ deregister_panic_callback (struct panic_callback *cb)
 /**
  * Put the current CPU into an idling loop.
  */
-static void
+void
 panic_stop_self (void)
 {
 	irq_disable ();
 
 	/* mark us as offline so enter_panic can proceed */
+	mb ();
 	clear_cpu_online (this_cpu_id ());
 
 	for (;;)
@@ -114,8 +117,7 @@ enter_panic (void)
 	/**
 	 * We are now the panic CPU. Stop all other CPUs.
 	 */
-
-	/* TODO: use IPIs to stop all other CPUs */
+	arch_panic_stop_others ();
 }
 
 static void

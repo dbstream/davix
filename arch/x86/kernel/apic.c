@@ -293,3 +293,18 @@ apic_init (void)
 		apic_write (APIC_TMR_ICR, apic_hz / (16 * 10));
 	}
 }
+
+/**
+ * Initialize the APIC on an AP. This function configures MSR_APIC_BASE and
+ * calls apic_init().
+ */
+void
+apic_init_ap (void)
+{
+	if (bsp_has (FEATURE_X2APIC))
+		setup_apic_base_x2APIC ();
+	else
+		setup_apic_base_xAPIC ();
+
+	apic_init ();
+}

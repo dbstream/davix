@@ -92,6 +92,9 @@ extern void
 early_apic_init (void);
 
 extern void
+apic_init_ap (void);
+
+extern void
 apic_init (void);
 
 /* Send APIC End-Of-Interrupt */

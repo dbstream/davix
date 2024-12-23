@@ -5,6 +5,7 @@
 #ifndef _DAVIX_BITMAP_H
 #define _DAVIX_BITMAP_H
 
+#include <davix/atomic.h>
 #include <davix/stdint.h>
 
 typedef unsigned long bitmap_t;
@@ -35,19 +36,19 @@ bitmap_bit (unsigned long bit_idx)
 static inline unsigned long
 bitmap_get (bitmap_t *bitmap, unsigned long bit)
 {
-	return bitmap[bitmap_idx(bit)] & bitmap_bit(bit);
+	return atomic_load_relaxed (&bitmap[bitmap_idx(bit)]) & bitmap_bit(bit);
 }
 
 static inline void
 bitmap_set (bitmap_t *bitmap, unsigned long bit)
 {
-	bitmap[bitmap_idx(bit)] |= bitmap_bit(bit);
+	atomic_or_fetch_relaxed (&bitmap[bitmap_idx(bit)], bitmap_bit(bit));
 }
 
 static inline void
 bitmap_clear (bitmap_t *bitmap, unsigned long bit)
 {
-	bitmap[bitmap_idx(bit)] &= ~bitmap_bit(bit);
+	atomic_and_fetch_relaxed (&bitmap[bitmap_idx(bit)], ~bitmap_bit(bit));
 }
 
 /**

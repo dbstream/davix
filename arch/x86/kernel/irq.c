@@ -5,6 +5,7 @@
  * Here, we handle interrupts that originate from the local APIC.
  */
 #include <davix/context.h>
+#include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/timer.h>
 #include <asm/apic.h>
@@ -55,6 +56,17 @@ handle_PIC_IRQ (struct entry_regs *regs)
 
 	(void) regs;
 	printk (PR_WARN "Spurious 8259 PIC interrupt on CPU%u\n", this_cpu_id ());
+
+	preempt_leave_IRQ (state);
+}
+
+void
+handle_panic_IPI (struct entry_regs *regs)
+{
+	preempt_state_t state = preempt_enter_IRQ ();
+
+	(void) regs;
+	panic_stop_self ();
 
 	preempt_leave_IRQ (state);
 }

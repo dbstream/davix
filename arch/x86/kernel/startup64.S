@@ -107,6 +107,7 @@ percpu_GDT:
 
 	.globl __startup64_bsp
 	.type __startup64_bsp, @function
+	.balign 16
 __startup64_bsp:
 	.cfi_startproc
 	.cfi_undefined rip
@@ -119,6 +120,24 @@ __startup64_bsp:
 	wrmsr
 	movq %rax, %gs:0	/* cpulocal_offset */
 
+	jmp lgdt_and_goto__start
+
+	.cfi_endproc
+	.size __startup64_bsp, . - __startup64_bsp
+
+	__TEXT
+
+	.globl __startup64_ap
+	.type __startup64_ap, @function
+	.balign 16
+__startup64_ap:
+	.cfi_startproc
+	.cfi_undefined rip
+
+	/** smpboot.c sets up CPU-local variables for this AP.  */
+	call startup64_ap_initialize_cpu
+
+lgdt_and_goto__start:
 	leaq percpu_GDT(%rip), %rbx
 	addq %gs:0, %rbx
 	subq $16, %rsp
@@ -141,4 +160,4 @@ __startup64_bsp:
 	lretq
 
 	.cfi_endproc
-	.size __startup64_bsp, . - __startup64_bsp
+	.size __startup64_ap, . - __startup64_ap

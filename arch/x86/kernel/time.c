@@ -12,6 +12,12 @@
 static bool use_hpet;
 static bool use_tsc;
 
+bool
+x86_time_is_tsc (void)
+{
+	return use_tsc;
+}
+
 __INIT_TEXT
 void
 x86_time_init_early (void)

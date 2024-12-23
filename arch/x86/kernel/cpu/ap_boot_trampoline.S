@@ -100,10 +100,8 @@ x86_ap_boot_trampoline:
 	movl %eax, %gs
 	movl %eax, %ss
 
-	movb $'X', %al
-	outb %al, $0xe9
-1:	hlt
-	jmp 1b
+	movq $__startup64_ap, %rax
+	jmp *%rax
 
 	.balign 64
 temporary_gdt:

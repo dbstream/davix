@@ -30,4 +30,21 @@ rdtsc (void)
 	return ((unsigned long) edx << 32) | eax;
 }
 
+extern bool
+x86_time_is_tsc (void);
+
+/**
+ * Synchronize the TSC on a newly-booted CPU. This function should be called on
+ * the control CPU.
+ */
+extern void
+x86_synchronize_tsc_control (void);
+
+/**
+ * Synchronize the TSC on a newly-booted CPU. This function should be called on
+ * the victim CPU.
+ */
+extern void
+x86_synchronize_tsc_victim (void);
+
 #endif /* _ASM_TSC_H */

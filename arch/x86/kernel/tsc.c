@@ -2,6 +2,7 @@
  * Timestamp Counter (TSC)
  * Copyright (C) 2024  dbstream
  */
+#include <davix/atomic.h>
 #include <davix/printk.h>
 #include <davix/timer.h>
 #include <asm/cpulocal.h>
@@ -194,4 +195,73 @@ x86_tsc_nsecs (void)
 	irq_restore (flag);
 
 	return conv.ns_offset + ((1000000UL * tsc) / conv.khz);
+}
+
+/**
+ * TSC synchronization
+ *
+ * The control CPU and the victim CPU play ping-pong with the
+ * tsc_sync_timeline, which is a timeline semaphore of sorts.
+ */
+
+enum {
+	TSC_SYNC_WAIT_FOR_VICTIM = 0,
+	TSC_SYNC_WAIT_FOR_CONTROL = 1,
+	TSC_SYNC_MEASURING = 2,
+	TSC_SYNC_VICTIM_DONE = 3,
+	TSC_SYNC_DONE = 4
+};
+
+static int tsc_sync_timeline = TSC_SYNC_WAIT_FOR_VICTIM;
+
+static uint64_t tsc_sync_ns;
+
+void
+x86_synchronize_tsc_control (void)
+{
+	if (!x86_time_is_tsc ())
+		return;
+
+	bool flag = irq_save ();
+
+	struct tsc_conv conv = this_cpu_read (&tsc_conv);
+
+	while (atomic_load_relaxed (&tsc_sync_timeline) != TSC_SYNC_WAIT_FOR_CONTROL)
+		arch_relax ();
+
+	atomic_store_relaxed (&tsc_sync_timeline, TSC_SYNC_MEASURING);
+	tsc_sync_ns = conv.ns_offset + ((1000000UL * rdtsc ()) / conv.khz);
+
+	do
+		arch_relax ();
+	while (atomic_load_relaxed (&tsc_sync_timeline) != TSC_SYNC_VICTIM_DONE);
+	atomic_store_release (&tsc_sync_timeline, TSC_SYNC_DONE);
+
+	do
+		arch_relax ();
+	while (atomic_load_relaxed (&tsc_sync_timeline) != TSC_SYNC_WAIT_FOR_VICTIM);
+	irq_restore (flag);
+}
+
+void
+x86_synchronize_tsc_victim (void)
+{
+	if (!x86_time_is_tsc ())
+		return;
+
+	uint64_t tsc;
+
+	atomic_store_relaxed (&tsc_sync_timeline, TSC_SYNC_WAIT_FOR_CONTROL);
+	do
+		arch_relax ();
+	while (atomic_load_relaxed (&tsc_sync_timeline) != TSC_SYNC_MEASURING);
+
+	tsc = rdtsc ();
+	atomic_store_relaxed (&tsc_sync_timeline, TSC_SYNC_VICTIM_DONE);
+	do
+		arch_relax ();
+	while (atomic_load_acquire (&tsc_sync_timeline) != TSC_SYNC_DONE);
+
+	set_tsc_conv (tsc, tsc_sync_ns);
+	atomic_store_release (&tsc_sync_timeline, TSC_SYNC_WAIT_FOR_VICTIM);
 }
