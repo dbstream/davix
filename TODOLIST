@@ -9,21 +9,16 @@ the QEMU debugcon port (port 0xe9).
 
 Planned features, in rough order of implementation:
 
-- Local APIC interrupts (APIC timer)
-
-- Very simple RR-style task scheduler
-
-- SMP bootup (remember to shut down other CPUs on kernel panic)
+- Async work scheduling
+  - Allow processors in normal and IRQ context to schedule work to run in normal
+    context on the same CPU. Useful for e.g. (non-smpboot) TSC synchronization,
+    where one CPU needs to send an IPI to another CPU while avoiding deadlock.
 
 - Longterm: Make printk NMI-safe
   - In printk_emit_message(), disable IRQs when printing
   - If during NMI, store the message to a per-CPU message buffer and signal a
     self-IPI (which will be handled the next time IRQs are enabled after
     returning from NMI context).
-
-- Longterm: Implement printk to a graphical console
-  - This will require writing a tty driver that can handle ANSI escape codes.
-  - Probably leave this to userspace.
 
 - Longterm: Userspace
   - Start out very basic, for example by mapping the initrd at a fixed address
