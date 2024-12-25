@@ -125,10 +125,8 @@ start_additional_processor (void)
 	set_cpu_online (this_cpu_id ());	
 	atomic_store_release (&sync_point_2, true);
 
-	printk ("Hello from another CPU!\n");
-
-	irq_enable ();
-	sched_idle ();
+//	printk ("Hello from another CPU!\n");
+	smp_start_additional_cpu ();
 }
 
 static spinlock_t smpboot_lock;
@@ -198,7 +196,6 @@ arch_smp_boot_cpu (unsigned int cpu)
 	__startup_rsp = (void *) stack_top;
 	__startup_rip = start_additional_processor;
 
-	printk ("smp: booting CPU%u\n", cpu);
 	if (!startup_cpu_using_APIC (cpu_to_apicid[cpu], (unsigned long) smpboot_page >> 12)) {
 		printk (PR_ERR "smp: failed to boot CPU%u; disabling smpboot...\n", cpu);
 		disable_smpboot = true;

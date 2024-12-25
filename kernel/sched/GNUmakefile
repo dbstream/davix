@@ -4,3 +4,4 @@
 kobjs += main.o
 kobjs += rq.o
 kobjs += timer.o
+kobjs += workqueue.o

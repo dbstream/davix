@@ -2,10 +2,14 @@
  * SMP support
  * Copyright (C) 2024  dbstream
  */
+#include <davix/context.h>
 #include <davix/cpuset.h>
 #include <davix/printk.h>
+#include <davix/sched.h>
 #include <davix/smp.h>
 #include <davix/stdbool.h>
+#include <davix/workqueue.h>
+#include <asm/irq.h>
 #include <asm/sections.h>
 #include <asm/smpboot.h>
 
@@ -53,4 +57,16 @@ smp_boot_cpus (void)
 		if (e != ESUCCESS)
 			printk (PR_ERR "smp: smp_boot_cpu(%u) failed with error %d\n", cpu, e);
 	}
+}
+
+void
+smp_start_additional_cpu (void)
+{
+	preempt_off ();
+	irq_enable ();
+
+	sched_init_this_cpu ();
+	workqueue_init_this_cpu ();
+
+	sched_idle ();
 }

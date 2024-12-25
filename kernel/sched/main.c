@@ -74,6 +74,23 @@ update_current_timeslice (void)
 }
 
 /**
+ * Wake up a task on the current CPU.
+ * !!! This function may only be called on tasks that belong to the current CPU.
+ * It must be called with preemption disabled.
+ */
+void
+sched_wake__this_cpu (struct task *task)
+{
+	bool flag = irq_save ();
+	if (task->state != TASK_RUNNABLE) {
+		task->state = TASK_RUNNABLE;
+		if (rq_enqueue (task))
+			update_current_timeslice ();
+	}
+	irq_restore (flag);
+}
+
+/**
  * Bring up the scheduler on the current CPU.
  */
 void
@@ -89,7 +106,7 @@ sched_init_this_cpu (void)
 	tmr->ktimer.callback = sched_timer_callback;
 	tmr->is_armed = false;
 
-	printk ("begin scheduling on CPU%u\n", this_cpu_id ());
+//	printk ("begin scheduling on CPU%u\n", this_cpu_id ());
 	this_cpu_write (&__scheduler_running, true);
 
 	update_current_timeslice ();
@@ -123,8 +140,8 @@ context_switch (struct task *next, struct task *self)
 {
 	struct runqueue *rq = this_cpu_runqueue ();
 
-	printk (PR_INFO "context_switch: %s --> %s\n",
-		self->comm, next->comm);
+//	printk (PR_INFO "context_switch: %s --> %s\n",
+//		self->comm, next->comm);
 
 	rq->last_task_switch = ns_since_boot ();
 	update_current_timeslice ();

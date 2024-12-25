@@ -48,7 +48,8 @@ create_idle_task (unsigned int cpu)
 }
 
 struct task *
-create_kernel_task (const char *name, void (*start_function)(void *), void *arg)
+create_kernel_task (const char *name, void (*start_function)(void *), void *arg,
+	unsigned int flags)
 {
 	struct task *task = alloc_task_struct ();
 	if (!task)
@@ -63,7 +64,7 @@ create_kernel_task (const char *name, void (*start_function)(void *), void *arg)
 
 	snprintf (task->comm, sizeof (task->comm), "%s", name);
 
-	task->flags = 0;
+	task->flags = flags;
 	task->state = TASK_RUNNABLE;
 	sched_new_task (task);
 	return task;

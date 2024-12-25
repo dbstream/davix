@@ -43,7 +43,8 @@ struct task {
 #define TASK_UNINTERRUPTIBLE 2
 #define TASK_ZOMBIE 3
 
-#define TF_IDLE 1U
+#define TF_IDLE 1U		/** The task is an idle task.  */
+#define TF_NOMIGRATE 2U		/** The task is to be excluded form migration.  */
 
 /**
  * Initialize the scheduler on boot.
@@ -83,5 +84,13 @@ sched_begin_task (void);
  */
 extern void
 sched_new_task (struct task *task);
+
+/**
+ * Wake up a task on the current CPU.
+ * !!! This function may only be called on tasks that belong to the current CPU.
+ * It must be called with preemption disabled.
+ */
+extern void
+sched_wake__this_cpu (struct task *task);
 
 #endif /* _DAVIX_SCHED_H */

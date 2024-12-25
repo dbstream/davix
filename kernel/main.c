@@ -12,6 +12,7 @@
 #include <davix/smp.h>
 #include <davix/task_api.h>
 #include <davix/vmap.h>
+#include <davix/workqueue.h>
 #include <asm/irq.h>
 #include <asm/page.h>
 #include <asm/sections.h>
@@ -65,8 +66,10 @@ main (void)
 	tasks_init ();
 	sched_init ();
 
-	if (!create_kernel_task ("init", start_init, NULL))
+	if (!create_kernel_task ("init", start_init, NULL, 0))
 		panic ("Couldn't create init task.");
+
+	workqueue_init_this_cpu ();
 
 	printk (PR_NOTICE "Reached end of main()\n");
 	sched_idle ();

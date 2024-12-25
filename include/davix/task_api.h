@@ -19,8 +19,11 @@ create_idle_task (unsigned int cpu);
 
 /**
  * Create a new task which will execute in kernel context.
+ * @flags	bitmask of TF_* values.
+ *	TF_NOMIGRATE	The task will run on the current CPU.
  */
 extern struct task *
-create_kernel_task (const char *name, void (*start_function) (void *), void *arg);
+create_kernel_task (const char *name, void (*start_function) (void *), void *arg,
+	unsigned int flags);
 
 #endif /* _DAVIX_TASK_API_H */
