@@ -6,6 +6,7 @@
 #include <davix/initmem.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <davix/string.h>
 #include <asm/acpi.h>
 #include <asm/apic.h>
 #include <asm/cpulocal.h>
@@ -57,6 +58,7 @@ x86_smp_init (void)
 		if (!__cpulocal_offsets[i])
 			panic ("Out of memory when allocating CPU-local regions.");
 
+		memset ((void *) __cpulocal_offsets[i], 0, size);
 		that_cpu_write (&__cpulocal_offset, i, __cpulocal_offsets[i]);
 		that_cpu_write (&__this_cpu_id, i, i);
 		that_cpu_write (&__stack_canary, i, this_cpu_read (&__stack_canary));
