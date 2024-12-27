@@ -216,3 +216,39 @@ arch_smp_boot_cpu (unsigned int cpu)
 	irq_restore (flag);
 	return ESUCCESS;
 }
+
+static void
+resynchronize_tsc_smp_work (void *arg)
+{
+	(void) arg;
+	x86_synchronize_tsc_victim ();
+}
+
+/**
+ * Synchronize all other CPU's TSCs against the current CPU's TSC.
+ *
+ * This must be done here because we need to hold the smpboot_lock while we
+ * do it.
+ */
+void
+x86_smp_resynchronize_tsc (void)
+{
+	struct smp_call_on_cpu_work work = {
+		.func = resynchronize_tsc_smp_work,
+		.arg = NULL
+	};
+
+	spin_lock (&smpboot_lock);
+
+	for_each_online_cpu (cpu) {
+		if (cpu == this_cpu_id ())
+			continue;
+
+		smp_call_on_cpu_async (cpu, &work);
+		x86_synchronize_tsc_control ();
+		smp_wait_for_call_on_cpu (&work);
+	}
+
+	spin_unlock (&smpboot_lock);
+	printk (PR_INFO "Resynchronized TSC on all CPUs to reference CPU%u\n", this_cpu_id ());
+}

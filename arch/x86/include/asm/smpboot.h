@@ -16,4 +16,11 @@ arch_smpboot_init (void);
 extern errno_t
 arch_smp_boot_cpu (unsigned int cpu);
 
+/**
+ * Resynchronize the timestamp counter of all CPUs with the current CPU.
+ * This has to be done under the smpboot lock, which is why it is here.
+ */
+extern void
+x86_smp_resynchronize_tsc (void);
+
 #endif /* __ASM_SMPBOOT_H */

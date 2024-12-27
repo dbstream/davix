@@ -309,6 +309,7 @@ idtentry_explicit asm_handle_IRQ_spurious handle_IRQ_spurious
 
 idtentry_explicit asm_handle_PIC_IRQ handle_PIC_IRQ
 
+idtentry_explicit asm_handle_call_on_cpu_IPI handle_call_on_cpu_IPI
 idtentry_explicit asm_handle_panic_IPI handle_panic_IPI
 
 .set i, 0

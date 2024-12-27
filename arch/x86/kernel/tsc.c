@@ -5,11 +5,13 @@
 #include <davix/atomic.h>
 #include <davix/printk.h>
 #include <davix/timer.h>
+#include <davix/workqueue.h>
 #include <asm/cpulocal.h>
 #include <asm/features.h>
 #include <asm/hpet.h>
 #include <asm/io.h>
 #include <asm/irq.h>
+#include <asm/smpboot.h>
 #include <asm/tsc.h>
 
 uint64_t tsc_hz;
@@ -123,6 +125,18 @@ hpet_calibrate_tsc_early (void)
 static struct ktimer tsc_calibration_timer;
 
 static void
+resynchronize_tsc (struct work *work)
+{
+	(void) work;
+
+	x86_smp_resynchronize_tsc ();
+}
+
+static struct work resynchronize_tsc_work = {
+	.execute = resynchronize_tsc
+};
+
+static void
 tsc_calibration_callback (struct ktimer *t)
 {
 	(void) t;
@@ -158,6 +172,7 @@ tsc_calibration_callback (struct ktimer *t)
 		tsc_hz % 1000000UL);
 
 	update_tsc_conv ();
+	wq_enqueue_work (&resynchronize_tsc_work);
 }
 
 bool

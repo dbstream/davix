@@ -6,6 +6,12 @@
 #define __ASM_IPI_H 1
 
 /**
+ * Send a call_on_cpu IPI to the target CPU.
+ */
+extern void
+arch_send_call_on_cpu_IPI (unsigned int cpu);
+
+/**
  * Architecture-specific function to stop all other CPUs on panic.
  */
 extern void

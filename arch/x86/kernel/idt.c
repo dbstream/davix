@@ -125,6 +125,7 @@ extern char asm_handle_IRQ_spurious[];
 
 extern char asm_handle_PIC_IRQ[];
 
+extern char asm_handle_call_on_cpu_IPI[];
 extern char asm_handle_panic_IPI[];
 
 extern void *asm_idtentry_irq_array[];
@@ -144,6 +145,7 @@ x86_trap_init (void)
 	set_idt_entry (VECTOR_APIC_TIMER, asm_handle_APIC_timer, __IST_NONE, 0);
 	set_idt_entry (VECTOR_SPURIOUS, asm_handle_IRQ_spurious, __IST_NONE, 0);
 
+	set_idt_entry (VECTOR_CALL_ON_CPU, asm_handle_call_on_cpu_IPI, __IST_NONE, 0);
 	set_idt_entry (VECTOR_PANIC, asm_handle_panic_IPI, __IST_NONE, 0);
 
 	for (int i = 32; i < 40; i++)
