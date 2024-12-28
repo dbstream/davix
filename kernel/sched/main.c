@@ -7,6 +7,7 @@
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/sched.h>
+#include <davix/smp.h>
 #include <davix/stddef.h>
 #include <davix/task_api.h>
 #include <davix/timer.h>
@@ -73,6 +74,16 @@ update_current_timeslice (void)
 	ktimer_add (&tmr->ktimer);
 }
 
+static void
+__sched_wake__this_cpu (struct task *task)
+{
+	if (task->state != TASK_RUNNABLE) {
+		task->state = TASK_RUNNABLE;
+		if (rq_enqueue (task))
+			update_current_timeslice ();
+	}
+}
+
 /**
  * Wake up a task on the current CPU.
  * !!! This function may only be called on tasks that belong to the current CPU.
@@ -82,12 +93,28 @@ void
 sched_wake__this_cpu (struct task *task)
 {
 	bool flag = irq_save ();
-	if (task->state != TASK_RUNNABLE) {
-		task->state = TASK_RUNNABLE;
-		if (rq_enqueue (task))
-			update_current_timeslice ();
-	}
+	__sched_wake__this_cpu (task);
 	irq_restore (flag);
+}
+
+static void
+sched_wake_ipi (void *arg)
+{
+	__sched_wake__this_cpu ((struct task *) arg);
+}
+
+/**
+ * Wake up a task on any CPU.
+ */
+void
+sched_wake (struct task *task)
+{
+	preempt_off ();
+	if (task->cpu == this_cpu_id ())
+		sched_wake__this_cpu (task);
+	else
+		smp_call_on_cpu (task->cpu, sched_wake_ipi, task);
+	preempt_on ();
 }
 
 /**
@@ -126,6 +153,7 @@ sched_begin_task (void)
 void
 sched_new_task (struct task *task)
 {
+	task->cpu = this_cpu_id ();
 	if (task->state != TASK_RUNNABLE)
 		return;
 

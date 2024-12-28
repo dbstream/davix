@@ -1,6 +1,7 @@
 # Subdirectory Makefile.
 # Copyright (C) 2024  dbstream
 
+kobjs += lock/
 kobjs += sched/
 kobjs += context.o
 kobjs += main.o

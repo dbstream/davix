@@ -44,6 +44,7 @@ create_idle_task (unsigned int cpu)
 
 	task->flags = TF_IDLE;
 	task->state = TASK_RUNNABLE;
+	task->cpu = cpu;
 	return task;
 }
 

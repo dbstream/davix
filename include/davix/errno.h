@@ -20,6 +20,8 @@ typedef int errno_t;
 #define EIO 2
 #define ENOTSUP 3
 #define EAGAIN 4
+#define ETIME 5
+#define EINTR 6
 
 #endif /* _DAVIX_ERRNO_H */
 

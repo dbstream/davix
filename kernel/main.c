@@ -17,6 +17,8 @@
 #include <asm/page.h>
 #include <asm/sections.h>
 
+#include <davix/mutex.h>
+
 static const char kernel_version[] = KERNELVERSION;
 
 /**

@@ -31,6 +31,11 @@ struct task {
 	unsigned int state;
 
 	/**
+	 * This is the processor that the task belongs to.
+	 */
+	unsigned int cpu;
+
+	/**
 	 * rq_entry: only used when the task is on the runqueue.
 	 */
 	struct rq_entry rq_entry;
@@ -92,5 +97,11 @@ sched_new_task (struct task *task);
  */
 extern void
 sched_wake__this_cpu (struct task *task);
+
+/**
+ * Wake up a task.
+ */
+extern void
+sched_wake (struct task *task);
 
 #endif /* _DAVIX_SCHED_H */
