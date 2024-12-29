@@ -13,6 +13,8 @@
 #include <davix/sched.h>
 #include <davix/timer.h>
 
+#include <davix/printk.h>
+
 /**
  * A mutex contains three things:
  * - Pointer to current owner (or NULL when unlocked).
@@ -134,7 +136,7 @@ acquire_contention_flag_for_lock (struct mutex *mutex, unsigned long *expected)
 			continue;
 		}
 
-		desired = *expected | CONTENDED;
+		desired = (*expected & ~HAS_WAITER) | CONTENDED;
 		if (atomic_cmpxchg_acqrel_acq (&mutex->owner_and_lock, expected, desired)) {
 			*expected = desired;
 			return;
@@ -173,10 +175,33 @@ wake_up_task (struct task *task)
 }
 
 /**
- * Wake up the first waiter and remove our contention on the lock. Returns
- * true if we wake ourselves up.
+ * Check if the current task has any pending signal. (stub)
  */
-static bool
+static inline bool
+has_pending_signal (unsigned int task_state)
+{
+	(void) task_state;
+	return false;
+}
+
+/**
+ * If IRQs are disabled when mutex_lock() is called, the following deadlock can
+ * occur:
+ *    CPU0                                        CPU1
+ *  mutex_lock()
+ *  ...
+ *  mutex_unlock()                              mutex_lock ()
+ *  -> acquire_contention_flag_for_unlock       -> irq_disable ()
+ *  -> wake_up_task(CPU1)                       -> acquire_contention_flag_for_lock
+ *      waits for CPU1 to accept interrupt          waits for CPU0 to release the contention flag
+ */
+
+/**
+ * Wake up the first waiter. Returns a pointer to the task that we woke up.
+ * NOTE: this function keeps the contention on the lock. mutex_lock_slowpath
+ * must release it.
+ */
+static struct task * 
 wake_up_waiter_is_self (struct mutex *mutex, struct task *self)
 {
 	struct mutex_waiter *w = list_item (struct mutex_waiter, list, mutex->waiters.next);
@@ -188,17 +213,10 @@ wake_up_waiter_is_self (struct mutex *mutex, struct task *self)
 	w->task = NULL;
 	list_delete (&w->list);
 
-	if (task == self) {
-		self->state = TASK_RUNNABLE;
-		atomic_store_relaxed (&mutex->owner_and_lock, (unsigned long) self);
-		return true;
-	}
+	if (task != self)
+		wake_up_task (task);
 
-	wake_up_task (task);
-
-	unsigned long desired = (unsigned long) task | HAS_WAITER;
-	atomic_store_release (&mutex->owner_and_lock, desired);
-	return false;
+	return task;
 }
 
 /**
@@ -275,34 +293,97 @@ static errno_t
 mutex_lock_slowpath (struct mutex *mutex, struct task *self,
 	unsigned int task_state, usecs_t timeout_us, unsigned long expected)
 {
+	unsigned long desired;
+
 	if (timeout_us != UINT64_MAX)
 		timeout_us += us_since_boot ();
 
 	struct mutex_timeout_waiter w;
 	w.timer.callback = mutex_waiter_timeout;
 	w.timer.expiry = timeout_us;
+	w.timer.triggered = true;
 	w.waiter.task = self;
 
 	acquire_contention_flag_for_lock (mutex, &expected);
+	if (!(expected & ~CONTENTION_FLAGS)) {
+		desired = (unsigned long) self;
+		atomic_store_release (&mutex->owner_and_lock, desired);
+		return ESUCCESS;
+	}
 
-	self->state = task_state;
+	/**
+	 * We need to disable interrupts when self->state is dirty (anything
+	 * other than TASK_RUNNING while we are still running). But we must
+	 * also avoid the wake_up_task deadlock (see comment above).
+	 *
+	 * We must also remember to check has_pending_signal() anytime we
+	 * disable IRQs.
+	 */
+
+	irq_disable ();
+	if (has_pending_signal (task_state)) {
+		/**
+		 * There is a pending signal on us. Do not acquire the lock.
+		 */
+		irq_enable ();
+
+		desired = expected & ~CONTENDED;
+		if (!list_empty (&mutex->waiters))
+			desired |= HAS_WAITER;
+
+		if (!atomic_cmpxchg_acqrel_acq (&mutex->owner_and_lock, &expected, desired))
+			/**
+			 * If the owner_and_lock release fails, it is because
+			 * mutex_unlock raised HAS_WAITER. We must now wake up
+			 * one waiter, which cannot be ourselves.
+			 */
+			wake_up_waiter_and_disown (mutex);
+
+		return EINTR;
+	}
+
 	list_insert_back (&mutex->waiters, &w.waiter.list);
-	unsigned long desired = (expected | HAS_WAITER) & ~CONTENDED;
+	desired = (expected | HAS_WAITER) & ~CONTENDED;
 	if (!atomic_cmpxchg_acqrel_acq (&mutex->owner_and_lock, &expected, desired)) {
+		irq_enable ();
+
 		/**
 		 * If the owner_and_lock release fails, it is because
 		 * mutex_unlock raised HAS_WAITER. It is now our
 		 * responsibility to wake up one waiter (which might
 		 * be ourselves).
 		 */
-		if (wake_up_waiter_is_self (mutex, self))
+		struct task *owner = wake_up_waiter_is_self (mutex, self);
+		desired = (unsigned long) owner;
+		if (owner == self) {
+			atomic_store_release (&mutex->owner_and_lock, desired);
 			return ESUCCESS;
+		}
+
+		irq_disable ();
+		if (has_pending_signal (task_state)) {
+			/**
+			 * There is a pending signal on us. Do not acquire the
+			 * lock.
+			 */
+			irq_enable ();
+			list_delete (&w.waiter.list);
+			if (!list_empty (&mutex->waiters))
+				desired |= HAS_WAITER;
+			atomic_store_release (&mutex->owner_and_lock, desired);
+			return EINTR;
+		}
+
+		desired |= HAS_WAITER;
+		atomic_store_release (&mutex->owner_and_lock, desired);
 	}
 
 	if (timeout_us != UINT64_MAX)
 		ktimer_add (&w.timer);
 
+	self->state = task_state;
 	schedule ();
+	irq_enable ();
 
 	/**
 	 * Whenever we are woken up, we know that any combination of:
@@ -323,7 +404,7 @@ mutex_lock_slowpath (struct mutex *mutex, struct task *self,
 			 * wake_up_task.
 			 */
 			expected = (unsigned long) self;
-			while ((atomic_load_relaxed (&mutex->owner_and_lock) & ~CONTENTION_FLAGS) != expected)
+			while ((atomic_load_acquire (&mutex->owner_and_lock) & ~CONTENTION_FLAGS) != expected)
 				arch_relax ();
 			return ESUCCESS;
 		}
@@ -403,10 +484,11 @@ mutex_lock_common (struct mutex *mutex, usecs_t timeout_us, bool interruptible)
 	if (!timeout_us)
 		return EAGAIN;
 
+	if (!irqs_enabled ())
+		panic ("mutex_lock was called with interrupts disabled!");
+
 	preempt_off ();
-	bool flag = irq_save ();
 	errno_t result = mutex_lock_slowpath (mutex, self, task_state, timeout_us, expected);
-	irq_restore (flag);
 	preempt_on ();
 	return result;
 }

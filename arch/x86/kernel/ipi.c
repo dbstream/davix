@@ -55,6 +55,8 @@ handle_call_on_cpu_IPI (struct entry_regs *regs)
 {
 	preempt_state_t state = preempt_enter_IRQ ();
 
+	apic_eoi ();
+
 	(void) regs;
 	smp_do_call_on_cpu_work ();
 
@@ -65,6 +67,8 @@ void
 handle_panic_IPI (struct entry_regs *regs)
 {
 	preempt_state_t state = preempt_enter_IRQ ();
+
+	apic_eoi ();
 
 	(void) regs;
 	panic_stop_self ();

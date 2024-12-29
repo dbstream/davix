@@ -67,12 +67,11 @@ void
 smp_start_additional_cpu (void)
 {
 	preempt_off ();
-	irq_enable ();
 
 	sched_init_this_cpu ();
 	workqueue_init_this_cpu ();
 
-	sched_idle ();
+	set_cpu_online (this_cpu_id ());	
 }
 
 struct call_on_cpu_state {

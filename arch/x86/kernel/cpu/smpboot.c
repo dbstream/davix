@@ -122,11 +122,11 @@ start_additional_processor (void)
 	x86_setup_local_traps ();
 	apic_init_ap ();
 
-	set_cpu_online (this_cpu_id ());	
-	atomic_store_release (&sync_point_2, true);
-
 //	printk ("Hello from another CPU!\n");
 	smp_start_additional_cpu ();
+	atomic_store_release (&sync_point_2, true);
+
+	sched_idle ();
 }
 
 static spinlock_t smpboot_lock;

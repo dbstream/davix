@@ -153,11 +153,13 @@ sched_begin_task (void)
 void
 sched_new_task (struct task *task)
 {
-	task->cpu = this_cpu_id ();
-	if (task->state != TASK_RUNNABLE)
-		return;
-
 	bool flag = irq_save ();
+	task->cpu = this_cpu_id ();
+	if (task->state != TASK_RUNNABLE) {
+		irq_restore (flag);
+		return;
+	}
+
 	if (rq_enqueue (task))
 		update_current_timeslice ();
 	irq_restore (flag);
@@ -215,9 +217,12 @@ sched_idle (void)
 {
 	set_preempt_state (0);
 	schedule ();
+	irq_enable ();
 
-	for (;;)
+	for (;;) {
 		arch_wfi ();
+		schedule ();
+	}
 }
 
 /**

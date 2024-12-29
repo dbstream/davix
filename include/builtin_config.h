@@ -32,3 +32,8 @@
 #ifndef CONFIG_KTEST_VMATREE
 #define CONFIG_KTEST_VMATREE	0
 #endif
+
+/* Run ktests for the mutex implementation.  */
+#ifndef CONFIG_KTEST_MUTEX
+#define CONFIG_KTEST_MUTEX	0
+#endif
