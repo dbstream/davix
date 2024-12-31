@@ -142,7 +142,7 @@ slab_alloc_page (void)
 		return phys_to_pfn_entry (addr);
 	}
 
-	return alloc_page (ALLOC_KERNEL, 0);
+	return alloc_page (ALLOC_KERNEL);
 }
 
 static void
@@ -153,7 +153,7 @@ slab_free_page (struct pfn_entry *page)
 		initmem_free_phys (pfn_entry_to_phys (page), PAGE_SIZE);
 		return;
 	}
-	free_page (page, 0);
+	free_page (page, ALLOC_KERNEL);
 }
 
 static struct pfn_entry *

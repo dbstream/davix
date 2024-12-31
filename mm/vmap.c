@@ -3,6 +3,7 @@
  * Copyright (C) 2024  dbstream
  */
 #include <davix/align.h>
+#include <davix/page.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/slab.h>
@@ -82,6 +83,21 @@ vmap_dump (void)
 	}
 
 	spin_unlock (&vmap_lock);
+}
+
+struct vmap_area *
+find_vmap_area (void *ptr)
+{
+	unsigned long addr = (unsigned long) ptr;
+	struct vma_tree_iterator it;
+
+	spin_lock (&vmap_lock);
+	bool result = vma_tree_find (&it, &vmap_tree, addr);
+	spin_unlock (&vmap_lock);
+
+	if (result)
+		return struct_parent (struct vmap_area, vma_node, vma_node (&it));
+	return NULL;
 }
 
 struct vmap_area *
@@ -174,6 +190,22 @@ map_phys_range (unsigned long virt_addr,
 	return true;
 }
 
+static bool
+map_pages_range (unsigned long virt_addr,
+	struct pfn_entry **pages, unsigned long size, pte_flags_t prot)
+{
+	for (; size; pages++, virt_addr += PAGE_SIZE, size -= PAGE_SIZE) {
+		pgtable_t *entry = get_pgtable_entry (virt_addr, 1);
+		if (!entry)
+			return false;
+
+		unsigned long phys = pfn_entry_to_phys (*pages);
+		__pte_install_always (entry, make_pte (1, phys, prot));
+	}
+
+	return true;
+}
+
 void *
 vmap_phys_explicit (const char *name,
 	unsigned long addr, unsigned long size, pte_flags_t prot,
@@ -205,4 +237,27 @@ vmap_phys (const char *name,
 {
 	return vmap_phys_explicit (name, addr, size, prot,
 		PAGE_SIZE, KERNEL_VMAP_LOW, KERNEL_VMAP_HIGH);
+}
+
+void *
+vmap_pages (const char *name,
+	struct pfn_entry **pages, unsigned long nr_pages, pte_flags_t prot)
+{
+	unsigned long size = (2 + nr_pages) * PAGE_SIZE;
+	struct vmap_area *area = allocate_vmap_area (name, size, PAGE_SIZE,
+		KERNEL_VMAP_LOW, KERNEL_VMAP_HIGH);
+
+	if (!area)
+		return NULL;
+
+	area->u.pages = pages;
+
+	if (map_pages_range (area->vma_node.first + PAGE_SIZE, pages, nr_pages * PAGE_SIZE, prot))
+		return (void *) (area->vma_node.first + PAGE_SIZE);
+
+	/** TODO: properly unmap the range and flush the TLB on failure */
+
+	strncpy (area->purpose, "[failed vmap_pages]", sizeof (area->purpose));
+	area->purpose[sizeof (area->purpose) - 1] = 0;
+	return NULL;
 }

@@ -103,7 +103,7 @@ alloc_page_table (int level)
 	if (mm_is_early)
 		return early_alloc_page_table ();
 
-	struct pfn_entry *page = alloc_page (ALLOC_KERNEL | ALLOC_ZERO, 0);
+	struct pfn_entry *page = alloc_page (ALLOC_KERNEL | __ALLOC_ZERO);
 	if (!page)
 		return NULL;
 
@@ -117,7 +117,10 @@ free_page_table (int level, pgtable_t *table)
 	if (!table)
 		return;
 
-	initmem_free_virt (table, PAGE_SIZE);
+	if (mm_is_early)
+		initmem_free_virt (table, PAGE_SIZE);
+	else
+		free_page (virt_to_pfn_entry (table), ALLOC_KERNEL);
 }
 
 __INIT_TEXT

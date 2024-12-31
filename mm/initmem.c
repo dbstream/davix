@@ -19,6 +19,7 @@
 #include <davix/align.h>
 #include <davix/initmem.h>
 #include <davix/panic.h>
+#include <davix/page.h>
 #include <davix/printk.h>
 #include <davix/spinlock.h>
 #include <davix/stdbool.h>
@@ -456,6 +457,10 @@ initmem_alloc_phys_range (unsigned long size, unsigned long align,
 	unsigned long pgalign = max(unsigned long, align, PAGE_SIZE);
 
 	bool flag = spin_lock_irq (&initmem_lock);
+	if (!mm_is_early) {
+		spin_unlock_irq (&initmem_lock, flag);
+		return 0;
+	}
 
 	/**
 	 * We rely on the fact that initmem_next_free_align returns ranges
@@ -553,4 +558,29 @@ void
 initmem_free_virt (void *start, unsigned long size)
 {
 	initmem_free_phys (virt_to_phys (start), size);
+}
+
+/**
+ * Exit the initmem allocator and end mm_is_early.
+ */
+__INIT_TEXT
+void
+initmem_exit (void)
+{
+	bool flag = spin_lock_irq (&initmem_lock);
+
+	struct initmem_range range;
+	unsigned long a = 0, b = 0;
+	while (initmem_next_free_aligned (&range, &a, &b, PAGE_SIZE)) {
+		struct pfn_entry *page = phys_to_pfn_entry (range.start);
+		unsigned long nr_pages = (range.end - range.start) / PAGE_SIZE;
+
+		for (; nr_pages; page++, nr_pages--)
+			free_page (page, ALLOC_KERNEL);
+	}
+
+	mm_is_early = false;
+	spin_unlock_irq (&initmem_lock, flag);
+
+	pgalloc_dump ();
 }

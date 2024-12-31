@@ -2,18 +2,14 @@
  * Task initialization and finalization on x86.
  * Copyright (C) 2024  dbstream
  */
+#include <davix/kmalloc.h>
 #include <davix/sched.h>
 #include <davix/stddef.h>
-#include <davix/initmem.h>
 
 extern errno_t
 arch_create_task (struct task *task, void (*start_function) (void *), void *arg)
 {
-	if (mm_is_early)
-		task->arch.stack_mem = initmem_alloc_virt (TASK_STK_SIZE, TASK_STK_SIZE);
-	else
-		task->arch.stack_mem = NULL; /* TODO: use page allocator */
-
+	task->arch.stack_mem = kmalloc (TASK_STK_SIZE);
 	if (!task->arch.stack_mem)
 		return ENOMEM;
 
@@ -29,8 +25,5 @@ arch_create_task (struct task *task, void (*start_function) (void *), void *arg)
 extern void
 arch_destroy_task (struct task *task)
 {
-	if (mm_is_early)
-		initmem_free_virt (task->arch.stack_mem, TASK_STK_SIZE);
-
-	/* TODO: use page allocator */
+	kfree (task->arch.stack_mem);
 }

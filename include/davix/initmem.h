@@ -142,4 +142,8 @@ initmem_free_phys (unsigned long start, unsigned long size);
 extern void
 initmem_free_virt (void *start, unsigned long size);
 
+/* Exit the initmem allocator, leaving mm_is_early. */
+extern void
+initmem_exit (void);
+
 #endif /* _DAVIX_INITMEM_H */

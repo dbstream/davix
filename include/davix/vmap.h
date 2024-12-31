@@ -8,9 +8,14 @@
 #include <davix/vma_tree.h>
 #include <asm/page_defs.h>
 
+struct pfn_entry;
+
 struct vmap_area {
 	struct vma_node vma_node;
-	char purpose[32];
+	union {
+		struct pfn_entry **pages;
+	} u;
+	char purpose[24];
 };
 
 extern void
@@ -18,6 +23,16 @@ vmap_init (void);
 
 extern void
 vmap_dump (void);
+
+/**
+ * Find a vmap_area by address.
+ *
+ * @ptr		pointer into vmap_area
+ **
+ * Returns NULL or a pointer to a vmap_area.
+ */
+extern struct vmap_area *
+find_vmap_area (void *ptr);
 
 /**
  * Allocate a vmap_area and insert it into the vmap tree.
@@ -52,6 +67,8 @@ free_vmap_area (struct vmap_area *area);
  * @align	required vmap_area alignment
  * @low		lowest possible address (set this to KERNEL_VMAP_LOW)
  * @high	highest possible address (set this to KERNEL_VMAP_HIGH)
+ *
+ * Returns NULL or a pointer to the mapped memory.
  */
 extern void *
 vmap_phys_explicit (const char *name,
@@ -65,9 +82,27 @@ vmap_phys_explicit (const char *name,
  * @addr	physical address to map
  * @size	size of memory to map
  * @prot	page protection flags (read/write and cache mode)
+ *
+ * Returns NULL or a pointer to the mapped memory.
  */
 extern void *
 vmap_phys (const char *name,
 	unsigned long addr, unsigned long size, pte_flags_t prot);
+
+/**
+ * Map noncontiguous pages of memory into a virtually-contiguous space.
+ *
+ * @name	descriptive name of vmap_area
+ * @pages	physical pages to map
+ * @size	size of memory to map
+ * @prot	page protection flags (read/write and cache mode)
+ *
+ * Returns NULL or a pointer to the mapped memory.
+ */
+extern void *
+vmap_pages (const char *name,
+	struct pfn_entry **pages, unsigned long nr_pages, pte_flags_t prot);
+
+#define VMAP_PAGES_USES_GUARD_PAGES 1
 
 #endif /* _DAVIX_VMAP_H */

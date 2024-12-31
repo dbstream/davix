@@ -6,6 +6,7 @@
 #define DAVIX_PAGE_H 1
 
 #include <davix/alloc_flags.h>
+#include <davix/errno.h>
 #include <davix/list.h>
 #include <davix/spinlock.h>
 #include <asm/page.h>
@@ -34,8 +35,7 @@ struct pfn_entry {
 
 		struct {
 			struct list list;
-			unsigned int page_order;
-		} pfn_buddy;
+		} pfn_free;
 
 		unsigned long pad[(ARCH_PFN_ENTRY_SIZE / sizeof(long)) - 1];
 	};
@@ -54,7 +54,6 @@ get_page_flags (struct pfn_entry *entry)
 }
 
 /* pfn_entry->flags */
-#define PFN_BUDDY	(1UL << 0)
 #define PFN_SLAB	(1UL << 1)
 
 _Static_assert (sizeof (struct pfn_entry) == ARCH_PFN_ENTRY_SIZE, "pfn_entry");
@@ -65,10 +64,39 @@ _Static_assert (sizeof (struct pfn_entry) == ARCH_PFN_ENTRY_SIZE, "pfn_entry");
 #define virt_to_pfn_entry(x) phys_to_pfn_entry(virt_to_phys(x))
 #define pfn_entry_to_virt(x) phys_to_virt(pfn_entry_to_phys(x))
 
+/**
+ * Allocate one page of physical memory, where @flags is the set of
+ * allocation flags to use.
+ */
 extern struct pfn_entry *
-alloc_page (alloc_flags_t flags, unsigned int order);
+alloc_page (alloc_flags_t flags);
 
+/**
+ * Free one page of physical memory. If @flags is the same set of flags
+ * that were used for allocation, accounting etc. will be fine.
+ */
 extern void
-free_page (struct pfn_entry *, unsigned int order);
+free_page (struct pfn_entry *page, alloc_flags_t flags);
+
+/**
+ * Reserve @num pages, if possible.
+ * Return value:
+ *   ESUCCESS	@num pages were successfully reserved and accounted.
+ *   ENOMEM	there is not enough memory available (or too much is already reserved)
+ */
+extern errno_t
+reserve_pages (unsigned long num);
+
+/**
+ * Unreserve @num pages.
+ */
+extern void
+unreserve_pages (unsigned long num);
+
+/**
+ * Dump the current state of the page allocator to printk.
+ */
+extern void
+pgalloc_dump (void);
 
 #endif /* DAVIX_PAGE_H */

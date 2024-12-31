@@ -4,6 +4,7 @@
  */
 #include <davix/cpuset.h>
 #include <davix/initmem.h>
+#include <davix/kmalloc.h>
 #include <davix/page.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
@@ -176,16 +177,7 @@ arch_smp_boot_cpu (unsigned int cpu)
 	sync_point_1 = false;
 	sync_point_2 = false;
 
-	unsigned long stack_top = 0;
-	if (mm_is_early)
-		stack_top = (unsigned long) initmem_alloc_virt (TASK_STK_SIZE, TASK_STK_SIZE);
-	else {
-		_Static_assert (TASK_STK_SIZE == PAGE_SIZE << 2, "TASK_STK_SIZE");
-		struct pfn_entry *stack_page = alloc_page (ALLOC_KERNEL, 2);
-		if (stack_page)
-			stack_top = pfn_entry_to_virt (stack_page);
-	}
-
+	unsigned long stack_top = (unsigned long) kmalloc (TASK_STK_SIZE);
 	if (!stack_top) {
 		spin_unlock (&smpboot_lock);
 		irq_restore (flag);
