@@ -430,11 +430,11 @@ arch_init_pfn_entry (void)
 void
 arch_insert_vmap_areas (void (*pfn_insert) (unsigned long, unsigned long, const char *))
 {
-	pfn_insert (HHDM_OFFSET, HHDM_END, "[higher-half direct map]");
+	pfn_insert (HHDM_OFFSET, HHDM_END, "[physical memory]");
 	pfn_insert (PFN_OFFSET, PFN_END, "[struct pfn_entry]");
-	pfn_insert ((unsigned long) __text_start, (unsigned long) __text_end - 1, "text(davix)");
-	pfn_insert ((unsigned long) __rodata_start, (unsigned long) __rodata_end - 1, "rodata(davix)");
-	pfn_insert ((unsigned long) __data_start, (unsigned long) __data_end - 1, "data(davix)");
-	pfn_insert ((unsigned long) __cpulocal_virt_start, (unsigned long) __cpulocal_virt_end - 1, "cpulocal(davix)");
-	pfn_insert ((unsigned long) __init_start, (unsigned long) __init_end - 1, "init(davix)");
+	pfn_insert ((unsigned long) __text_start, (unsigned long) __text_end - 1, ".text(davix)");
+	pfn_insert ((unsigned long) __rodata_start, (unsigned long) __rodata_end - 1, ".rodata(davix)");
+	pfn_insert ((unsigned long) __data_start, (unsigned long) __data_end - 1, ".data(davix)");
+	pfn_insert ((unsigned long) __cpulocal_virt_start, (unsigned long) __cpulocal_virt_end - 1, ".cpulocal(davix)");
+	pfn_insert ((unsigned long) __init_start, (unsigned long) __init_end - 1, ".init(davix)");
 }
