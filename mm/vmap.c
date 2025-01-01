@@ -3,11 +3,11 @@
  * Copyright (C) 2024  dbstream
  */
 #include <davix/align.h>
+#include <davix/mutex.h>
 #include <davix/page.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/slab.h>
-#include <davix/spinlock.h>
 #include <davix/stddef.h>
 #include <davix/string.h>
 #include <davix/vmap.h>
@@ -26,7 +26,7 @@ static struct vma_tree vmap_tree;
  * The vmap_lock must be held during any operation that reads or modifies the
  * vmap_tree.
  */
-static spinlock_t vmap_lock;
+static struct mutex vmap_lock;
 
 static bool has_initialised_vmap = false;
 
@@ -49,6 +49,7 @@ vmap_insert_default_area (unsigned long first, unsigned long last,
 void
 vmap_init (void)
 {
+	mutex_init (&vmap_lock);
 	vma_tree_init (&vmap_tree);
 
 	vmap_slab = slab_create ("vmap_area", sizeof (struct vmap_area));
@@ -69,7 +70,7 @@ vmap_dump (void)
 
 	printk ("vmap_dump:\n");
 
-	spin_lock (&vmap_lock);
+	mutex_lock (&vmap_lock);
 
 	struct vma_tree_iterator it;
 	bool flag = vma_tree_first (&it, &vmap_tree);
@@ -82,7 +83,7 @@ vmap_dump (void)
 		flag = vma_tree_next (&it);
 	}
 
-	spin_unlock (&vmap_lock);
+	mutex_unlock (&vmap_lock);
 }
 
 struct vmap_area *
@@ -91,9 +92,9 @@ find_vmap_area (void *ptr)
 	unsigned long addr = (unsigned long) ptr;
 	struct vma_tree_iterator it;
 
-	spin_lock (&vmap_lock);
+	mutex_lock (&vmap_lock);
 	bool result = vma_tree_find (&it, &vmap_tree, addr);
-	spin_unlock (&vmap_lock);
+	mutex_unlock (&vmap_lock);
 
 	if (result)
 		return struct_parent (struct vmap_area, vma_node, vma_node (&it));
@@ -122,7 +123,7 @@ allocate_vmap_area (const char *name,
 	strncpy (area->purpose, name, sizeof (area->purpose));
 	area->purpose[sizeof (area->purpose) - 1] = 0;
 
-	spin_lock (&vmap_lock);
+	mutex_lock (&vmap_lock);
 
 	unsigned long addr;
 	if (vma_tree_find_free_bottomup (&addr, &vmap_tree, size, align, low, high)) {
@@ -134,16 +135,16 @@ allocate_vmap_area (const char *name,
 		area = NULL;
 	}
 
-	spin_unlock (&vmap_lock);
+	mutex_unlock (&vmap_lock);
 	return area;
 }
 
 void
 free_vmap_area (struct vmap_area *area)
 {
-	spin_lock (&vmap_lock);
+	mutex_lock (&vmap_lock);
 	vma_tree_remove (&vmap_tree, &area->vma_node);
-	spin_unlock (&vmap_lock);
+	mutex_unlock (&vmap_lock);
 
 	slab_free (area);
 }
