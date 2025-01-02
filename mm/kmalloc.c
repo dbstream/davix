@@ -7,6 +7,7 @@
  * small (<=PAGE_SIZE/2) allocations.
  */
 #include <davix/align.h>
+#include <davix/printk.h>
 #include <davix/initmem.h>
 #include <davix/kmalloc.h>
 #include <davix/page.h>
@@ -44,7 +45,7 @@ kfree_vmap (void *ptr)
 	struct pfn_entry **pages = area->u.pages;
 	unsigned long nr_pages = (1 + area->vma_node.last - area->vma_node.first) / PAGE_SIZE;
 
-	// TODO: vunmap
+	free_vmap_area (area);
 
 	_Static_assert (VMAP_PAGES_USES_GUARD_PAGES == 1, "!VMAP_PAGES_USES_GUARD_PAGES; fix kfree_vmap");
 

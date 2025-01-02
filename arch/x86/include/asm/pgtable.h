@@ -23,6 +23,12 @@ typedef unsigned long pgtable_t;
 typedef unsigned long pte_t;
 
 /**
+ * This is the maximum page table level for which vunmap() should free page
+ * tables.
+ */
+#define max_vunmap_pgtable_level (max_pgtable_level - 1)
+
+/**
  * Allocate a new page table. 'level' indicates the level in the page-table
  * hierarchy that we are allocating.
  */
@@ -88,6 +94,24 @@ __pte_install (pgtable_t *entry, pte_t expected, pte_t desired)
 {
 	atomic_cmpxchg_acqrel_acq (entry, &expected, desired);
 	return expected;
+}
+
+/**
+ * Read a page table entry.
+ */
+static inline pte_t
+__pte_read (pgtable_t *entry)
+{
+	return atomic_load_acquire (entry);
+}
+
+/**
+ * Clear a page table entry. Returns the old value.
+ */
+static inline pte_t
+__pte_clear (pgtable_t *entry)
+{
+	return atomic_exchange (entry, 0, memory_order_acquire);
 }
 
 /**

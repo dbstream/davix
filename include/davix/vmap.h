@@ -105,4 +105,12 @@ vmap_pages (const char *name,
 
 #define VMAP_PAGES_USES_GUARD_PAGES 1
 
+/**
+ * Unmap an area that was previously mapped using vmap.
+ *
+ * @mem		pointer returned from vmap_phys or vmap_pages
+ */
+extern void
+vunmap (void *mem);
+
 #endif /* _DAVIX_VMAP_H */

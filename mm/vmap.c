@@ -86,6 +86,100 @@ vmap_dump (void)
 	mutex_unlock (&vmap_lock);
 }
 
+static void
+__clear_vmap_range (struct tlb *, pgtable_t *, int,
+	unsigned long, unsigned long, unsigned long);
+
+static void
+__clear_vmap_entry (struct tlb *tlb, pgtable_t *entry, int level, unsigned long vaddr)
+{
+	unsigned long entry_size = 1UL << pgtable_shift (level);
+
+	pte_t val = __pte_clear (entry);
+	if (!pte_is_present (level, val))
+		return;
+
+	if (!pte_is_pgtable (level, val)) {
+		tlb_flush_range (tlb, vaddr, vaddr + entry_size);
+		return;
+	}
+
+	pgtable_t *table = pte_pgtable (level, val);
+	int entries = pgtable_entries (level);
+	entry_size = 1UL << pgtable_shift (--level);
+	for (int i = 0; i < entries; i++) {
+		entry = table + pgtable_addr_index (vaddr, level);
+		__clear_vmap_entry (tlb, entry, level, vaddr);
+		vaddr += entry_size;
+	}
+
+	if (level < max_vunmap_pgtable_level) {
+		printk ("vmap: freed page table at %d\n", level + 1);
+		tlb_flush_pgtable (tlb, table, level + 1, vaddr);
+	}
+}
+
+static void
+__clear_vmap_range (struct tlb *tlb, pgtable_t *table, int level,
+	unsigned long vaddr, unsigned long offset, unsigned long size)
+{
+	unsigned long entry_size = 1UL << pgtable_shift (level);
+
+	while (size) {
+		pgtable_t *entry = table + pgtable_addr_index (vaddr + offset, level);
+		unsigned long next = ALIGN_UP (offset + 1UL, entry_size);
+		if (offset + size && offset + size < next)
+			next = offset + size;
+		else if (offset == ALIGN_DOWN (offset, entry_size)) {
+			__clear_vmap_entry (tlb, entry, level, vaddr + offset);
+			size -= next - offset;
+			offset = next;
+		}
+
+		pte_t val = __pte_read (entry);
+		if (pte_is_present (level, val) && pte_is_pgtable (level, val)) {
+			entry = pte_pgtable (level, val);
+			__clear_vmap_range (tlb, entry, level - 1,
+				vaddr + (offset & ~(entry_size - 1)), offset & (entry_size - 1), next - offset);
+		}
+
+		size -= next - offset;
+		offset = next;
+	}
+}
+
+/**
+ * Remove mappings for @area.
+ */
+static void
+clear_vmap_range (struct vmap_area *area)
+{
+	unsigned long align = 1UL << pgtable_shift (max_vunmap_pgtable_level);
+
+	// NB: unsigned overflow can make end==0
+	unsigned long start = ALIGN_DOWN (area->vma_node.first, align);
+	unsigned long end = ALIGN_UP (area->vma_node.last + 1UL, align);
+
+	struct vma_tree_iterator it;
+	vma_tree_make_iterator (&it, &vmap_tree, &area->vma_node);
+	if (vma_tree_prev (&it)) {
+		start = max (unsigned long, start, vma_node (&it)->last + 1UL);
+		vma_tree_make_iterator (&it, &vmap_tree, &area->vma_node);
+	}
+	if (vma_tree_next (&it)) {
+		if (end)
+			end = min (unsigned long, end, vma_node (&it)->first);
+		else
+			end = vma_node (&it)->first;
+	}
+
+	struct tlb tlb;
+	tlbflush_init (&tlb, NULL);
+	__clear_vmap_range (&tlb, get_vmap_page_table (),
+		max_pgtable_level, 0, start, end - start);
+	tlb_flush (&tlb);
+}
+
 struct vmap_area *
 find_vmap_area (void *ptr)
 {
@@ -143,6 +237,7 @@ void
 free_vmap_area (struct vmap_area *area)
 {
 	mutex_lock (&vmap_lock);
+	clear_vmap_range (area);
 	vma_tree_remove (&vmap_tree, &area->vma_node);
 	mutex_unlock (&vmap_lock);
 
@@ -157,7 +252,7 @@ get_pgtable_entry (unsigned long addr, int level)
 	pgtable += pgtable_addr_index (addr, current);
 
 	while (current > level) {
-		pte_t entry = *pgtable;
+		pte_t entry = __pte_read (pgtable);
 		if (pte_is_present (current, entry))
 			pgtable = pte_pgtable (current, entry);
 		else {
@@ -225,10 +320,7 @@ vmap_phys_explicit (const char *name,
 	if (map_phys_range (area->vma_node.first, addr, size, prot))
 		return (void *) (area->vma_node.first + offset);
 
-	/** TODO: properly unmap the range and flush the TLB on failure */
-
-	strncpy (area->purpose, "[failed vmap_phys]", sizeof (area->purpose));
-	area->purpose[sizeof (area->purpose) - 1] = 0;
+	free_vmap_area (area);
 	return NULL;
 }
 
@@ -256,9 +348,14 @@ vmap_pages (const char *name,
 	if (map_pages_range (area->vma_node.first + PAGE_SIZE, pages, nr_pages * PAGE_SIZE, prot))
 		return (void *) (area->vma_node.first + PAGE_SIZE);
 
-	/** TODO: properly unmap the range and flush the TLB on failure */
-
-	strncpy (area->purpose, "[failed vmap_pages]", sizeof (area->purpose));
-	area->purpose[sizeof (area->purpose) - 1] = 0;
+	free_vmap_area (area);
 	return NULL;
+}
+
+void
+vunmap (void *mem)
+{
+	struct vmap_area *area = find_vmap_area (mem);
+	if (area)
+		free_vmap_area (area);
 }

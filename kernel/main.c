@@ -18,8 +18,6 @@
 #include <asm/page.h>
 #include <asm/sections.h>
 
-#include <davix/mutex.h>
-
 static const char kernel_version[] = KERNELVERSION;
 
 /**
@@ -34,6 +32,8 @@ start_init (void *arg)
 	printk (PR_INFO "start_init()\n");
 
 	initmem_exit ();
+	arch_init_late ();
+
 	smp_boot_cpus ();
 
 	run_ktests ();

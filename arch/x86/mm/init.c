@@ -438,3 +438,21 @@ arch_insert_vmap_areas (void (*pfn_insert) (unsigned long, unsigned long, const 
 	pfn_insert ((unsigned long) __cpulocal_virt_start, (unsigned long) __cpulocal_virt_end - 1, ".cpulocal(davix)");
 	pfn_insert ((unsigned long) __init_start, (unsigned long) __init_end - 1, ".init(davix)");
 }
+
+void
+arch_init_late (void)
+{
+	pgtable_t *table = NULL;
+	for (int i = 256; i < 512; i++) {
+		if (!kernel_page_tables[i]) {
+			if (!table)
+				table = alloc_page_table (max_pgtable_level - 1);
+			if (!table)
+				panic ("out of memory in arch_init_late");
+			__pgtable_install (&kernel_page_tables[i], &table, true);
+		}
+	}
+
+	if (table)
+		free_page_table (max_pgtable_level - 1, table);
+}

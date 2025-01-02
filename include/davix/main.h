@@ -11,4 +11,7 @@ main (void);
 extern void
 arch_init (void);
 
+extern void
+arch_init_late (void);
+
 #endif /* _DAVIX_MAIN_H */

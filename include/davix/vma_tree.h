@@ -48,6 +48,14 @@ struct vma_tree_iterator {
 	struct list *entry;
 };
 
+static inline void
+vma_tree_make_iterator (struct vma_tree_iterator *it,
+	struct vma_tree *tree, struct vma_node *entry)
+{
+	it->tree = tree;
+	it->entry = &entry->vma_list;
+}
+
 static inline bool
 vma_tree_first (struct vma_tree_iterator *it, struct vma_tree *tree)
 {

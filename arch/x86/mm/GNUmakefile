@@ -3,3 +3,4 @@
 
 kobjs += early_memmap.o
 kobjs += init.o
+kobjs += tlb.o
