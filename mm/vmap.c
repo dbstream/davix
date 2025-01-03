@@ -95,11 +95,16 @@ __clear_vmap_entry (struct tlb *tlb, pgtable_t *entry, int level, unsigned long 
 {
 	unsigned long entry_size = 1UL << pgtable_shift (level);
 
-	pte_t val = __pte_clear (entry);
+	pte_t val;
+	if (level <= max_vunmap_pgtable_level)
+		val = __pte_clear (entry);
+	else
+		val = __pte_read (entry);
 	if (!pte_is_present (level, val))
 		return;
 
 	if (!pte_is_pgtable (level, val)) {
+		__pte_clear (entry);
 		tlb_flush_range (tlb, vaddr, vaddr + entry_size);
 		return;
 	}
@@ -113,10 +118,8 @@ __clear_vmap_entry (struct tlb *tlb, pgtable_t *entry, int level, unsigned long 
 		vaddr += entry_size;
 	}
 
-	if (level < max_vunmap_pgtable_level) {
-		printk ("vmap: freed page table at %d\n", level + 1);
+	if (level < max_vunmap_pgtable_level)
 		tlb_flush_pgtable (tlb, table, level + 1, vaddr);
-	}
 }
 
 static void
@@ -134,6 +137,7 @@ __clear_vmap_range (struct tlb *tlb, pgtable_t *table, int level,
 			__clear_vmap_entry (tlb, entry, level, vaddr + offset);
 			size -= next - offset;
 			offset = next;
+			continue;
 		}
 
 		pte_t val = __pte_read (entry);
