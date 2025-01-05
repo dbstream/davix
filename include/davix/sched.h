@@ -8,6 +8,8 @@
 #include <davix/list.h>
 #include <asm/task.h>
 
+struct process_mm;
+
 struct rq_entry {
 	struct list list;
 };
@@ -41,6 +43,12 @@ struct task {
 	struct rq_entry rq_entry;
 
 	char comm[16];
+
+	/**
+	 * This is the memory manager instance of the task (or NULL for kernel
+	 * tasks).
+	 */
+	struct process_mm *mm;
 };
 
 #define TASK_RUNNABLE 0

@@ -13,8 +13,10 @@
 #include <davix/timer.h>
 #include <asm/cpulocal.h>
 #include <asm/irq.h>
+#include <asm/mm.h>
 #include <asm/smp.h>
 #include "internal.h"
+
 
 struct runqueue sched_runqueues __CPULOCAL;
 
@@ -177,6 +179,8 @@ context_switch (struct task *next, struct task *self)
 	update_current_timeslice ();
 
 	set_current_task (next);
+	if (self->mm != next->mm)
+		switch_to_mm (next->mm);
 	arch_switch_to (next, self);
 }
 

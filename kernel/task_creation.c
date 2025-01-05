@@ -45,6 +45,7 @@ create_idle_task (unsigned int cpu)
 	task->flags = TF_IDLE;
 	task->state = TASK_RUNNABLE;
 	task->cpu = cpu;
+	task->mm = NULL;
 	return task;
 }
 
@@ -67,6 +68,7 @@ create_kernel_task (const char *name, void (*start_function)(void *), void *arg,
 
 	task->flags = flags;
 	task->state = TASK_RUNNABLE;
+	task->mm = NULL;
 	sched_new_task (task);
 	return task;
 }

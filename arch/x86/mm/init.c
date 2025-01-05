@@ -123,6 +123,17 @@ free_page_table (int level, pgtable_t *table)
 		free_page (virt_to_pfn_entry (table), ALLOC_KERNEL);
 }
 
+pgtable_t *
+alloc_user_page_table (void)
+{
+	pgtable_t *table = alloc_page_table (max_pgtable_level);
+	if (!table)
+		return NULL;
+
+	memcpy (&table[256], &kernel_page_tables[256], 256 * sizeof (pte_t));
+	return table;
+}
+
 __INIT_TEXT
 void
 x86_pgtable_init (void)

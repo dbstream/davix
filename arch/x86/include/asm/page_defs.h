@@ -89,6 +89,10 @@ extern unsigned long max_mapped_addr;
 extern unsigned long KERNEL_VMAP_LOW;
 extern unsigned long KERNEL_VMAP_HIGH;
 
+/** Start and end of the userspace mmap() range. */
+extern unsigned long USER_MMAP_LOW;
+extern unsigned long USER_MMAP_HIGH;
+
 /**
  * Conversions between physical and virtual memory.
  */

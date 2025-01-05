@@ -7,6 +7,9 @@
 #include <davix/smp.h>
 #include <asm/cpulocal.h>
 #include <asm/cregs.h>
+#include <davix/mm.h>
+#include <asm/mm.h>
+#include <asm/mm_init.h>
 #include <asm/tlb.h>
 
 /**
@@ -80,4 +83,16 @@ tlb_flush (struct tlb *tlb)
 	 * able to continue using the same TLB tracker object after flushing.
 	 */
 	tlbflush_init (tlb, tlb->mm);
+}
+
+void
+switch_to_mm (struct process_mm *mm)
+{
+	if (!mm) {
+		write_cr3 (virt_to_phys (kernel_page_tables));
+		return;
+	}
+
+	unsigned long value = virt_to_phys (mm->pgtable);
+	write_cr3 (value);
 }

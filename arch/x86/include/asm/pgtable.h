@@ -45,6 +45,18 @@ extern void
 free_page_table (int level, pgtable_t *table);
 
 /**
+ * Allocate and initialize a new root page table for process_mm.
+ */
+extern pgtable_t *
+alloc_user_page_table (void);
+
+static inline void
+free_user_page_table (pgtable_t *table)
+{
+	free_page_table (max_pgtable_level, table);
+}
+
+/**
  * Get the root page table to be used for vmap operations.
  */
 extern pgtable_t *

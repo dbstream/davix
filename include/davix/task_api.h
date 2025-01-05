@@ -5,6 +5,8 @@
 #ifndef _DAVIX_TASK_API_H
 #define _DAVIX_TASK_API_H 1
 
+struct task;
+
 extern void
 tasks_init (void);
 
