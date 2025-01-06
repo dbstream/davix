@@ -112,6 +112,7 @@ __clear_vmap_entry (struct tlb *tlb, pgtable_t *entry, int level, unsigned long 
 	pgtable_t *table = pte_pgtable (level, val);
 	int entries = pgtable_entries (level);
 	entry_size = 1UL << pgtable_shift (--level);
+	unsigned long vaddr_old = vaddr;
 	for (int i = 0; i < entries; i++) {
 		entry = table + pgtable_addr_index (vaddr, level);
 		__clear_vmap_entry (tlb, entry, level, vaddr);
@@ -119,7 +120,7 @@ __clear_vmap_entry (struct tlb *tlb, pgtable_t *entry, int level, unsigned long 
 	}
 
 	if (level < max_vunmap_pgtable_level)
-		tlb_flush_pgtable (tlb, table, level + 1, vaddr);
+		tlb_flush_pgtable (tlb, table, level + 1, vaddr_old);
 }
 
 static void

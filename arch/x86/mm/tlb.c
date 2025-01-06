@@ -11,6 +11,7 @@
 #include <asm/mm.h>
 #include <asm/mm_init.h>
 #include <asm/tlb.h>
+#include <davix/printk.h>
 
 /**
  * For now, this is very simplistic code. We do not use PCIDs at all, and we
@@ -89,10 +90,10 @@ void
 switch_to_mm (struct process_mm *mm)
 {
 	if (!mm) {
-		write_cr3 (virt_to_phys (kernel_page_tables));
+		write_cr3 (virt_to_phys (get_vmap_page_table ()));
 		return;
 	}
 
-	unsigned long value = virt_to_phys (mm->pgtable);
+	unsigned long value = virt_to_phys (get_pgtable (mm->pgtable_handle));
 	write_cr3 (value);
 }

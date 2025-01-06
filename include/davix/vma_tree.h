@@ -101,6 +101,14 @@ vma_tree_find (struct vma_tree_iterator *it,
 	struct vma_tree *tree, unsigned long addr);
 
 /**
+ * Find the first entry with last above or equal to @addr. Stores the matching
+ * node (if any) in @it. Returns false if no node exists above @addr.
+ */
+extern bool
+vma_tree_find_first (struct vma_tree_iterator *it,
+	struct vma_tree *tree, unsigned long addr);
+
+/**
  * Insert @node into @tree.
  */
 extern void

@@ -35,6 +35,32 @@ vma_tree_find (struct vma_tree_iterator *it,
 	return false;
 }
 
+bool
+vma_tree_find_first (struct vma_tree_iterator *it,
+	struct vma_tree *tree, unsigned long addr)
+{
+	it->tree = tree;
+	it->entry = NULL;
+
+	struct vma_node *current = tree->vma_tree;
+	struct vma_node *match = NULL;
+	while (current) {
+		if (addr > current->last) {
+			current = current->children[1];
+			continue;
+		}
+
+		match = current;
+		current = current->children[0];
+	}
+
+	if (!match)
+		return false;
+
+	it->entry = &match->vma_list;
+	return true;
+}
+
 static inline struct vma_node *
 prev_node (struct vma_tree *tree, struct vma_node *node)
 {

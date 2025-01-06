@@ -7,6 +7,7 @@
 #include <davix/initmem.h>
 #include <davix/ktest.h>
 #include <davix/main.h>
+#include <davix/mm.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/sched.h>
@@ -15,8 +16,11 @@
 #include <davix/vmap.h>
 #include <davix/workqueue.h>
 #include <asm/irq.h>
+#include <asm/mm.h>
 #include <asm/page.h>
 #include <asm/sections.h>
+
+#include <davix/page.h>
 
 static const char kernel_version[] = KERNELVERSION;
 
@@ -37,6 +41,35 @@ start_init (void *arg)
 	smp_boot_cpus ();
 
 	run_ktests ();
+
+	mm_init ();
+
+	struct task *self = get_current_task ();
+	self->mm = mmnew ();
+	if (!self->mm)
+		panic ("Failed to create the process_mm of init.");
+	switch_to_mm (self->mm);
+
+	pgalloc_dump ();
+
+	printk ("Ok, mapping some memory...\n");
+	void *addr;
+	errno_t e = ksys_mmap (NULL, 0x10000000UL, PROT_READ | PROT_WRITE,
+			MAP_ANON | MAP_PRIVATE, NULL, NULL, &addr);
+	if (e == ESUCCESS) {
+		printk ("Got ESUCCESS from ksys_mmap!\n");
+		pgalloc_dump ();
+		printk ("Ok, unmapping it...\n");
+		ksys_munmap (addr, 0x10000000UL);
+	} else {
+		printk ("Got error %d from ksys_mmap!\n", e);
+	}
+
+	pgalloc_dump ();
+
+	if (1)
+		for (;;)
+			arch_wfi ();
 
 	irq_disable ();
 

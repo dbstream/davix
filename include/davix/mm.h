@@ -11,9 +11,29 @@
 #include <davix/sys_types.h>
 #include <davix/vma_tree.h>
 
+struct file;
 struct process_mm;
 struct tlb;
 struct vm_area_ops;
+
+#define PROT_NONE		0x00
+#define PROT_EXEC		0x01
+#define PROT_WRITE		0x02
+#define PROT_READ		0x04
+
+#define PROT_VALID_BITS		0x07
+
+#define MAP_SHARED		0x1
+#define MAP_PRIVATE		0x2
+#define MAP_TYPE_BITS		0xf
+#define MAP_ANON		0x0010
+#define MAP_FIXED		0x0020
+#define MAP_FIXED_NOREPLACE	0x0040
+
+#define VM_EXEC			0x01
+#define VM_WRITE		0x02
+#define VM_READ			0x04
+#define VM_SHARED		0x08
 
 struct vm_area {
 	struct process_mm *mm;
@@ -23,6 +43,8 @@ struct vm_area {
 	const struct vm_area_ops *ops;
 
 	void *private;
+
+	unsigned int vm_flags;
 };
 
 /**
@@ -42,6 +64,8 @@ vma_end (struct vm_area *vma)
 {
 	return vma->vma_node.last + 1UL;
 }
+
+struct vm_pgtable_op;
 
 struct vm_area_ops {
 	/**
@@ -81,7 +105,7 @@ struct vm_area_ops {
 	/**
 	 * Notify the VMA that a range of memory has been removed.
 	 *
-	 * @tlb		TLB tracker object. This should be passed to PTE
+	 * @op		Page table accessor.  This should be passed to PTE
 	 *		unmapping functions.
 	 * @vma		The VMA that has been unmapped from.
 	 * @start	Start of the unmapped region.
@@ -99,7 +123,19 @@ struct vm_area_ops {
 	 * If this function is NULL, the range will be unmapped but no pages
 	 * pointed to by the PTEs will be freed.
 	 */
-	void (*unmap_vma_range) (struct tlb *tlb, struct vm_area *vma,
+	void (*unmap_vma_range) (struct vm_pgtable_op *op, struct vm_area *vma,
+			unsigned long start, unsigned long end);
+
+	/**
+	 * Map a range of memory.
+	 *
+	 * @op		struct vm_pgtable_op - should be passed to any vm_map_*
+	 *		function that takes it as an argument.
+	 * @vma		The VMA that is being mapped.
+	 * @start	Start of the region being mapped.
+	 * @end		End of the region being mapped.
+	 */
+	errno_t(*map_vma_range) (struct vm_pgtable_op *op, struct vm_area *vma,
 			unsigned long start, unsigned long end);
 };
 
@@ -116,6 +152,12 @@ struct process_mm {
 	unsigned long mm_start, mm_end;
 
 	/**
+	 * This is the default base for any mmap's, used when no address hint
+	 * is given and when !MAP_FIXED.
+	 */
+	unsigned long mmap_base;
+
+	/**
 	 * Reference count. Use mmget and mmput instead.
 	 */
 	refcount_t refcount;
@@ -124,7 +166,7 @@ struct process_mm {
 	 * Page tables used for this MM.
 	 * (opaque handle used with get_pgtable)
 	 */
-	void *pgtable;
+	void *pgtable_handle;
 
 	/**
 	 * MM lock.  Currently a mutex but will be replaced with rwmutex later.
@@ -330,5 +372,36 @@ mmnew (void);
  */
 extern void
 mm_init (void);
+
+
+/**
+ * Perform a mmap() syscall.
+ *
+ * @addr	address hint
+ * @length	length
+ * @prot	PROT_* flags
+ * @flags	MAP_* flags
+ * @file	file corresponding to fd
+ * @offset	file offset
+ */
+extern errno_t
+ksys_mmap (void *addr, size_t length, int prot, int flags,
+		struct file *file, off_t offset, void **out_addr);
+
+/**
+ * Perform a munmap() syscall.
+ *
+ * @addr	address hint
+ * @length	lenth
+ * @prot	PROT_* flags
+ * @flags	MAP_* flags
+ */
+extern errno_t
+ksys_munmap (void *addr, size_t length);
+
+/**
+ * Anonymous VMA operations.
+ */
+extern const struct vm_area_ops anon_vma_ops;
 
 #endif /* __DAVIX_MM_H  */

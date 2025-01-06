@@ -36,6 +36,9 @@ unsigned long max_mapped_addr = 0;
 unsigned long KERNEL_VMAP_LOW;
 unsigned long KERNEL_VMAP_HIGH;
 
+unsigned long USER_MMAP_LOW;
+unsigned long USER_MMAP_HIGH;
+
 __DATA_PAGE_ALIGNED __attribute__ ((aligned (PAGE_SIZE)))
 unsigned long kernel_page_tables[512];
 
@@ -123,7 +126,7 @@ free_page_table (int level, pgtable_t *table)
 		free_page (virt_to_pfn_entry (table), ALLOC_KERNEL);
 }
 
-pgtable_t *
+void *
 alloc_user_page_table (void)
 {
 	pgtable_t *table = alloc_page_table (max_pgtable_level);
@@ -162,6 +165,8 @@ x86_pgtable_init (void)
 		PFN_END = 0xff81ffffffffffffUL;
 		KERNEL_VMAP_LOW = 0xff90000000000000UL;
 		KERNEL_VMAP_HIGH = 0xffcfffffffffffffUL;
+		USER_MMAP_LOW = 0;
+		USER_MMAP_HIGH = 0xffffffffffffffUL;
 	} else {
 		max_pgtable_level = 4;
 		HHDM_OFFSET = 0xffff800000000000UL;
@@ -170,6 +175,8 @@ x86_pgtable_init (void)
 		PFN_END = 0xffffc0ffffffffffUL;
 		KERNEL_VMAP_LOW = 0xffffe00000000000UL;
 		KERNEL_VMAP_HIGH = 0xffffefffffffffffUL;
+		USER_MMAP_LOW = 0;
+		USER_MMAP_HIGH = 0x7fffffffffffUL;
 	}
 
 	if (bsp_has (FEATURE_NX)) {

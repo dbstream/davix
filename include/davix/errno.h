@@ -22,6 +22,7 @@ typedef int errno_t;
 #define EAGAIN 4
 #define ETIME 5
 #define EINTR 6
+#define EINVAL 7
 
 #endif /* _DAVIX_ERRNO_H */
 

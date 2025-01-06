@@ -47,13 +47,19 @@ free_page_table (int level, pgtable_t *table);
 /**
  * Allocate and initialize a new root page table for process_mm.
  */
-extern pgtable_t *
+extern void *
 alloc_user_page_table (void);
 
 static inline void
-free_user_page_table (pgtable_t *table)
+free_user_page_table (void *handle)
 {
-	free_page_table (max_pgtable_level, table);
+	free_page_table (max_pgtable_level, handle);
+}
+
+static inline pgtable_t *
+get_pgtable (void *handle)
+{
+	return (pgtable_t *) handle;
 }
 
 /**
@@ -127,6 +133,48 @@ __pte_clear (pgtable_t *entry)
 }
 
 /**
+ * Get the address pointed to by a PTE.
+ */
+static inline unsigned long
+pte_addr (int level, pte_t pte)
+{
+	if (level > 1)
+		return pte & __PG_ADDR_MASK & ~__PG_PAT_HUGE;
+	else
+		return pte & __PG_ADDR_MASK;
+}
+
+static inline bool
+pte_is_readable (int level, pte_t pte)
+{
+	(void) level;
+	return (pte & __PG_PRESENT) ? true : false;
+}
+
+static inline bool
+pte_is_writable (int level, pte_t pte)
+{
+	(void) level;
+	return (pte & __PG_WRITE) ? true : false;
+}
+
+/**
+ * Convert from PROT_* bits to pte flags.
+ */
+static inline unsigned long
+make_pte_flags (bool prot_read, bool prot_write, bool prot_exec)
+{
+	unsigned long flags = 0;
+	if (prot_read || prot_write || prot_exec)
+		flags |= __PG_PRESENT;
+	if (prot_write)
+		flags |= __PG_WRITE;
+	if (!prot_exec)
+		flags |= x86_nx_bit;
+	return flags;
+}
+
+/**
  * Make a PTE value from page table level, physical address, and flags.
  */
 static inline pte_t
@@ -137,11 +185,31 @@ make_pte (int level, unsigned long phys_addr, unsigned long flags)
 	return phys_addr | flags;
 }
 
+/**
+ * Make a userspace PTE value from page table level, physical address,
+ * and flags.
+ */
+static inline pte_t
+make_user_pte (int level, unsigned long phys_addr, unsigned long flags)
+{
+	flags |= __PG_USER;
+	if (level > 1)
+		flags |= (flags & __PG_PAT) ? __PG_PAT_HUGE : __PG_HUGE;
+	return phys_addr | flags;
+}
+
 static inline bool
 pte_is_present (int level, pte_t pte)
 {
 	(void) level;
 	return (pte & __PG_PRESENT) ? true : false;
+}
+
+static inline bool
+pte_is_nonnull (int level, pte_t pte)
+{
+	(void) level;
+	return pte ? true : false;
 }
 
 static inline bool
