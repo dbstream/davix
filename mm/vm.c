@@ -68,7 +68,8 @@ __vm_clear_range (struct tlb *tlb, pgtable_t *table, int level,
 		pte_t val = __pte_read (entry);
 		if (is_present_pgtable (level, val)) {
 			entry = pte_pgtable (level, val);
-			__vm_clear_range (tlb, entry, level - 1, addr + offset,
+			__vm_clear_range (tlb, entry, level - 1,
+					addr + (offset & ~(entry_size - 1)),
 					offset & (entry_size - 1), next - offset);
 		}
 
