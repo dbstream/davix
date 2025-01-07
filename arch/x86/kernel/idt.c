@@ -117,6 +117,10 @@ setup_traps_for (unsigned int cpu)
 
 extern char asm_handle_BP[];
 
+extern char asm_handle_SS[];
+extern char asm_handle_GP[];
+extern char asm_handle_PF[];
+
 extern char asm_handle_NMI[];
 extern char asm_handle_MCE[];
 
@@ -138,6 +142,10 @@ x86_trap_init (void)
 		setup_traps_for (i);
 
 	set_idt_entry (X86_TRAP_BP, asm_handle_BP, __IST_NONE, 3);
+
+	set_idt_entry (X86_TRAP_SS, asm_handle_SS, __IST_NONE, 0);
+	set_idt_entry (X86_TRAP_GP, asm_handle_GP, __IST_NONE, 0);
+	set_idt_entry (X86_TRAP_PF, asm_handle_PF, __IST_NONE, 0);
 
 	set_idt_entry (X86_TRAP_NMI, asm_handle_NMI, __IST_NMI, 0);
 	set_idt_entry (X86_TRAP_MCE, asm_handle_MCE, __IST_MCE, 0);

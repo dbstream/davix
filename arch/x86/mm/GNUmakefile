@@ -3,4 +3,5 @@
 
 kobjs += early_memmap.o
 kobjs += init.o
+kobjs += pagefault.o
 kobjs += tlb.o

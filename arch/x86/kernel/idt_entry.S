@@ -301,6 +301,10 @@ atomic_exit:
 
 idtentry_exception asm_handle_BP 0 1 handle_BP_interrupt handle_BP_interrupt_k
 
+idtentry_exception asm_handle_SS 1 0 handle_SS_exception handle_SS_exception_k
+idtentry_exception asm_handle_GP 1 0 handle_GP_exception handle_GP_exception_k
+idtentry_exception asm_handle_PF 1 0 handle_PF_exception handle_PF_exception_k
+
 idtentry_atomic asm_handle_NMI 0 0 handle_NMI
 idtentry_atomic asm_handle_MCE 0 0 handle_MCE
 
