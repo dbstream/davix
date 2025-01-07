@@ -7,6 +7,7 @@
  * - handling page faults
  */
 #include <davix/align.h>
+#include <davix/pagefault.h>
 #include <davix/mm.h>
 #include <davix/page.h>
 #include "internal.h"
@@ -286,3 +287,10 @@ const struct vm_area_ops anon_vma_ops = {
 	.map_vma_range = anon_map_vma_range,
 	.unmap_vma_range = anon_unmap_vma_range
 };
+
+pagefault_status_t
+vm_handle_pagefault (struct pagefault_info *info)
+{
+	(void) info;
+	return FAULT_SIGSEGV;
+}

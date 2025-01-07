@@ -5,10 +5,13 @@
  * We also implement the Stack-Segment (SS) Fault and General Protection (GP)
  * handlers here.
  */
+#include <davix/pagefault.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <asm/cregs.h>
 #include <asm/entry.h>
+#include <asm/irq.h>
+#include <asm/usercopy.h>
 
 #define PF_P	0x00000001U
 #define PF_WR	0x00000002U
@@ -64,18 +67,54 @@ note_pagefault (unsigned long addr, unsigned int error_code)
 			addr, by, id, tp, cause);
 }
 
+static pagefault_status_t
+handle_pagefault_in_vm (unsigned long addr, unsigned int error_code)
+{
+	struct pagefault_info fault;
+	fault.addr = addr;
+	fault.access_write = (error_code & PF_WR) ? 1 : 0;
+	fault.access_exec = (error_code & PF_ID) ? 1 : 0;
+
+	irq_enable ();
+	pagefault_status_t status = vm_handle_pagefault (&fault);
+	irq_disable ();
+	return status;
+}
+
 void
 handle_PF_exception (struct entry_regs *regs)
 {
-	note_pagefault (read_cr2 (), regs->error_code);
+	unsigned long addr = read_cr2 ();
+	note_pagefault (addr, regs->error_code);
 	panic ("x86: Page Fault in userspace!  (rip=0x%lx  ss:rsp=%lu:0x%lx)",
 		regs->rip, regs->ss, regs->rsp);
+}
+
+extern char __usercopy_pagefault_address[];
+extern char __usercopy_fixup_address[];
+
+static bool
+handle_usercopy_fault (unsigned long addr, struct entry_regs *regs)
+{
+	if (usercopy_ok ((void *) addr, 1) != ESUCCESS)
+		return false;
+	if (regs->error_code & PF_ID)
+		return false;
+
+	if (handle_pagefault_in_vm (addr, regs->error_code) != FAULT_HANDLED)
+		regs->rip = (unsigned long) __usercopy_fixup_address;
+	return true;
 }
 
 void
 handle_PF_exception_k (struct entry_regs *regs)
 {
-	note_pagefault (read_cr2 (), regs->error_code);
+	unsigned long addr = read_cr2 ();
+	note_pagefault (addr, regs->error_code);
+	if (regs->rip == (unsigned long) __usercopy_pagefault_address) {
+		if (handle_usercopy_fault (addr, regs))
+			return;
+	}
 	panic ("x86: Page Fault in kernelspace!  (rip=0x%lx  ss:rsp=%lu:0x%lx)",
 		regs->rip, regs->ss, regs->rsp);
 }

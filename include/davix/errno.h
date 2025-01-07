@@ -13,7 +13,9 @@
  * - Return values should be placed in a passed pointer.
  */
 
+#ifndef __ASSEMBLER__
 typedef int errno_t;
+#endif
 
 #define ESUCCESS 0
 #define ENOMEM 1
@@ -23,6 +25,7 @@ typedef int errno_t;
 #define ETIME 5
 #define EINTR 6
 #define EINVAL 7
+#define EFAULT 8
 
 #endif /* _DAVIX_ERRNO_H */
 

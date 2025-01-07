@@ -21,6 +21,7 @@
 #include <asm/sections.h>
 
 #include <davix/page.h>
+#include <asm/usercopy.h>
 
 static const char kernel_version[] = KERNELVERSION;
 
@@ -58,14 +59,21 @@ start_init (void *arg)
 			MAP_ANON | MAP_PRIVATE, NULL, NULL, &addr);
 	if (e == ESUCCESS) {
 		printk ("Got ESUCCESS from ksys_mmap!\n");
-		pgalloc_dump ();
-		printk ("Ok, unmapping it...\n");
-		ksys_munmap (addr, 0x10000000UL);
+//		pgalloc_dump ();
+//		printk ("Ok, unmapping it...\n");
+//		ksys_munmap (addr, 0x10000000UL);
 	} else {
 		printk ("Got error %d from ksys_mmap!\n", e);
 	}
 
 	pgalloc_dump ();
+
+	printk ("copying stuff to userspace...\n");
+	e = memcpy_to_userspace (addr, "Hello, world!", 14);
+	if (e == ESUCCESS)
+		printk ("Got ESUCCESS from memcpy_to_userspace!\n");
+	else
+		printk ("Got error %d from memcpy_to_userspace!\n", e);
 
 	if (1)
 		for (;;)
