@@ -196,6 +196,7 @@ if [ -d /tmp/isodir ]; then
 fi
 mkdir /tmp/isodir
 cp build/davix /tmp/isodir/davix
+cp build/init /tmp/isodir/davixinit
 
 mkdir -p /tmp/isodir/boot/grub
 cat << EOF >> /tmp/isodir/boot/grub/grub.cfg
@@ -208,6 +209,7 @@ set timeout=1
 menuentry "Davix kernel" {
 	echo "Loading multiboot2 image..."
 	multiboot2 /davix
+	module2 /davixinit
 	echo "Booting..."
 	boot
 }

@@ -260,6 +260,27 @@ parse_memmap (void)
 	__parse_memmap (memmap, register_other_entries);
 }
 
+__INIT_TEXT
+static void
+parse_multiboot_other (void)
+{
+	struct multiboot_module *boot_module = NULL;
+
+	struct multiboot_tag *tag;
+	for (tag = mb2_first (); tag; tag = mb2_next (tag)) {
+		switch (tag->type) {
+		case MB2_TAG_MODULE:
+			boot_module = (struct multiboot_module *) tag;
+			break;
+		}
+	}
+
+	if (boot_module) {
+		boot_module_start = boot_module->mod_start;
+		boot_module_end = boot_module->mod_end;
+	}
+}
+
 /**
  * arch_init() performs the most basic initializations, then does parsing of
  * multiboot_params into kernel-internal formats. We are running under the
@@ -276,6 +297,7 @@ arch_init (void)
 	reserve_stuff ();
 	init_acpi_tables_early ();
 	parse_memmap ();
+	parse_multiboot_other ();
 
 	initmem_dump (&initmem_usable_ram);
 	initmem_dump (&initmem_reserved);

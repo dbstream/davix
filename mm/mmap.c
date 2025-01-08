@@ -3,6 +3,7 @@
  * Copyright (C) 2025-present  dbstream
  */
 #include <davix/align.h>
+#include <davix/file.h>
 #include <davix/mm.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
@@ -82,8 +83,6 @@ do_mmap_locked (unsigned long addr, size_t length, int prot, int flags,
 
 	struct process_mm *mm = get_current_task ()->mm;
 
-	printk ("in do_mmap_locked\n");
-
 	if (!addr && !(flags & MAP_FIXED))
 		addr = mm->mmap_base;
 
@@ -104,11 +103,8 @@ do_mmap_locked (unsigned long addr, size_t length, int prot, int flags,
 
 	if ((flags & MAP_FIXED_NOREPLACE) || !(flags & MAP_FIXED)) {
 		if (!find_free_area (&addr, mm, length, low, high))
-			return ENOMEM;
+			return (flags & MAP_FIXED_NOREPLACE) ? EEXIST : ENOMEM;
 	}
-
-	printk ("mapping base address: 0x%lx\n", addr);
-	printk ("prepping munmap()\n");
 
 	struct munmap_state unmap_state;
 	unmap_state.start = addr;
@@ -117,17 +113,12 @@ do_mmap_locked (unsigned long addr, size_t length, int prot, int flags,
 	if (e != ESUCCESS)
 		return e;
 
-	printk ("allocating vma...\n");
-
 	struct vm_area *vma = alloc_vm_area ();
 	if (!vma) {
 		munmap_cancel (&unmap_state);
 		return ENOMEM;
 	}
 
-	/** TODO: handle non-ANON mmap()s  */
-
-	vma->ops = &anon_vma_ops;
 	vma->vma_node.first = addr;
 	vma->vma_node.last = addr + length - 1UL;
 	vma->vm_flags = 0;
@@ -142,15 +133,17 @@ do_mmap_locked (unsigned long addr, size_t length, int prot, int flags,
 	if ((flags & MAP_TYPE_BITS) != MAP_PRIVATE)
 		vma->vm_flags |= VM_SHARED;
 
-	if (vma->ops->open_vma)
-		vma->ops->open_vma (vma);
-
 	struct vm_pgtable_op op;
 	vm_init_offline_pgtable_op (&op);
 
-	printk ("mapping range...\n");
+	if (file) {
+		e = file->ops->mmap (file, &op, vma,
+				vma_start (vma), vma_end (vma), offset);
+	} else {
+		vma->ops = &anon_vma_ops,
+		e = vma->ops->map_vma_range (&op, vma, vma_start (vma), vma_end (vma));
+	}
 
-	e = vma->ops->map_vma_range (&op, vma, vma_start (vma), vma_end (vma));
 	if (e != ESUCCESS) {
 		vm_cancel_offline_pgtable_op (&op);
 		munmap_cancel (&unmap_state);
@@ -162,16 +155,11 @@ do_mmap_locked (unsigned long addr, size_t length, int prot, int flags,
 
 	struct tlb tlb;
 	tlbflush_init (&tlb, mm);
-	printk ("applying munmap...\n");
 	munmap_apply (mm, &unmap_state, &tlb);
-	printk ("applying offline vm_pgtable_op...\n");
 	vm_apply_offline_pgtable_op (&op, mm, &tlb, addr, addr + length);
-	printk ("inserting range into vma_tree...\n");
 	vma_tree_insert (&mm->vma_tree, &vma->vma_node);
-	printk ("flushing tlb...\n");
 	tlb_flush (&tlb);
 
-	printk ("do_mmap_locked: done\n");
 	*out_addr = (void *) addr;
 	return ESUCCESS;
 }
@@ -180,6 +168,10 @@ errno_t
 ksys_mmap (void *addr_, size_t length, int prot, int flags,
 		struct file *file, off_t offset, void **out_addr)
 {
+	void *dummy_out_addr;
+	if (!out_addr)
+		out_addr = &dummy_out_addr;
+
 	if (prot & ~PROT_VALID_BITS)
 		return EINVAL;
 
@@ -197,9 +189,14 @@ ksys_mmap (void *addr_, size_t length, int prot, int flags,
 	if (!length)
 		return EINVAL;
 
-	// TODO: implement file mmap()
-	if (!(flags & MAP_ANON))
-		return ENOTSUP;
+	if (!(flags & MAP_ANON) && !file)
+		return EINVAL;
+
+	if (flags & MAP_ANON)
+		file = NULL;
+
+	if (file && !file->ops->mmap)
+		return EINVAL;
 
 	if (flags & MAP_FIXED_NOREPLACE)
 		flags |= MAP_FIXED;

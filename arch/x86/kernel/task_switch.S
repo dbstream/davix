@@ -25,9 +25,9 @@
 
 	__TEXT
 
-	.globl arch_switch_to
-	.type arch_switch_to, @function
-arch_switch_to:
+	.globl __arch_switch_to
+	.type __arch_switch_to, @function
+__arch_switch_to:
 	.cfi_startproc
 
 	XPUSHQ(rdi)
@@ -51,4 +51,4 @@ arch_switch_to:
 	ret
 
 	.cfi_endproc
-	.size arch_switch_to, . - arch_switch_to
+	.size __arch_switch_to, . - __arch_switch_to

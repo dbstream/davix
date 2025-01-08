@@ -8,6 +8,26 @@ AS := x86_64-elf-gcc
 LD := x86_64-elf-ld
 OBJCOPY := x86_64-elf-objcopy
 
+CFLAGS-init := $(CFLAGS)	\
+	-march=x86-64		\
+	-mabi=sysv		\
+	-mcmodel=small		\
+	-mno-80387		\
+	-mno-mmx		\
+	-mno-sse		\
+	-mno-sse2		\
+	-mgeneral-regs-only	\
+	-fno-stack-check	\
+	-fno-lto		\
+	-fno-PIC		\
+	-fno-stack-protector
+
+LDFLAGS-init := \
+	-nostdlib		\
+	-zmax-page-size=0x1000	\
+	--no-dynamic-linker	\
+	-static
+
 CFLAGS += \
 	-march=x86-64		\
 	-mabi=sysv		\

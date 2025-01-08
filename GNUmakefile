@@ -83,10 +83,20 @@ export CC AS LD OBJCOPY CPPFLAGS CFLAGS AFLAGS
 
 kobjs += acpi/
 kobjs += arch/$(ARCH)/
+kobjs += fs/
 kobjs += kernel/
 kobjs += ktest/
 kobjs += mm/
 kobjs += util/
+
+all: $(obj)init
+
+targets += $(obj)init.o $(obj)init
+$(obj)init.o: cflags=$(CPPFLAGS) $(CFLAGS-init)
+$(obj)init: ldflags=$(LDFLAGS-init)
+$(obj)init: ldlibs=$(LDLIBS-init)
+$(obj)init: $(obj)init.o FORCE
+	$(call cond_cmd,ld)
 
 # Up to architecture to define an $(obj)davix.
 targets += $(obj)davix.elf

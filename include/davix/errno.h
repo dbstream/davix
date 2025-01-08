@@ -26,6 +26,9 @@ typedef int errno_t;
 #define EINTR 6
 #define EINVAL 7
 #define EFAULT 8
+#define EEXIST 9
+#define ENOEXEC 10
+#define E2BIG 11
 
 #endif /* _DAVIX_ERRNO_H */
 

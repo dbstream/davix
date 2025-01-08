@@ -4,6 +4,8 @@
 kobjs += lock/
 kobjs += sched/
 kobjs += context.o
+kobjs += exec.o
+kobjs += exec_elf.o
 kobjs += main.o
 kobjs += panic.o
 kobjs += printk.o

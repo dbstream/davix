@@ -10,7 +10,7 @@
 #include <asm/page_defs.h>
 
 static inline errno_t
-usercopy_ok (void *addr, size_t size)
+usercopy_ok (const void *addr, size_t size)
 {
 	unsigned long start = (unsigned long) addr;
 	unsigned long end = start + size;
@@ -26,13 +26,13 @@ usercopy_ok (void *addr, size_t size)
 }
 
 extern errno_t
-__memcpy_from_userspace (void *dst, void *src, size_t size);
+__memcpy_from_userspace (void *dst, const void *src, size_t size);
 
 extern errno_t
-__memcpy_to_userspace (void *dst, void *src, size_t size);
+__memcpy_to_userspace (void *dst, const void *src, size_t size);
 
 static inline errno_t
-memcpy_from_userspace (void *dst, void *src, size_t size)
+memcpy_from_userspace (void *dst, const void *src, size_t size)
 {
 	errno_t e = usercopy_ok (src, size);
 	if (e == ESUCCESS)
@@ -41,7 +41,7 @@ memcpy_from_userspace (void *dst, void *src, size_t size)
 }
 
 static inline errno_t
-memcpy_to_userspace (void *dst, void *src, size_t size)
+memcpy_to_userspace (void *dst, const void *src, size_t size)
 {
 	errno_t e = usercopy_ok (dst, size);
 	if (e == ESUCCESS)

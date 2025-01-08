@@ -4,6 +4,8 @@
  */
 #include <davix/context.h>
 #include <davix/cpuset.h>
+#include <davix/exec.h>
+#include <davix/file.h>
 #include <davix/initmem.h>
 #include <davix/ktest.h>
 #include <davix/main.h>
@@ -19,11 +21,45 @@
 #include <asm/mm.h>
 #include <asm/page.h>
 #include <asm/sections.h>
-
-#include <davix/page.h>
 #include <asm/usercopy.h>
 
 static const char kernel_version[] = KERNELVERSION;
+
+unsigned long boot_module_start = 0, boot_module_end = 0;
+
+static errno_t
+boot_module_pread (struct file *file, void *buf,
+		size_t size, off_t offset, ssize_t *out)
+{
+	(void) file;
+
+	if (offset < 0)
+		return EINVAL;
+	unsigned long uoffset = (unsigned long) offset;
+	if (uoffset + size < uoffset)
+		return EINVAL;
+
+	if (uoffset + size > boot_module_end - boot_module_start)
+		return EINVAL;
+
+	void *src = (void *) phys_to_virt (boot_module_start + offset);
+	errno_t e = __memcpy_to_userspace (buf, src, size);
+	if (e == ESUCCESS)
+		*out = size;
+	return e;
+}
+
+/**
+ * Implement everything needed for kernel_fexecve().
+ */
+static const struct file_ops boot_module_ops = {
+	.pread = boot_module_pread
+};
+
+static struct file boot_module_file = {
+	.refcount = 1,
+	.ops = &boot_module_ops
+};
 
 /**
  * Start the init task.
@@ -45,44 +81,11 @@ start_init (void *arg)
 
 	mm_init ();
 
-	struct task *self = get_current_task ();
-	self->mm = mmnew ();
-	if (!self->mm)
-		panic ("Failed to create the process_mm of init.");
-	switch_to_mm (self->mm);
+	if (boot_module_start == boot_module_end)
+		panic ("No boot module was provided!");
 
-	pgalloc_dump ();
-
-	printk ("Ok, mapping some memory...\n");
-	void *addr;
-	errno_t e = ksys_mmap (NULL, 0x10000000UL, PROT_READ | PROT_WRITE,
-			MAP_ANON | MAP_PRIVATE, NULL, NULL, &addr);
-	if (e == ESUCCESS) {
-		printk ("Got ESUCCESS from ksys_mmap!\n");
-//		pgalloc_dump ();
-//		printk ("Ok, unmapping it...\n");
-//		ksys_munmap (addr, 0x10000000UL);
-	} else {
-		printk ("Got error %d from ksys_mmap!\n", e);
-	}
-
-	pgalloc_dump ();
-
-	printk ("copying stuff to userspace...\n");
-	e = memcpy_to_userspace (addr, "Hello, world!", 14);
-	if (e == ESUCCESS)
-		printk ("Got ESUCCESS from memcpy_to_userspace!\n");
-	else
-		printk ("Got error %d from memcpy_to_userspace!\n", e);
-
-	if (1)
-		for (;;)
-			arch_wfi ();
-
-	irq_disable ();
-
-	get_current_task ()->state = TASK_ZOMBIE;
-	schedule ();
+	errno_t e = kernel_fexecve (&boot_module_file, NULL, NULL);
+	panic ("kernel_fexecve returned error %d!", e);
 }
 
 /**

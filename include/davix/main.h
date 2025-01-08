@@ -14,4 +14,6 @@ arch_init (void);
 extern void
 arch_init_late (void);
 
+extern unsigned long boot_module_start, boot_module_end;
+
 #endif /* _DAVIX_MAIN_H */
