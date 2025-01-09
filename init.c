@@ -17,6 +17,6 @@ _start (void)
 
 	/** ... and now sleep... */
 	asm volatile ("syscall" :: "a" (__SYS_exit),
-			"D" (69)
+			"D" (0)
 			: "rsi", "rdx", "r10", "r8", "r9", "cc", "rcx", "r11");
 }
