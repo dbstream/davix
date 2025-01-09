@@ -9,6 +9,8 @@
 
 #define ALL_SYSCALLS(macro)		\
 	ARCH_ALL_SYSCALLS(macro)	\
-	macro(write_dmesg)
+	macro(write_dmesg)		\
+	macro(exit)			\
+
 
 #endif /* _DAVIX_ALL_SYSCALLS_H  */

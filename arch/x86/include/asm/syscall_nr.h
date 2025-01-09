@@ -9,5 +9,6 @@
 
 #define __SYS_enosys			0
 #define __SYS_write_dmesg		1
+#define __SYS_exit			2
 
 #endif /* __DAVIX_ASM_SYSCALL_NR_H  */

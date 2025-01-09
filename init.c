@@ -16,6 +16,7 @@ _start (void)
 			: "rdx", "r10", "r8", "r9", "cc", "rcx", "r11");
 
 	/** ... and now sleep... */
-	for (;;)
-		__builtin_ia32_pause ();
+	asm volatile ("syscall" :: "a" (__SYS_exit),
+			"D" (69)
+			: "rsi", "rdx", "r10", "r8", "r9", "cc", "rcx", "r11");
 }
