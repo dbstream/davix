@@ -8,7 +8,7 @@
 #include <asm/sections.h>
 #include <asm/msr.h>
 
-unsigned long __efer_state = _EFER_LME;
+unsigned long __efer_state = _EFER_LME | _EFER_SCE;
 unsigned long __cr0_state;
 unsigned long __cr4_state;
 
@@ -123,4 +123,5 @@ void
 bsp_features_init (void)
 {
 	load_features (bsp_feature_array, &cpu_vendor, cpu_brand, cpu_model);
+	write_msr (MSR_EFER, __efer_state);
 }

@@ -200,8 +200,8 @@ boot_gdt:
 	.quad 0
 	.quad 0
 	.quad 0
-	.quad 0x00af93000000ffff	/* __KERNEL_DS */
 	.quad 0x00af9b000000ffff	/* __KERNEL_CS */
+	.quad 0x00af93000000ffff	/* __KERNEL_DS */
 
 boot_pagetables:
 	/* 0x0000: PML5 */

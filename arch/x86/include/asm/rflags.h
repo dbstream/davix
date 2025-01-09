@@ -27,5 +27,8 @@
 #define __RFL_ID		(1 << 21)
 
 #define __RFL_INITIAL		(__RFL_RA1 | __RFL_IF)
+#define __RFL_CLEAR_ON_SYSCALL	(__RFL_CF | __RFL_PF | __RFL_AF | __RFL_ZF	\
+		| __RFL_SF | __RFL_TF | __RFL_IF | __RFL_DF | __RFL_OF		\
+		| __RFL_IOPL3 | __RFL_NT | __RFL_RF | __RFL_AC | __RFL_ID)
 
 #endif /* _ASM_RFLAGS_H */

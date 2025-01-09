@@ -18,6 +18,7 @@ kobjs += setup.o
 kobjs += smp.o
 kobjs += startup64.o
 kobjs += syscall_entry.o
+kobjs += syscall.o
 kobjs += task_switch.o
 kobjs += task.o
 kobjs += time.o

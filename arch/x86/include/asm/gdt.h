@@ -9,8 +9,8 @@
 #define __USER32_DS (0x10 | 3)
 #define __USER64_DS (0x10 | 3)
 #define __USER64_CS (0x18 | 3)
-#define __KERNEL_DS 0x20
-#define __KERNEL_CS 0x28
+#define __KERNEL_CS 0x20
+#define __KERNEL_DS 0x28
 #define __GDT_TSS 0x30
 
 #endif /* _ASM_GDT_H */

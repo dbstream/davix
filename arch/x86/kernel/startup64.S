@@ -98,8 +98,8 @@ percpu_GDT:
 	.quad 0x00cffb000000ffff	/* __USER32_CS */
 	.quad 0x00cff3000000ffff	/* __USERXX_DS */
 	.quad 0x00affb000000ffff	/* __USER64_CS */
-	.quad 0x00af93000000ffff	/* __KERNEL_DS */
 	.quad 0x00af9b000000ffff	/* __KERNEL_CS */
+	.quad 0x00af93000000ffff	/* __KERNEL_DS */
 	.quad 0				/* TSS: low qword */
 	.quad 0				/* TSS: high qword */
 

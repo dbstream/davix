@@ -13,6 +13,8 @@
 #include <asm/entry.h>
 #include <asm/gdt.h>
 #include <asm/interrupt.h>
+#include <asm/msr.h>
+#include <asm/rflags.h>
 #include <asm/sections.h>
 #include <asm/trap.h>
 
@@ -56,7 +58,7 @@ struct __attribute__((packed)) tss_struct {
 	unsigned short	iopb_offset;
 };
 
-static __CPULOCAL __attribute__((aligned(128))) struct tss_struct tss_struct;
+__CPULOCAL __attribute__((aligned(128))) struct tss_struct tss_struct;
 
 void
 x86_update_rsp0 (unsigned long value)
@@ -69,12 +71,19 @@ struct __attribute__((packed)) segment_ptr {
 	unsigned long address;
 };
 
+extern char asm_syscall_entry[];
+
 void
 x86_setup_local_traps (void)
 {
 	struct segment_ptr idt_ptr = { 0xfff, (unsigned long) idt_table };
 	asm volatile ("ltr %0" :: "r" (__GDT_TSS));
 	asm volatile ("lidt %0" :: "m" (idt_ptr));
+
+	write_msr (MSR_LSTAR, (unsigned long) asm_syscall_entry);
+	write_msr (MSR_SFMASK, __RFL_CLEAR_ON_SYSCALL);
+	write_msr (MSR_STAR, ((unsigned long) __KERNEL_CS << 32)
+			| ((unsigned long) __USER32_CS << 48));
 }
 
 __INIT_TEXT

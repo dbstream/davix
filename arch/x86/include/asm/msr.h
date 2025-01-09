@@ -17,6 +17,11 @@
 #define _EFER_LMA	(1 << 10)	/* long mode active */
 #define _EFER_NXE	(1 << 11)	/* no execute enable */
 
+#define MSR_STAR		0xc0000081
+#define MSR_LSTAR		0xc0000082
+#define MSR_CSTAR		0xc0000083
+#define MSR_SFMASK		0xc0000084
+
 #define MSR_FSBASE		0xc0000100
 #define MSR_GSBASE		0xc0000101
 #define MSR_KERNELGSBASE	0xc0000102
