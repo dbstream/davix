@@ -52,6 +52,10 @@ _help() {
 	echo '                                   the directory "/usr/share/ovmf/x64". This can'
 	echo '                                   be overridden by providing the environment'
 	echo '                                   variable "OVMF_PATH".'
+	echo '      --grub'
+	echo '      --limine'
+	echo '      --boootloader={grub, limine} Select GRUB or Limine as the bootloader to'
+	echo '                                   use. (default: GRUB)'
 }
 
 # We require GNU enhanced getopt(1) for long options to be supported. Check for
@@ -81,6 +85,7 @@ provide NO_REBOOT "y"
 provide FIRMWARE "UEFI"
 provide QSMP "1"
 provide QMACHINE "pc"
+provide BOOTLOADER "grub"
 
 # Parse the command line arguments.
 while true; do
@@ -157,6 +162,30 @@ while true; do
 			esac
 			shift 2
 		;;
+		'--grub')
+			BOOTLOADER="grub"
+			shift
+		;;
+		'--limine')
+			BOOTLOADER="limine"
+			shift
+		;;
+		'--bootloader')
+			case "$2" in
+				'grub'|'GRUB')
+					BOOTLOADER="grub"
+				;;
+				'limine'|'Limine')
+					BOOTLOADER="limine"
+				;;
+				*)
+					echo "Unrecognized bootloader: \"$2\" (supported are: grub, limine)" >&2
+					_help >&2
+					exit 1
+				;;
+			esac
+			shift 2
+		;;
 		'--')
 			shift
 			break
@@ -198,8 +227,10 @@ mkdir /tmp/isodir
 cp build/davix /tmp/isodir/davix
 cp build/init /tmp/isodir/davixinit
 
-mkdir -p /tmp/isodir/boot/grub
-cat << EOF >> /tmp/isodir/boot/grub/grub.cfg
+if [ $BOOTLOADER = "grub" ]; then
+	# Boot using GRUB.
+	mkdir -p /tmp/isodir/boot/grub
+	cat << EOF >> /tmp/isodir/boot/grub/grub.cfg
 insmod fat
 insmod efi_gop
 
@@ -215,7 +246,27 @@ menuentry "Davix kernel" {
 }
 
 EOF
-grub-mkrescue -o /tmp/bootable.iso /tmp/isodir
+	grub-mkrescue -o /tmp/bootable.iso /tmp/isodir
+else
+	# Boot using Limine.
+	LIMINE_DATADIR=$(limine --print-datadir)
+	mkdir -p /tmp/isodir/EFI/BOOT
+	cp $LIMINE_DATADIR/limine-uefi-cd.bin $LIMINE_DATADIR/limine-bios-cd.bin $LIMINE_DATADIR/limine-bios.sys /tmp/isodir
+	cat << EOF >> /tmp/isodir/limine.conf
+timeout: 1
+/Davix kernel
+	comment: davix operating system kernel
+	protocol: multiboot2
+	path: boot():/davix
+	module_path: boot():/davixinit
+EOF
+	xorriso -as mkisofs -R -r -J -b limine-bios-cd.bin -no-emul-boot	\
+		-boot-load-size 4 -boot-info-table -hfsplus			\
+		-apm-block-size 2048 --efi-boot limine-uefi-cd.bin		\
+		--efi-boot-part --efi-boot-image --protective-msdos-label	\
+		/tmp/isodir -o /tmp/bootable.iso
+	limine bios-install /tmp/bootable.iso
+fi
 rm -r /tmp/isodir
 
 # Invoke QEMU now.
