@@ -85,7 +85,7 @@ asm_syscall_entry:
 
 	movq %gs:__syscall_saved_rsp, %rsp
 	swapgs
-	sysret
+	sysretq
 
 syscall_return_via_iretq:
 	addq $8, %rsp
