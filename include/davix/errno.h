@@ -30,6 +30,7 @@ typedef int errno_t;
 #define ENOEXEC 10
 #define E2BIG 11
 #define ENOSYS 12
+#define EPERM 13
 
 #endif /* _DAVIX_ERRNO_H */
 

@@ -8,6 +8,7 @@
  */
 #include <davix/align.h>
 #include <davix/pagefault.h>
+#include <davix/panic.h>
 #include <davix/mm.h>
 #include <davix/page.h>
 #include "internal.h"
@@ -230,8 +231,7 @@ static void
 anon_unmap_vma_range (struct vm_pgtable_op *op, struct vm_area *vma,
 		unsigned long start, unsigned long end)
 {
-	if (!(vma->vm_flags & (VM_READ | VM_WRITE | VM_EXEC)))
-		return;
+	(void) vma;
 
 	do {
 		pgtable_t *entry = get_pgtable_entry (op, start);
@@ -251,9 +251,6 @@ static errno_t
 anon_map_vma_range (struct vm_pgtable_op *op, struct vm_area *vma,
 		unsigned long start, unsigned long end)
 {
-	if (!(vma->vm_flags & (VM_READ | VM_WRITE | VM_EXEC)))
-		return ESUCCESS;
-
 	pte_flags_t flags = make_pte_flags (
 			vma->vm_flags & VM_READ,
 			vma->vm_flags & VM_WRITE,
@@ -283,9 +280,39 @@ anon_map_vma_range (struct vm_pgtable_op *op, struct vm_area *vma,
 	return ESUCCESS;
 }
 
+static errno_t
+anon_mprotect_vma_range (struct vm_pgtable_op *op, struct vm_area *vma,
+		unsigned long start, unsigned long end)
+{
+	pte_flags_t flags = make_pte_flags (
+			vma->vm_flags & VM_READ,
+			vma->vm_flags & VM_WRITE,
+			vma->vm_flags & VM_EXEC);
+
+	unsigned long i = start;
+	do {
+		pgtable_t *entry = get_pgtable_entry (op, i);
+		if (!entry)
+			panic ("anon_mprotect_vma_range: no page was mapped!");
+
+		pte_t old = __pte_read (entry);
+		if (!pte_is_nonnull (1, old))
+			panic ("anon_mprotect_vma_range: no page was allocated!");
+
+		pte_t pte = make_user_pte (1, pte_addr (1, old), flags);
+		__pte_install_always (entry, pte);
+		if (pte_update_needs_flush (old, pte) && op->tlb)
+			tlb_flush_range (op->tlb, i, i + PAGE_SIZE);
+
+		i += PAGE_SIZE;
+	} while (i != end);
+	return ESUCCESS;
+}
+
 const struct vm_area_ops anon_vma_ops = {
 	.map_vma_range = anon_map_vma_range,
-	.unmap_vma_range = anon_unmap_vma_range
+	.unmap_vma_range = anon_unmap_vma_range,
+	.mprotect_vma_range = anon_mprotect_vma_range
 };
 
 pagefault_status_t

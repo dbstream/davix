@@ -158,6 +158,18 @@ pte_is_writable (int level, pte_t pte)
 	return (pte & __PG_WRITE) ? true : false;
 }
 
+static inline bool
+pte_update_needs_flush (pte_t old_pte, pte_t new_pte)
+{
+	/**
+	 * For now, always flush if old_pte was present.  vm doesn't handle
+	 * pagefaults yet
+	 */
+
+	(void) new_pte;
+	return (old_pte & __PG_PRESENT) ? true : false;
+}
+
 /**
  * Convert from PROT_* bits to pte flags.
  */

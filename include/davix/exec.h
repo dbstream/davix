@@ -42,7 +42,7 @@ exec_mmap_file (unsigned long addr, size_t size, int prot,
 		struct file *file, off_t offset);
 
 extern errno_t
-exec_mprotect_range (unsigned long addr, size_t size);
+exec_mprotect_range (unsigned long addr, size_t size, int prot);
 
 extern errno_t
 exec_mmap_stack (struct exec_state *state, size_t size, int prot);

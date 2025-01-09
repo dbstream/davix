@@ -34,6 +34,11 @@ struct vm_area_ops;
 #define VM_WRITE		0x02
 #define VM_READ			0x04
 #define VM_SHARED		0x08
+#define VM_CAN_EXEC		0x10
+#define VM_CAN_WRITE		0x20
+#define VM_CAN_READ		0x40
+
+#define VM_PERMISSION_BITS	0x07
 
 struct vm_area {
 	struct process_mm *mm;
@@ -135,7 +140,19 @@ struct vm_area_ops {
 	 * @start	Start of the region being mapped.
 	 * @end		End of the region being mapped.
 	 */
-	errno_t(*map_vma_range) (struct vm_pgtable_op *op, struct vm_area *vma,
+	errno_t (*map_vma_range) (struct vm_pgtable_op *op, struct vm_area *vma,
+			unsigned long start, unsigned long end);
+
+	/**
+	 * Notify the VMA that a range of memory has had its protection bits
+	 * changed.s
+	 *
+	 * @op		Page table accessor.
+	 * @vma		The VMA that has been remapped.
+	 * @start	Start of the region being remapped.
+	 * @end		End of the region being remapped.
+	 */
+	errno_t (*mprotect_vma_range) (struct vm_pgtable_op *op, struct vm_area *vma,
 			unsigned long start, unsigned long end);
 };
 
@@ -391,13 +408,23 @@ ksys_mmap (void *addr, size_t length, int prot, int flags,
 /**
  * Perform a munmap() syscall.
  *
- * @addr	address hint
- * @length	lenth
+ * @addr	address
+ * @length	length
  * @prot	PROT_* flags
  * @flags	MAP_* flags
  */
 extern errno_t
 ksys_munmap (void *addr, size_t length);
+
+/**
+ * Perform a mprotect() syscall.
+ *
+ * @addr	address
+ * @length	length
+ * @prot	PROT_* flags
+ */
+extern errno_t
+ksys_mprotect (void *addr, size_t length, int prot);
 
 /**
  * Anonymous VMA operations.

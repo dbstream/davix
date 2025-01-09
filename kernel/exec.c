@@ -51,9 +51,8 @@ exec_mmap_file (unsigned long addr, size_t size, int prot,
 				MAP_PRIVATE | MAP_FIXED_NOREPLACE,
 				file, offset, &mmap_out_addr);
 
-	// need full RWX; exec_mprotect_range doesn't work yet.
-	prot = PROT_READ | PROT_WRITE | PROT_EXEC;
-	errno_t e = ksys_mmap ((void *) addr, size, prot,
+	errno_t e = ksys_mmap ((void *) addr, size,
+			(prot & PROT_WRITE) ? prot : PROT_WRITE,
 			MAP_PRIVATE | MAP_ANON | MAP_FIXED_NOREPLACE,
 			NULL, 0, &mmap_out_addr);
 
@@ -68,16 +67,15 @@ exec_mmap_file (unsigned long addr, size_t size, int prot,
 	if ((size_t) nread != size)
 		return EIO;
 
+	if (!(prot & PROT_WRITE))
+		return exec_mprotect_range (addr, size, prot);
 	return ESUCCESS;
 }
 
 errno_t
-exec_mprotect_range (unsigned long addr, size_t size)
+exec_mprotect_range (unsigned long addr, size_t size, int prot)
 {
-	(void) addr;
-	(void) size;
-	// TODO: mprotect() the range
-	return ESUCCESS;
+	return ksys_mprotect ((void *) addr, size, prot);
 }
 
 errno_t

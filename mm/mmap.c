@@ -34,6 +34,15 @@ mmap_init (void)
 		panic ("Failed to create vm_area slab!");
 }
 
+static struct vm_area *
+find_first_vma_above (struct process_mm *mm, unsigned long addr)
+{
+	struct vma_tree_iterator it;
+	if (vma_tree_find_first (&it, &mm->vma_tree, addr))
+		return struct_parent (struct vm_area, vma_node, vma_node (&it));
+	return NULL;
+}
+
 /**
  * State tracker for munmap().
  */
@@ -66,6 +75,56 @@ find_free_area (unsigned long *out, struct process_mm *mm, size_t size,
 			size, PAGE_SIZE, low, high);
 }
 
+/**
+ * Check if @left and @right can be merged.
+ */
+static bool
+can_merge_vmas (struct vm_area *left, struct vm_area *right)
+{
+	if (vma_end (left) != vma_start (right))
+		return false;
+
+	if (left->ops != right->ops)
+		return false;
+
+	if (left->private != right->private)
+		return false;
+
+	if (left->vm_flags != right->vm_flags)
+		return false;
+
+	return true;
+}
+
+/**
+ * Check if any VMAs in the range @start and @end can be merged.
+ */
+static void
+do_merge_vmas (struct process_mm *mm, unsigned long start, unsigned long end)
+{
+
+	struct vm_area *next, *vma = find_first_vma_above (mm, start ? start - 1UL : start);
+	if (!vma)
+		return;
+
+	next = vm_area_next (mm, vma);
+	if (!next)
+		return;
+
+	do {
+		if (end && vma_start (next) > end)
+			return;
+
+		if (can_merge_vmas (vma, next)) {
+			vma_tree_remove (&mm->vma_tree, &next->vma_node);
+			vma->vma_node.last = next->vma_node.last;
+			vma_tree_adjust (&mm->vma_tree, &vma->vma_node);
+			free_vm_area (next);
+		} else
+			vma = next;
+		next = vm_area_next (mm, vma);
+	} while (next);
+}
 
 /**
  * The guts of mmap().
@@ -140,6 +199,7 @@ do_mmap_locked (unsigned long addr, size_t length, int prot, int flags,
 		e = file->ops->mmap (file, &op, vma,
 				vma_start (vma), vma_end (vma), offset);
 	} else {
+		vma->vm_flags |= VM_CAN_READ | VM_CAN_WRITE | VM_CAN_EXEC;
 		vma->ops = &anon_vma_ops,
 		e = vma->ops->map_vma_range (&op, vma, vma_start (vma), vma_end (vma));
 	}
@@ -210,17 +270,10 @@ ksys_mmap (void *addr_, size_t length, int prot, int flags,
 		return e;
 
 	e = do_mmap_locked (addr, length, prot, flags, file, offset, out_addr);
+	if (e == ESUCCESS)
+		do_merge_vmas (mm, addr, addr + length);
 	mm_unlock (mm);
 	return e;
-}
-
-static struct vm_area *
-find_first_vma_above (struct process_mm *mm, unsigned long addr)
-{
-	struct vma_tree_iterator it;
-	if (vma_tree_find_first (&it, &mm->vma_tree, addr))
-		return struct_parent (struct vm_area, vma_node, vma_node (&it));
-	return NULL;
 }
 
 static errno_t
@@ -404,3 +457,132 @@ ksys_munmap (void *addr, size_t length)
 	return ESUCCESS;
 }
 
+static errno_t
+do_mprotect (struct process_mm *mm, unsigned long start, unsigned long end, int prot)
+{
+	unsigned int wanted_vm_flags = 0;
+	if (prot & PROT_READ)
+		wanted_vm_flags |= VM_READ;
+	if (prot & PROT_WRITE)
+		wanted_vm_flags |= VM_WRITE;
+	if (prot & PROT_EXEC)
+		wanted_vm_flags |= VM_EXEC;
+
+	struct vm_area *first_vma = NULL, *last_vma = NULL;
+	struct vm_area *vma = find_first_vma_above (mm, start);
+	if (!vma || (end && vma_start (vma) >= end))
+		return ESUCCESS;
+
+	first_vma = vma;
+	for (;;) {
+		last_vma = vma;
+		if ((wanted_vm_flags & VM_EXEC) && !(vma->vm_flags & VM_CAN_EXEC))
+			return EPERM;
+		if ((wanted_vm_flags & VM_WRITE) && !(vma->vm_flags & VM_CAN_WRITE))
+			return EPERM;
+		if ((wanted_vm_flags & VM_READ) && !(vma->vm_flags & VM_CAN_READ))
+			return EPERM;
+		vma = vm_area_next (mm, vma);
+		if (!vma)
+			break;
+		if (end && vma_start (vma) >= end)
+			break;
+	}
+
+	if (vma_start (first_vma) < start && first_vma->ops->can_split_vma) {
+		errno_t e = first_vma->ops->can_split_vma (first_vma, start);
+		if (e != ESUCCESS)
+			return e;
+	}
+
+	if (end && vma_end (last_vma) > end && last_vma->ops->can_split_vma) {
+		errno_t e = last_vma->ops->can_split_vma (last_vma, end);
+		if (e != ESUCCESS)
+			return e;
+	}
+
+	struct vm_area *prealloc_left = NULL, *prealloc_right = NULL;
+	if (vma_start (first_vma) < start) {
+		prealloc_left = alloc_vm_area ();
+		if (!prealloc_left)
+			return ENOMEM;
+	}
+
+	if (end && vma_end (last_vma) > end) {
+		prealloc_right = alloc_vm_area ();
+		if (!prealloc_right) {
+			if (prealloc_left)
+				free_vm_area (prealloc_left);
+			return ENOMEM;
+		}
+	}
+
+	if (prealloc_left) {
+		*prealloc_left = *first_vma;
+		first_vma->vma_node.first = start;
+		prealloc_left->vma_node.last = start - 1UL;
+		vma_tree_adjust (&mm->vma_tree, &first_vma->vma_node);
+		vma_tree_insert (&mm->vma_tree, &prealloc_left->vma_node);
+		if (prealloc_left->ops->open_vma)
+			prealloc_left->ops->open_vma (prealloc_left);
+	}
+
+	if (prealloc_right) {
+		*prealloc_right = *last_vma;
+		last_vma->vma_node.last = end - 1UL;
+		prealloc_right->vma_node.first = end;
+		vma_tree_adjust (&mm->vma_tree, &last_vma->vma_node);
+		vma_tree_insert (&mm->vma_tree, &prealloc_right->vma_node);
+		if (prealloc_right->ops->open_vma)
+			prealloc_right->ops->open_vma (prealloc_right);
+	}
+
+	struct vm_pgtable_op op;
+	struct tlb tlb;
+	tlbflush_init (&tlb, mm);
+	vm_init_online_pgtable_op (&op, mm, &tlb);
+
+	errno_t e;
+	for (;;) {
+		first_vma->vm_flags = wanted_vm_flags
+				| (first_vma->vm_flags & ~VM_PERMISSION_BITS);
+		e = first_vma->ops->mprotect_vma_range (&op, first_vma,
+				vma_start (first_vma), vma_end (first_vma));
+		if (e != ESUCCESS)
+			break;
+
+		if (first_vma == last_vma)
+			break;
+		first_vma = vm_area_next (mm, first_vma);
+	}
+
+	tlb_flush (&tlb);
+	return e;
+}
+
+errno_t
+ksys_mprotect (void *addr, size_t length, int prot)
+{
+	unsigned long start = (unsigned long) addr;
+	unsigned long end = start + length;
+	if (end < start)
+		return EINVAL;
+
+	if (start & (PAGE_SIZE - 1))
+		return EINVAL;
+
+	end = ALIGN_UP (end, PAGE_SIZE);
+
+	struct process_mm *mm = get_current_task ()->mm;
+	if (!mm)
+		return EINVAL;
+
+	errno_t e = mm_lock (mm);
+	if (e != ESUCCESS)
+		return e;
+
+	e = do_mprotect (mm, start, end, prot);
+	do_merge_vmas (mm, start, end);
+	mm_unlock (mm);
+	return e;
+}
