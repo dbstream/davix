@@ -141,7 +141,8 @@ static void
 free_exec_state (struct exec_state *state)
 {
 	// TODO: free argv and envp vectors
-	(void) state;
+	if (state->file)
+		fput (state->file);
 }
 
 static void

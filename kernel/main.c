@@ -84,7 +84,7 @@ start_init (void *arg)
 	if (boot_module_start == boot_module_end)
 		panic ("No boot module was provided!");
 
-	errno_t e = kernel_fexecve (&boot_module_file, NULL, NULL);
+	errno_t e = kernel_fexecve (fget (&boot_module_file), NULL, NULL);
 	panic ("kernel_fexecve returned error %d!", e);
 }
 

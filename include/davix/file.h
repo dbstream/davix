@@ -22,6 +22,13 @@ struct file {
 
 struct file_ops {
 	/**
+	 * Close the file.
+	 *
+	 * @file	struct file
+	 */
+	void (*close) (struct file *file);
+
+	/**
 	 * Memory map a region of a file.
 	 *
 	 * @file	struct file
@@ -51,6 +58,29 @@ struct file_ops {
 	errno_t (*pread) (struct file *file, void *buf,
 			size_t size, off_t offset, ssize_t *out);
 };
+
+extern void
+__fput (struct file *file);
+
+/**
+ * Grab a reference to @file.
+ */
+static inline struct file *
+fget (struct file *file)
+{
+	refcount_inc (&file->refcount);
+	return file;
+}
+
+/**
+ * Drop a reference to @file.
+ */
+static inline void
+fput (struct file *file)
+{
+	if (refcount_dec (&file->refcount))
+		__fput (file);
+}
 
 /**
  * Read a file from kernelspace.
