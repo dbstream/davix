@@ -1,0 +1,54 @@
+============
+System calls
+============
+
+System calls are divided into two groups:
+
+- Stable system calls
+
+- Unstable system calls
+
+The kernel is permitted to add and remove unstable system calls at any time,
+potentially reusing old unstable syscall numbers, while stable system calls
+cannot change.
+
+The kernel is permitted to deprecate a syscall in the 'stable' category, but
+it may not reuse its syscall number for something else.
+
+
+Calling conventions
+===================
+
+Calling convention on x86
+-------------------------
+
+On x86, the system call convention is as follows:
+
+	+-----------------+---------------------------+
+	| syscall number  | `%rax`                    |
+	| First argument  | `%rdi`                    |
+	| Second argument | `%rsi`                    |
+	| Third argument  | `%rdx`                    |
+	| Fourth argument | `%r10`                    |
+	| Fifth argument  | `%r8`                     |
+	| Sixth argument  | `%r9`                     |
+	+-----------------+---------------------------+
+	| Returned value  | `%rax`                    |
+	| Returned error  | `%rax`                    |
+	| Error flag      | `%rflags.cf` (carry flag) |
+	+-----------------+---------------------------+
+	| Clobbered       | `%rflags` (except `.cf`)  |
+	|                 | `%rcx`                    |
+	|                 | `%r11`                    |
+	+-----------------+---------------------------+
+
+If the error flag is set, the syscall result stored in `%rax` is an error.
+Otherwise, it is whatever the return value of the syscall.
+
+The following range is reserved for stable syscalls:
+
+- 0 ... 1023  (0x0 ... 0x3ff)
+
+The following range is reserved for unstable syscalls:
+
+- 1048576 ... 1049599  (0x100000 ... 0x1003ff)
