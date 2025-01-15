@@ -5,9 +5,6 @@
 #ifndef _DAVIX_SYS_TYPES_H
 #define _DAVIX_SYS_TYPES_H 1
 
-/**
- * off_t is used for describing file sizes.  It is a signed integer type.
- */
-typedef long long off_t;
+#include <davix/uapi/types.h>
 
 #endif /** _DAVIX_SYS_TYPES_H  */

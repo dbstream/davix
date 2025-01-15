@@ -49,6 +49,12 @@ struct task {
 	 * tasks).
 	 */
 	struct process_mm *mm;
+
+	/**
+	 * This is the filesystem context of the task.  (or NULL for kernel
+	 * tasks)
+	 */
+	struct fs_context *fs;
 };
 
 #define TASK_RUNNABLE 0

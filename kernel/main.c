@@ -6,6 +6,7 @@
 #include <davix/cpuset.h>
 #include <davix/exec.h>
 #include <davix/file.h>
+#include <davix/fs.h>
 #include <davix/initmem.h>
 #include <davix/ktest.h>
 #include <davix/main.h>
@@ -80,6 +81,9 @@ start_init (void *arg)
 	run_ktests ();
 
 	mm_init ();
+	init_vnode_cache ();
+	init_inode_cache ();
+	init_mounts ();
 
 	if (boot_module_start == boot_module_end)
 		panic ("No boot module was provided!");

@@ -14,13 +14,6 @@
 #ifndef DAVIX_TIME_H
 #define DAVIX_TIME_H 1
 
-struct timespec {
-	long long	tv_sec;
-	long		tv_nsec;
-};
-
-typedef long long time_t;
-
 typedef unsigned long long nsecs_t;
 typedef unsigned long long usecs_t;
 typedef unsigned long long msecs_t;

@@ -21,6 +21,35 @@ refcount_set (refcount_t *ref, refcount_t value)
 }
 
 /**
+ * Read the reference count.  This uses relaxed ordering.
+ */
+static inline refcount_t
+refcount_read (refcount_t *ref)
+{
+	return atomic_load (ref, memory_order_relaxed);
+}
+
+/**
+ * Perform an atomic cmpxchg on the refcount.  This uses release ordering on
+ * success, followed by an acquire fence if the refcount is dropped to zero.
+ *
+ * @ref		pointer to refcount
+ * @expected	the value we expect to find at @ref
+ * @desired	the value we want in @ref
+ */
+static inline int
+refcount_cmpxchg (refcount_t *ref, refcount_t *expected, refcount_t desired)
+{
+	if (!atomic_cmpxchg (ref, expected, desired,
+			memory_order_release, memory_order_relaxed))
+		return 0;
+
+	if (!desired)
+		atomic_thread_fence (memory_order_acquire);
+	return 1;
+}
+
+/**
  * Increment @ref by one.
  */
 static inline void
