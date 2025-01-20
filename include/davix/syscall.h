@@ -83,7 +83,7 @@ __wrap_sys_##name (syscall_regs_t __syscall_regs)			\
 SYSCALL_PROTO3(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3)
 
 #define SYSCALL4(type, name, type1, arg1, type2, arg2, type3, arg3, type4, arg4);	\
-SYSCALL_PROTO4(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3, type3, arg4);	\
+SYSCALL_PROTO4(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3, type4, arg4);	\
 int									\
 __wrap_sys_##name (syscall_regs_t __syscall_regs)			\
 {									\
@@ -96,7 +96,7 @@ __wrap_sys_##name (syscall_regs_t __syscall_regs)			\
 SYSCALL_PROTO4(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3, type4, arg4)
 
 #define SYSCALL5(type, name, type1, arg1, type2, arg2, type3, arg3, type4, arg4, type5, arg5);	\
-SYSCALL_PROTO5(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3, type3, arg4, type5, arg5);	\
+SYSCALL_PROTO5(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3, type4, arg4, type5, arg5);	\
 int									\
 __wrap_sys_##name (syscall_regs_t __syscall_regs)			\
 {									\
@@ -110,7 +110,7 @@ __wrap_sys_##name (syscall_regs_t __syscall_regs)			\
 SYSCALL_PROTO5(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3, type4, arg4, type5, arg5)
 
 #define SYSCALL6(type, name, type1, arg1, type2, arg2, type3, arg3, type4, arg4, type5, arg5, type6, arg6);	\
-SYSCALL_PROTO6(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3, type3, arg4, type5, arg5, type6, arg6);	\
+SYSCALL_PROTO6(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3, type4, arg4, type5, arg5, type6, arg6);	\
 int									\
 __wrap_sys_##name (syscall_regs_t __syscall_regs)			\
 {									\
