@@ -31,6 +31,13 @@ typedef int errno_t;
 #define E2BIG 11
 #define ENOSYS 12
 #define EPERM 13
+#define ENXIO 14
+#define ENOENT 15
+#define ELOOP 16
+#define EXDEV 17
+#define ENOTDIR 18
+#define EISDIR 19
+#define ENAMETOOLONG 20
 
 #endif /* _DAVIX_ERRNO_H */
 

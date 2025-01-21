@@ -4,6 +4,8 @@
  *
  * This is passed as the boot module to the kernel.
  */
+#include <davix/uapi/openat.h>
+#include <davix/uapi/stat.h>
 #include <asm/syscall_nr.h>
 
 /**
@@ -67,11 +69,36 @@ dmesg (const char *fmt, ...)
 			: "rdx", "r10", "r8", "r9", "cc", "rcx", "r11");
 }
 
+static int
+stat (struct stat *buf, size_t buf_size, const char *path,
+		int dirfd, struct pathwalk_info *pwinfo, size_t pwinfo_size)
+{
+	register long r10 asm("r10") = dirfd;
+	register long r8 asm("r8") = (long) pwinfo;
+	register long r9 asm("r9") = pwinfo_size;
+
+	int ret;
+	asm volatile ("syscall" : "=a" (ret) : "a" (__SYS_stat),
+			"D" (buf), "S" (buf_size), "d" (path),
+			"r" (r10), "r" (r8), "r" (r9));
+	return ret;
+}
+
 void
 _start (void)
 {
 	/** note that we're alive...  */
 	dmesg ("\"%s\" from userspace!\n", "hello world");
+
+	/** test the VFS... */
+	struct stat buf;
+	dmesg ("stat (...) = %d\n",
+			stat (&buf, sizeof (buf), "/././../.././.././", AT_FDCWD, NULL, 0));
+
+	dmesg ("st_valid=%u\n", buf.st_valid);
+	dmesg ("st_dev=%llu\n", buf.st_dev);
+	dmesg ("st_ino=%llu\n", buf.st_ino);
+	dmesg ("st_mode=%o\n", buf.st_mode);
 
 	/** ... and now sleep... */
 	asm volatile ("syscall" :: "a" (__SYS_exit),

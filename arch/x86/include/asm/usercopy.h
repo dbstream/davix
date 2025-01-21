@@ -31,6 +31,9 @@ __memcpy_from_userspace (void *dst, const void *src, size_t size);
 extern errno_t
 __memcpy_to_userspace (void *dst, const void *src, size_t size);
 
+extern errno_t
+__strncpy_from_userspace (char *dst, const char *src, size_t n);
+
 static inline errno_t
 memcpy_from_userspace (void *dst, const void *src, size_t size)
 {
@@ -46,6 +49,18 @@ memcpy_to_userspace (void *dst, const void *src, size_t size)
 	errno_t e = usercopy_ok (dst, size);
 	if (e == ESUCCESS)
 		e = __memcpy_to_userspace (dst, src, size);
+	return e;
+}
+
+/**
+ * BIG FAT WARNING:   This does NOT null-terminate *dst.
+ */
+static inline errno_t
+strncpy_from_userspace (char *dst, const char *src, size_t n)
+{
+	errno_t e = usercopy_ok (src, n);
+	if (e == ESUCCESS)
+		e = __strncpy_from_userspace (dst, src, n);
 	return e;
 }
 

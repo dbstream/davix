@@ -91,7 +91,15 @@ handle_PF_exception (struct entry_regs *regs)
 }
 
 extern char __usercopy_pagefault_address[];
+extern char __userstrcpy_pagefault_address[];
 extern char __usercopy_fixup_address[];
+
+static inline bool
+is_usercopy_addr (void *rip)
+{
+	return rip == __usercopy_pagefault_address
+			|| rip == __userstrcpy_pagefault_address;
+}
 
 static bool
 handle_usercopy_fault (unsigned long addr, struct entry_regs *regs)
@@ -111,7 +119,7 @@ handle_PF_exception_k (struct entry_regs *regs)
 {
 	unsigned long addr = read_cr2 ();
 	note_pagefault (addr, regs->error_code);
-	if (regs->rip == (unsigned long) __usercopy_pagefault_address) {
+	if (is_usercopy_addr ((void *) regs->rip)) {
 		if (handle_usercopy_fault (addr, regs))
 			return;
 	}

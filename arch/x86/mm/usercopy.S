@@ -49,3 +49,27 @@ __usercopy_fixup_address:
 	ret
 	.cfi_endproc
 	.size __usercopy_fixup_address, . - __usercopy_fixup_address
+
+	.globl __userstrcpy_pagefault_address
+
+	.globl __strncpy_from_userspace
+	.type __strncpy_from_userspace, @function
+__strncpy_from_userspace:
+	.cfi_startproc
+
+1:
+__userstrcpy_pagefault_address:
+	lodsb (%rsi), %al
+	stosb %al, (%rdi)
+
+	testb %al, %al
+	jz 1f
+
+	decq %rdx
+	jnz 1b
+
+1:	xorq %rax, %rax
+	ret
+
+	.cfi_endproc
+	.size __strncpy_from_userspace, . - __strncpy_from_userspace

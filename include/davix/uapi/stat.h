@@ -9,6 +9,7 @@
 #include <davix/uapi/types.h>
 
 struct stat {
+	unsigned int	st_valid;	/** Bitmask of valid struct stat fields.  */
 	dev_t		st_dev;
 	ino_t		st_ino;
 	mode_t		st_mode;
@@ -24,6 +25,20 @@ struct stat {
 	struct timespec st_mtim;	/** Time of last modification  */
 	struct timespec st_ctim;	/** Time of last status change  */
 };
+
+#define STAT_ATTR_DEV		0x00000001U
+#define STAT_ATTR_INO		0x00000002U
+#define STAT_ATTR_MODE		0x00000004U
+#define STAT_ATTR_NLINK		0x00000008U
+#define STAT_ATTR_UID		0x00000010U
+#define STAT_ATTR_GID		0x00000020U
+#define STAT_ATTR_RDEV		0x00000040U
+#define STAT_ATTR_SIZE		0x00000080U
+#define STAT_ATTR_BLKSIZE	0x00000100U
+#define STAT_ATTR_BLOCKS	0x00000200U
+#define STAT_ATTR_ATIME		0x00001000U
+#define STAT_ATTR_MTIME		0x00002000U
+#define STAT_ATTR_CTIME		0x00004000U
 
 #define S_IFMT		0170000
 #define S_IFDIR		0040000

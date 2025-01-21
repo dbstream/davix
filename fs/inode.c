@@ -89,6 +89,7 @@ alloc_inode (struct filesystem *fs)
 	inode->i_mode = 0;
 	inode->i_uid = 0;
 	inode->i_gid = 0;
+	spinlock_init (&inode->i_lock);
 	refcount_set (&inode->refcount, 1);
 	inode->fs = fs;
 

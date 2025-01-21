@@ -268,6 +268,12 @@ struct inode {
 	uid_t i_uid;
 	gid_t i_gid;
 
+	/**
+	 * inode spinlock.  This protects the above fields used during name
+	 * lookup.  TODO: replace this with a generation counting-approach.
+	 */
+	spinlock_t i_lock;
+
 	refcount_t refcount;
 
 	/**
@@ -351,12 +357,18 @@ struct inode_ops {
 	/**
 	 * Lookup an inode.
 	 *
-	 * @fs		filesystem
 	 * @parent	parent inode
 	 * @vnode	vnode which is being looked up.
 	 */
-	errno_t (*lookup_inode) (struct filesystem *fs,
-			struct inode *parent, struct vnode *vnode);
+	errno_t (*lookup_inode) (struct inode *parent, struct vnode *vnode);
+
+	/**
+	 * stat() an inode.
+	 *
+	 * @buf		kernel instance of 'struct stat'
+	 * @inode	the inode to stat().
+	 */
+	errno_t (*stat) (struct stat *buf, struct inode *inode);
 };
 
 extern struct inode *

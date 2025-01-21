@@ -1,0 +1,133 @@
+/**
+ * stat() system call.
+ * Copyright (C) 2025  dbstream
+ */
+#include <davix/printk.h>
+#include <davix/string.h>
+#include <davix/syscall.h>
+#include "internal.h"
+
+#include <asm/usercopy.h>
+
+/**
+ * NOTE:  in the future, it is desirable to do some other form of path
+ * copying from userspace to the kernel, because this is just horrible.
+ *
+ * On x86, where the stack size is 16KiB, this buffer uses 1/4th of the
+ * available stack space.  Luckily, syscalls don't nest.
+ */
+
+#define PATH_MAX	4096
+
+#include <asm/task.h>
+_Static_assert (4 * PATH_MAX <= TASK_STK_SIZE, "rework filesystem syscalls!");
+
+/**
+ * Lookup a path.
+ */
+static errno_t
+lookup_path (struct path *out, const char *path,
+		int dirfd, struct pathwalk_info *info)
+{
+	struct pathwalk_state state;
+	errno_t e = pathwalk_begin (&state, dirfd, info);
+	if (e != ESUCCESS)
+		return e;
+
+	e = do_pathwalk (&state, path);
+	if (e == ESUCCESS) {
+		if (state.has_result_component)
+			*out = path_get (state.result_component);
+		else {
+			printk (PR_ERR "lookup_path: do_pathwalk() returned ESUCCESS, but has_result_component is false\n");
+			e = EINVAL;
+		}
+	}
+
+	pathwalk_finish (&state);
+	return e;
+}
+
+static errno_t
+do_stat_inode (struct stat *buf, struct inode *inode)
+{
+	if (inode->ops->stat)
+		return inode->ops->stat (buf, inode);
+
+	buf->st_valid = STAT_ATTR_NLINK | STAT_ATTR_MODE |
+			STAT_ATTR_UID | STAT_ATTR_GID;
+	spin_lock (&inode->i_lock);
+	buf->st_nlink = inode->i_nlink;
+	buf->st_mode = inode->i_mode;
+	buf->st_uid = inode->i_uid;
+	buf->st_gid = inode->i_gid;
+	spin_unlock (&inode->i_lock);
+	return ESUCCESS;
+}
+
+static errno_t
+do_stat (struct stat *buf, const char *pathname,
+		int dirfd, struct pathwalk_info *info)
+{
+	struct path path;
+	errno_t e = lookup_path (&path, pathname, dirfd, info);
+	if (e != ESUCCESS)
+		return e;
+
+	spin_lock (&path.vnode->vn_lock);
+	if (path.vnode->vn_flags & VN_NEEDLOOKUP)
+		printk (PR_WARN "do_stat: lookup_path was called but VN_NEEDLOOKUP is still set\n");
+	struct inode *inode = path.vnode->vn_inode;
+	spin_unlock (&path.vnode->vn_lock);
+
+	if (inode)
+		e = do_stat_inode (buf, inode);
+	else
+		e = ENOENT;
+
+	path_put (path);
+	return e;
+}
+
+static errno_t
+get_path_from_userspace (char *kbuf, const char *user)
+{
+	kbuf[PATH_MAX - 1] = 0;
+	errno_t e = strncpy_from_userspace (kbuf, user, PATH_MAX + 1);
+	if (e == ESUCCESS && kbuf[PATH_MAX - 1])
+		e = ENAMETOOLONG;
+	return e;
+}
+
+SYSCALL6 (void, stat, struct stat *, buf, size_t, buf_size, const char *, path,
+		int, dirfd, struct pathwalk_info *, info, size_t, info_size)
+{
+	char kpath[PATH_MAX];
+	struct stat kstat;
+	struct pathwalk_info kpathwalk_info;
+
+	if (info_size > sizeof (kpathwalk_info))
+		syscall_return_error (E2BIG);
+
+	memset (&kpathwalk_info, 0, sizeof (kpathwalk_info));
+	errno_t e = ESUCCESS;
+	if (info_size)
+		e = memcpy_from_userspace (&kpathwalk_info, info, info_size);
+	if (e != ESUCCESS)
+		syscall_return_error (e);
+
+	e = get_path_from_userspace (kpath, path);
+	if (e != ESUCCESS)
+		syscall_return_error (e);
+
+	kstat.st_valid = 0;
+	e = do_stat (&kstat, kpath, dirfd, &kpathwalk_info);
+	if (e != ESUCCESS)
+		syscall_return_error (e);
+
+	e = memcpy_to_userspace (buf, &kstat,
+			min (size_t, buf_size, sizeof (kstat)));
+	if (e == ESUCCESS)
+		syscall_return_void;
+	syscall_return_error (e);
+}

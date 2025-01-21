@@ -491,6 +491,7 @@ parse_fmt(const char *fmt, struct fmtspec *spec, char **o, char *end)
 			}
 			break;
 		case 'u':
+		case 'o':
 		case 'x':
 		case 'X':
 			if(spec->size == PR_CHAR) {

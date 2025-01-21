@@ -11,6 +11,7 @@
 	ARCH_ALL_SYSCALLS(macro)	\
 	macro(write_dmesg)		\
 	macro(exit)			\
+	macro(stat)			\
 
 
 #endif /* _DAVIX_ALL_SYSCALLS_H  */
