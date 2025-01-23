@@ -244,6 +244,24 @@ vname_move (struct vname *target, struct vname *source)
 
 
 /**
+ * Install an inode into a vnode.
+ *
+ * @vnode	vnode to install into
+ * @inode	inode to install
+ *
+ * This is used by e.g. lookup_inode() or mknod().
+ *
+ * NOTE:  this does not do an iget() of its own on the inode.
+ */
+static inline void
+vnode_install (struct vnode *vnode, struct inode *inode)
+{
+	spin_lock (&vnode->vn_lock);
+	vnode->vn_inode = inode;
+	spin_unlock (&vnode->vn_lock);
+}
+
+/**
  * Find or allocate a child vnode.
  *
  * @child	storage for the child vnode
@@ -275,6 +293,11 @@ struct inode {
 	spinlock_t i_lock;
 
 	refcount_t refcount;
+
+	/**
+	 * Things for stat().
+	 */
+	dev_t i_dev;
 
 	/**
 	 * inode mutex.  TODO: replace this with an rwmutex
@@ -369,6 +392,19 @@ struct inode_ops {
 	 * @inode	the inode to stat().
 	 */
 	errno_t (*stat) (struct stat *buf, struct inode *inode);
+
+	/**
+	 * Make a new filesystem node.
+	 *
+	 * @parent	parent inode
+	 * @vnode	path of child inode being created
+	 * @uid		uid_t to create the inode with
+	 * @gid		gid_t to create the inode with
+	 * @mode	file mode to create the inode with
+	 * @dev		if S_ISCHR or S_ISBLK, this is the device number to use
+	 */
+	errno_t (*mknod) (struct inode *parent, struct vnode *vnode,
+			uid_t uid, gid_t gid, mode_t mode, dev_t dev);
 };
 
 extern struct inode *

@@ -17,5 +17,6 @@
 #define __SYS_write_dmesg		1
 #define __SYS_exit			2
 #define __SYS_stat			3
+#define __SYS_mknod			4
 
 #endif /* __DAVIX_ASM_SYSCALL_NR_H  */

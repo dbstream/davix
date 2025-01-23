@@ -93,6 +93,8 @@ alloc_inode (struct filesystem *fs)
 	refcount_set (&inode->refcount, 1);
 	inode->fs = fs;
 
+	inode->i_dev = 0;
+
 	spin_lock (&fs->fs_inodes_lock);
 	list_insert (&fs->fs_inodes, &inode->fs_inodes);
 	spin_unlock (&fs->fs_inodes_lock);

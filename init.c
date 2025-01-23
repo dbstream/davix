@@ -84,6 +84,38 @@ stat (struct stat *buf, size_t buf_size, const char *path,
 	return ret;
 }
 
+static int
+mknod (const char *path, int dirfd,
+		struct pathwalk_info *pwinfo, size_t pwinfo_size,
+		mode_t mode, dev_t dev)
+{
+	register long r10 asm ("r10") = pwinfo_size;
+	register long r8 asm ("r8") = mode;
+	register long r9 asm ("r9") = dev;
+
+	int ret;
+	asm volatile ("syscall" : "=a" (ret) : "a" (__SYS_mknod),
+			"D" (path), "S" (dirfd), "d" (pwinfo),
+			"r" (r10), "r" (r8), "r" (r9));
+	return ret;
+}
+
+static void
+show_stat (const char *path)
+{
+	struct stat buf;
+	int ret = stat (&buf, sizeof (buf), path, AT_FDCWD, NULL, 0);
+	dmesg ("stat (%s) = %d\n", path, ret);
+	if (ret)
+		return;
+
+	if (buf.st_valid & STAT_ATTR_NLINK)	dmesg ("st_nlink=%llu\n", buf.st_nlink);
+	if (buf.st_valid & STAT_ATTR_MODE)	dmesg ("st_mode=%o\n", buf.st_mode);
+	if (buf.st_valid & STAT_ATTR_UID)	dmesg ("st_uid=%u\n", buf.st_uid);
+	if (buf.st_valid & STAT_ATTR_GID)	dmesg ("st_gid=%u\n", buf.st_gid);
+	if (buf.st_valid & STAT_ATTR_DEV)	dmesg ("st_dev=%llu\n", buf.st_dev);
+}
+
 void
 _start (void)
 {
@@ -91,14 +123,12 @@ _start (void)
 	dmesg ("\"%s\" from userspace!\n", "hello world");
 
 	/** test the VFS... */
-	struct stat buf;
-	dmesg ("stat (...) = %d\n",
-			stat (&buf, sizeof (buf), "/././../.././.././", AT_FDCWD, NULL, 0));
-
-	dmesg ("st_valid=%u\n", buf.st_valid);
-	dmesg ("st_dev=%llu\n", buf.st_dev);
-	dmesg ("st_ino=%llu\n", buf.st_ino);
-	dmesg ("st_mode=%o\n", buf.st_mode);
+	show_stat ("/");
+	show_stat ("/foo");
+	dmesg ("mknod (...) = %d\n",
+			mknod ("/foo", AT_FDROOT, NULL, 0, S_IFDIR | 0644, 0));
+	show_stat ("/");
+	show_stat ("/foo");
 
 	/** ... and now sleep... */
 	asm volatile ("syscall" :: "a" (__SYS_exit),

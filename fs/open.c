@@ -55,12 +55,13 @@ do_stat_inode (struct stat *buf, struct inode *inode)
 		return inode->ops->stat (buf, inode);
 
 	buf->st_valid = STAT_ATTR_NLINK | STAT_ATTR_MODE |
-			STAT_ATTR_UID | STAT_ATTR_GID;
+			STAT_ATTR_UID | STAT_ATTR_GID | STAT_ATTR_DEV;
 	spin_lock (&inode->i_lock);
 	buf->st_nlink = inode->i_nlink;
 	buf->st_mode = inode->i_mode;
 	buf->st_uid = inode->i_uid;
 	buf->st_gid = inode->i_gid;
+	buf->st_dev = inode->i_dev;
 	spin_unlock (&inode->i_lock);
 	return ESUCCESS;
 }
@@ -86,6 +87,80 @@ do_stat (struct stat *buf, const char *pathname,
 		e = ENOENT;
 
 	path_put (path);
+	return e;
+}
+
+static errno_t
+do_mknod (const char *pathname, int dirfd, struct pathwalk_info *info,
+		mode_t mode, dev_t dev)
+{
+	struct path parent, target;
+	struct inode *inode;
+
+	switch (mode & S_IFMT) {
+	case S_IFDIR:
+	case S_IFCHR:
+	case S_IFBLK:
+	case S_IFREG:
+	case S_IFIFO:
+	case S_IFLNK:
+	case S_IFSOCK:
+		break;
+	default:
+		return EINVAL;
+	}
+
+	struct pathwalk_state state;
+	errno_t e = pathwalk_begin (&state, dirfd, info);
+	if (e != ESUCCESS)
+		return e;
+
+	e = do_pathwalk (&state, pathname);
+	if (e == ESUCCESS) {
+		if (!state.has_parent_component || !state.has_result_component)
+			e = EINVAL;
+		else {
+			parent = path_get (state.parent_component);
+			target = path_get (state.result_component);
+		}
+	}
+
+	pathwalk_finish (&state);
+	if (e != ESUCCESS)
+		return e;
+
+	if (parent.mount != target.mount)
+		e = EINVAL;
+
+	if (e == ESUCCESS) {
+		inode = parent.vnode->vn_inode;
+		e = inode_permission_check (inode, S_IFDIR | S_IWUSR);
+	}
+
+	if (e == ESUCCESS) {
+		i_lock_exclusive (inode);
+		spin_lock (&target.vnode->vn_lock);
+		if (target.vnode->vn_parent != parent.vnode)
+			/** we raced against rename()  */
+			e = EAGAIN;
+		spin_unlock (&target.vnode->vn_lock);
+
+		if (e == ESUCCESS) {
+			if (inode->ops->mknod)
+				/**
+				 * TODO: use process effective uid and gid.
+				 */
+				e = inode->ops->mknod (inode, target.vnode,
+						0, 0, mode, dev);
+			else
+				e = ENOTSUP;
+		}
+
+		i_unlock_exclusive (inode);
+	}
+
+	path_put (target);
+	path_put (parent);
 	return e;
 }
 
@@ -120,6 +195,7 @@ SYSCALL6 (void, stat, struct stat *, buf, size_t, buf_size, const char *, path,
 	if (e != ESUCCESS)
 		syscall_return_error (e);
 
+	memset (&kstat, 0, sizeof (kstat));
 	kstat.st_valid = 0;
 	e = do_stat (&kstat, kpath, dirfd, &kpathwalk_info);
 	if (e != ESUCCESS)
@@ -127,6 +203,35 @@ SYSCALL6 (void, stat, struct stat *, buf, size_t, buf_size, const char *, path,
 
 	e = memcpy_to_userspace (buf, &kstat,
 			min (size_t, buf_size, sizeof (kstat)));
+	if (e == ESUCCESS)
+		syscall_return_void;
+	syscall_return_error (e);
+}
+
+SYSCALL6 (void, mknod, const char *, path, int, dirfd,
+		struct pathwalk_info *, info, size_t, info_size,
+		mode_t, mode, dev_t, dev)
+{
+	char kpath[PATH_MAX];
+	struct pathwalk_info kpathwalk_info;
+
+	if (info_size > sizeof (kpathwalk_info))
+		syscall_return_error (E2BIG);
+
+	memset (&kpathwalk_info, 0, sizeof (kpathwalk_info));
+	errno_t e = ESUCCESS;
+	if (info_size)
+		e = memcpy_from_userspace (&kpathwalk_info, info, info_size);
+	if (e != ESUCCESS)
+		syscall_return_error (e);
+
+	kpathwalk_info.flags = O_NOFOLLOW;
+
+	e = get_path_from_userspace (kpath, path);
+	if (e != ESUCCESS)
+		syscall_return_error (e);
+
+	e = do_mknod (kpath, dirfd, &kpathwalk_info, mode, dev);
 	if (e == ESUCCESS)
 		syscall_return_void;
 	syscall_return_error (e);

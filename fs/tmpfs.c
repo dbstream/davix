@@ -5,8 +5,44 @@
 #include <davix/fs.h>
 #include <davix/slab.h>
 
+static const struct inode_ops tmpfs_inode_operations;
+
+static errno_t
+tmpfs_mknod (struct inode *parent, struct vnode *vnode,
+		uid_t uid, gid_t gid, mode_t mode, dev_t dev)
+{
+	(void) dev;
+
+	struct inode *inode = alloc_inode (parent->fs);
+	if (!inode)
+		return ENOMEM;
+
+	inode->ops = &tmpfs_inode_operations;
+	inode->i_uid = uid;
+	inode->i_gid = gid;
+	inode->i_mode = mode;
+	if (S_ISDIR (mode))
+		inode->i_nlink = 2;
+	else
+		inode->i_nlink = 1;
+
+	if (S_ISDIR (mode)) {
+		spin_lock (&parent->i_lock);
+		parent->i_nlink++;
+		spin_unlock (&parent->i_lock);
+	} else if (S_ISBLK (mode) || S_ISCHR (mode))
+		inode->i_dev = dev;
+
+	vnode_install (vnode, inode);
+	vn_get (vnode);
+	return ESUCCESS;
+}
+
 static const struct filesystem_ops tmpfs_operations = {};
-static const struct inode_ops tmpfs_inode_operations = {};
+
+static const struct inode_ops tmpfs_inode_operations = {
+	.mknod = tmpfs_mknod
+};
 
 static errno_t
 tmpfs_mount (struct filesystem **out_fs, struct vnode **out_root,
@@ -37,6 +73,7 @@ tmpfs_mount (struct filesystem **out_fs, struct vnode **out_root,
 	fs->ops = &tmpfs_operations;
 	inode->ops = &tmpfs_inode_operations;
 	inode->i_mode = args->mode;
+	inode->i_nlink = 2;
 
 	vnode->vn_inode = inode;
 	*out_fs = fs;

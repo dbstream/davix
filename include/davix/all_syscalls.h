@@ -12,6 +12,7 @@
 	macro(write_dmesg)		\
 	macro(exit)			\
 	macro(stat)			\
+	macro(mknod)			\
 
 
 #endif /* _DAVIX_ALL_SYSCALLS_H  */

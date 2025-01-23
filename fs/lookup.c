@@ -353,13 +353,21 @@ do_pathwalk (struct pathwalk_state *state, const char *pathname)
 		spin_unlock (&child->vn_lock);
 		i_unlock_shared (inode);
 
-		if (e != ESUCCESS) {
-			if (is_last (&comp) && e == ENOENT)
+		if (is_last (&comp)) {
+			if (e == ENOENT)
 				e = ESUCCESS;
-			else {
-				vn_put (child);
-				break;
-			}
+		} else if (e == ESUCCESS) {
+			inode = child->vn_inode;
+			if (!inode) {
+				printk (PR_ERR "do_pathwalk: lookup_inode() returned ESUCCESS, but inode is NULL");
+				e = ENOENT;
+			} else if (!S_ISDIR (inode->i_mode))
+				e = ENOTDIR;
+		}
+
+		if (e != ESUCCESS) {
+			vn_put (child);
+			break;
 		}
 
 		set_parent (state, path_get (state->result_component));
