@@ -80,7 +80,8 @@ stat (struct stat *buf, size_t buf_size, const char *path,
 	int ret;
 	asm volatile ("syscall" : "=a" (ret) : "a" (__SYS_stat),
 			"D" (buf), "S" (buf_size), "d" (path),
-			"r" (r10), "r" (r8), "r" (r9));
+			"r" (r10), "r" (r8), "r" (r9)
+			: "cc", "rcx", "r11");
 	return ret;
 }
 
@@ -96,7 +97,8 @@ mknod (const char *path, int dirfd,
 	int ret;
 	asm volatile ("syscall" : "=a" (ret) : "a" (__SYS_mknod),
 			"D" (path), "S" (dirfd), "d" (pwinfo),
-			"r" (r10), "r" (r8), "r" (r9));
+			"r" (r10), "r" (r8), "r" (r9)
+			: "cc", "rcx", "r11");
 	return ret;
 }
 
