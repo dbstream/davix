@@ -24,6 +24,11 @@
 #include <asm/sections.h>
 #include <asm/usercopy.h>
 
+#if CONFIG_UACPI
+#include <uacpi/event.h>
+#include <uacpi/uacpi.h>
+#endif
+
 static const char kernel_version[] = KERNELVERSION;
 
 unsigned long boot_module_start = 0, boot_module_end = 0;
@@ -84,6 +89,13 @@ start_init (void *arg)
 	init_vnode_cache ();
 	init_inode_cache ();
 	init_mounts ();
+
+#if CONFIG_UACPI
+	uacpi_initialize (0);
+	uacpi_namespace_load ();
+	uacpi_namespace_initialize ();
+	uacpi_finalize_gpe_initialization ();
+#endif
 
 	if (boot_module_start == boot_module_end)
 		panic ("No boot module was provided!");

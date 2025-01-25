@@ -12,6 +12,8 @@
 #include <asm/page_defs.h>
 #include <asm/sections.h>
 
+unsigned long acpi_rsdp_phys_for_uacpi = 0;
+
 #define MAX_ACPI_TABLES 128
 struct acpi_table_list_entry acpi_tables[MAX_ACPI_TABLES];
 unsigned long num_acpi_tables = 0;
@@ -191,11 +193,16 @@ acpi_parse_rsdp (struct acpi_table_rsdp *table)
  */
 __INIT_TEXT
 void
-acpi_init_tables (void *root_table)
+acpi_init_tables (void *root_table, unsigned long rsdp_phys)
 {
-	if (!memcmp (root_table, ACPI_SIG_RSDP, 8))
+	/**
+	 * TODO:  fake a RSDP if we are passed the RSDT or XSDT.
+	 */
+
+	if (!memcmp (root_table, ACPI_SIG_RSDP, 8)) {
+		acpi_rsdp_phys_for_uacpi = rsdp_phys;
 		acpi_parse_rsdp (root_table);
-	else if (!memcmp (root_table, ACPI_SIG_RSDT, 4))
+	} else if (!memcmp (root_table, ACPI_SIG_RSDT, 4))
 		acpi_parse_rsdt (root_table);
 	else if (!memcmp (root_table, ACPI_SIG_XSDT, 4))
 		acpi_parse_xsdt (root_table);

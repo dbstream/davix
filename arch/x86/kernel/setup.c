@@ -107,7 +107,13 @@ init_acpi_tables_early (void)
 	if (!rsdp)
 		panic ("No ACPI RSD PTR was provided by bootloader.");
 
-	acpi_init_tables ((void *) ((unsigned long) rsdp + 8));
+	/**
+	 * uACPI needs the physical address of the RSDP for some reason.
+	 * When this is called, we are operating in low direct-mapped memory
+	 * anyways, so phys=virt.
+	 */
+	acpi_init_tables ((void *) ((unsigned long) rsdp + 8),
+			(unsigned long) rsdp + 8);
 
 	for (unsigned long i = 0; i < num_acpi_tables; i++) {
 		initmem_reserve (acpi_tables[i].address,

@@ -37,3 +37,14 @@
 #ifndef CONFIG_KTEST_MUTEX
 #define CONFIG_KTEST_MUTEX	0
 #endif
+
+/* Run the uACPI kernel benchmark.  */
+/* WARNING!!! NOT SAFE ON REAL HARDWARE!!!  */
+#ifndef CONFIG_UACPI
+#define CONFIG_UACPI 0
+#endif
+
+/** TODO: find a better place for uACPI config stuff.  */
+#if CONFIG_UACPI
+#define UACPI_OVERRIDE_TYPES 1
+#endif

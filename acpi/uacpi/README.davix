@@ -1,0 +1,25 @@
+	Davix usage of uACPI
+
+uACPI is a large portion of an ACPI subsystem (similar to ACPICA, but
+objectively better) that is shared between many operating systems.  As of
+2025-01-24, the uACPI project lives at https://github.com/uACPI/uACPI,
+which is where authoritative code for uACPI exists.
+
+Everything in this directory, except for the GNUmakefile in uacpi/ and
+in uacpi/source is uACPI source code that has not intentionally been
+modified in any way.
+
+Current uACPI commit: 63ab369748db5764b59a728f54da0d7e5390f407
+
+	Keeping uACPI sources up-to-date
+
+Because we don't use git submodules for this, uACPI sources need to be
+kept up-to-date manually.  The process for this boils down to:
+
+- git checkout the latest-and-greates uACPI in another source directory.
+
+- copy the uACPI source files to this directory.
+
+- keep the GNUmakefiles accurate.
+
+- update the current commit in this file.
