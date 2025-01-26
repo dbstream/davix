@@ -45,6 +45,8 @@
 #endif
 
 /** TODO: find a better place for uACPI config stuff.  */
-#if CONFIG_UACPI
+/**
+ * Ok, turns out we need UACPI_OVERRIDE_TYPES even when !CONFIG_UACPI.  This is
+ * because the build system doesn't integrate with config.h.
+ */
 #define UACPI_OVERRIDE_TYPES 1
-#endif
