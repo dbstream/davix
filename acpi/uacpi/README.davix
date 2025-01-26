@@ -9,7 +9,7 @@ Everything in this directory, except for the GNUmakefile in uacpi/ and
 in uacpi/source is uACPI source code that has not intentionally been
 modified in any way.
 
-Current uACPI commit: 63ab369748db5764b59a728f54da0d7e5390f407
+Current uACPI commit: 199b625a347e8f91efad3ec6c7a2200903a24f01
 
 	Keeping uACPI sources up-to-date
 
