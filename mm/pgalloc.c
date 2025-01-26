@@ -7,6 +7,7 @@
 #include <davix/page.h>
 #include <davix/printk.h>
 #include <davix/spinlock.h>
+#include <davix/string.h>
 
 static spinlock_t pgalloc_lock;
 
@@ -28,6 +29,16 @@ pgalloc_dump (void)
 	unsigned long kib_resv = bytes_resv / 1024UL;
 
 	printk (PR_NOTICE "pgalloc: %lu KiB free, %lu KiB reserved\n", kib_free, kib_resv);
+}
+
+static void
+post_alloc_hooks (struct pfn_entry *page, alloc_flags_t flags)
+{
+	if (!page)
+		return;
+
+	if (flags & __ALLOC_ZERO)
+		memset ((void *) pfn_entry_to_virt (page), 0, PAGE_SIZE);
 }
 
 /**
@@ -100,6 +111,8 @@ alloc_page (alloc_flags_t flags)
 	bool flag = spin_lock_irq (&pgalloc_lock);
 	struct pfn_entry *page = __alloc_page (flags);
 	spin_unlock_irq (&pgalloc_lock, flag);
+
+	post_alloc_hooks (page, flags);
 
 	return page;
 }
