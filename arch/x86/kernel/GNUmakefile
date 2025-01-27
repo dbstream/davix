@@ -10,6 +10,7 @@ kobjs += header.o
 kobjs += hpet.o
 kobjs += idt_entry.o
 kobjs += idt.o
+kobjs += ioapic.o
 kobjs += ipi.o
 kobjs += irq.o
 kobjs += nmi.o

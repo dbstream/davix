@@ -61,6 +61,113 @@ x86_madt_parse_apics (void (*callback)(uint32_t, uint32_t, int))
 		acpi_parse_table_madt (madt, parse_apics_callback, callback);
 }
 
+__INIT_TEXT
+static int
+parse_ioapics_callback (struct acpi_subtable_header *header, void *p)
+{
+	void (*callback) (uint32_t, unsigned long, uint32_t) = p;
+
+	uint32_t apic_id, gsi_base;
+	unsigned long addr;
+	if (header->type == ACPI_MADT_IO_APIC) {
+		struct acpi_madt_io_apic *ioapic = (struct acpi_madt_io_apic *) header;
+		apic_id = le32toh (ioapic->ioapic_id);
+		addr = le32toh (ioapic->ioapic_addr);
+		gsi_base = le32toh (ioapic->gsi_base);
+	} else
+		return 1;
+
+	callback (apic_id, addr, gsi_base);
+	return 1;
+}
+
+__INIT_TEXT
+void
+x86_madt_parse_ioapics (void (*callback)(uint32_t, unsigned long, uint32_t))
+{
+	if (madt)
+		acpi_parse_table_madt (madt, parse_ioapics_callback, callback);
+}
+
+__INIT_TEXT
+static int
+parse_interrupt_overrides_callback (struct acpi_subtable_header *header, void *p)
+{
+	/**
+	 * (map_source, map_dest, active_hi, active_lo, tgm_edge, tgm_level);
+	 */
+	void (*callback) (uint32_t, uint32_t, bool, bool, bool, bool) = p;
+
+	uint8_t bus;
+	uint32_t map_source, map_dest;
+	uint16_t mps_flags;
+	if (header->type == ACPI_MADT_INTERRUPT_OVERRIDE) {
+		struct acpi_madt_interrupt_override *o =
+				(struct acpi_madt_interrupt_override *) header;
+
+		bus = o->bus;
+		map_source = o->source_irq;
+		map_dest = le32toh (o->gsi_irq);
+		mps_flags = le16toh (o->flags);
+	} else
+		return 1;
+
+	if (bus != 0) {
+		printk (PR_WARN "x86_madt_parse_interrupt_overrides: invalid IRQ override bus=%u source=%u dest=%u flags=0x%x\n",
+				bus, map_source, map_dest, mps_flags);
+		return 1;
+	}
+
+	bool force_active_high = false;
+	bool force_active_low = false;
+	bool force_tgm_edge = false;
+	bool force_tgm_level = false;
+	bool warn = false;
+
+	if (mps_flags & (1 << 0)) {
+		if (mps_flags & (1 << 1))
+			force_active_low = true;
+		else
+			force_active_high = true;
+	} else if (mps_flags & (1 << 1))
+		warn = true;
+
+	if (mps_flags & (1 << 2)) {
+		if (mps_flags & (1 << 3))
+			force_tgm_level = true;
+		else
+			force_tgm_edge = true;
+	} else if (mps_flags & (1 << 3))
+		warn = true;
+
+	if (mps_flags & ~0xfU)
+		warn = true;
+
+	if (warn)
+		printk (PR_WARN "x86_madt_parse_interrupt_overrides: unknown MPS flags 0x%x\n",
+				mps_flags);
+
+	if (map_source >= 16) {
+		printk (PR_WARN "x86_madt_parse_interrupt_overrides: source=%u is outside of ISA range\n",
+				map_source);
+		return true;
+	}
+
+	callback (map_source, map_dest, force_active_high, force_active_low,
+			force_tgm_edge, force_tgm_level);
+	return true;
+}
+
+__INIT_TEXT
+void
+x86_madt_parse_interrupt_overrides (void (*callback) (uint32_t, uint32_t,
+		bool, bool, bool, bool))
+{
+	if (madt)
+		acpi_parse_table_madt (madt, parse_interrupt_overrides_callback,
+				callback);
+}
+
 static int
 parse_apic_nmi_callback (struct acpi_subtable_header *header, void *p)
 {

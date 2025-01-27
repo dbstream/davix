@@ -5,6 +5,7 @@
  * Here, we handle interrupts that originate from the local APIC.
  */
 #include <davix/context.h>
+#include <davix/interrupt.h>
 #include <davix/printk.h>
 #include <davix/timer.h>
 #include <asm/apic.h>
@@ -16,8 +17,8 @@ handle_IRQ (struct entry_regs *regs)
 {
 	preempt_state_t state = preempt_enter_IRQ ();
 
-	int irq = regs->error_code;
-	printk (PR_INFO "Received IRQ %d\n", irq);
+	int vector = regs->error_code;
+	handle_interrupt (vector);
 	apic_eoi ();
 
 	preempt_leave_IRQ (state);

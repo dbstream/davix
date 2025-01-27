@@ -38,6 +38,7 @@ typedef int errno_t;
 #define ENOTDIR 18
 #define EISDIR 19
 #define ENAMETOOLONG 20
+#define ENOSPC 21
 
 #endif /* _DAVIX_ERRNO_H */
 

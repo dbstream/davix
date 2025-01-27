@@ -41,12 +41,16 @@
 #define APIC_DM_INIT		(5U << 8)
 #define APIC_DM_SIPI		(6U << 8)
 
+#define APIC_DM_BITS		(7U << 8)
+
 #define APIC_DST_LOGICAL	(1U << 11)
 
 #define APIC_POLARITY_LOW	(1U << 13)
 #define APIC_LEVEL_ASSERT	(1U << 14)
 #define APIC_TRIGGER_MODE_LEVEL	(1U << 15)
 #define APIC_IRQ_MASK		(1U << 16)
+
+#define APIC_MODE_BITS		(APIC_POLARITY_LOW | APIC_TRIGGER_MODE_LEVEL)
 
 #define APIC_IRQ_PENDING	(1U << 12)
 
@@ -103,6 +107,12 @@ apic_eoi (void)
 {
 	apic_write (APIC_EOI, 0);
 }
+
+/**
+ * Initialize the IOAPIC subsystem.
+ */
+extern void
+ioapic_init (void);
 
 #endif /* !__ASSEMBLER__ */
 #endif /* _ASM_APIC_H */

@@ -458,7 +458,7 @@ arch_insert_vmap_areas (void (*pfn_insert) (unsigned long, unsigned long, const 
 }
 
 void
-arch_init_late (void)
+x86_mm_init_late (void)
 {
 	pgtable_t *table = NULL;
 	for (int i = 256; i < 512; i++) {

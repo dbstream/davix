@@ -8,6 +8,7 @@
  */
 
 #include <acpi/acpi.h>
+#include <davix/interrupt.h>
 #include <davix/kmalloc.h>
 #include <davix/mutex.h>
 #include <davix/panic.h>
@@ -313,16 +314,35 @@ uacpi_kernel_handle_firmware_request (uacpi_firmware_request *req)
 	return UACPI_STATUS_UNIMPLEMENTED;
 }
 
+static irqstatus_t
+handle_uacpi_interrupt (struct interrupt_handler *h)
+{
+	uacpi_interrupt_handler fn = h->ptr1;
+	uacpi_handle ctx = h->ptr2;
+
+	uacpi_interrupt_ret ret = fn (ctx);
+	return (ret == UACPI_INTERRUPT_HANDLED)
+		? INTERRUPT_HANDLED
+		: INTERRUPT_NOT_HANDLED;
+}
+
 uacpi_status
 uacpi_kernel_install_interrupt_handler (uacpi_u32 irq,
 		uacpi_interrupt_handler fn, uacpi_handle ctx, uacpi_handle *out)
 {
-	(void) irq;
-	(void) fn;
-	(void) ctx;
-	(void) out;
+	struct interrupt_handler *h = kmalloc (sizeof (*h));
+	if (!h)
+		return UACPI_STATUS_OUT_OF_MEMORY;
 
-	return UACPI_STATUS_UNIMPLEMENTED;
+	h->handler = handle_uacpi_interrupt;
+	h->ptr1 = fn;
+	h->ptr2 = ctx;
+	errno_t e = install_interrupt_handler (h, irq, 0);
+	if (e == ESUCCESS)
+		return UACPI_STATUS_OK;
+
+	*out = h;
+	return UACPI_STATUS_INTERNAL_ERROR;
 }
 
 uacpi_status
@@ -330,9 +350,10 @@ uacpi_kernel_uninstall_interrupt_handler (uacpi_interrupt_handler fn,
 		uacpi_handle handle)
 {
 	(void) fn;
-	(void) handle;
 
-	return UACPI_STATUS_UNIMPLEMENTED;
+	struct interrupt_handler *h = handle;
+	uninstall_interrupt_handler (h);
+	return UACPI_STATUS_OK;
 }
 
 uacpi_handle

@@ -317,3 +317,10 @@ arch_init (void)
 	x86_trap_init ();
 	apic_init ();
 }
+
+void
+arch_init_late (void)
+{
+	x86_mm_init_late ();
+	ioapic_init ();
+}

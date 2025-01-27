@@ -27,4 +27,7 @@ map_hhdm_range (unsigned long start, unsigned long end);
 extern void
 arch_insert_vmap_areas (void (*pfn_insert) (unsigned long, unsigned long, const char *));
 
+void
+x86_mm_init_late (void);
+
 #endif /* _ASM_MM_INIT_H */

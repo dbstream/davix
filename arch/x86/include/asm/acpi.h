@@ -15,6 +15,16 @@ extern void
 x86_madt_parse_apics (void (*callback)
 	(uint32_t apic_id, uint32_t acpi_uid, int present));
 
+void
+x86_madt_parse_ioapics (void (*callback)
+	(uint32_t ioapic_id, unsigned long addr, uint32_t gsi_base));
+
+void
+x86_madt_parse_interrupt_overrides (void (*callback)
+	(uint32_t map_source, uint32_t map_dest,
+			bool actice_hi, bool active_lo,
+			bool tgm_edge, bool tgm_level));
+
 extern void
 x86_madt_parse_apic_nmis (void (*callback)
 	(uint32_t acpi_uid, int lint, uint16_t flags));
