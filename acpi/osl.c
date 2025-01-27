@@ -28,13 +28,13 @@ uacpi_kernel_log (uacpi_log_level level, const uacpi_char *msg)
 	case UACPI_LOG_TRACE:
 		return;
 	case UACPI_LOG_INFO:
-		printk (PR_INFO "uACPI: %s\n", msg);
+		printk (PR_INFO "uACPI: %s", msg);
 		break;
 	case UACPI_LOG_WARN:
-		printk (PR_WARN "uACPI: %s\n", msg);
+		printk (PR_WARN "uACPI: %s", msg);
 		break;
 	case UACPI_LOG_ERROR:
-		printk (PR_ERR "uACPI: %s\n", msg);
+		printk (PR_ERR "uACPI: %s", msg);
 		break;
 	}
 }
