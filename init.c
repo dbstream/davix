@@ -5,6 +5,7 @@
  * This is passed as the boot module to the kernel.
  */
 #include <davix/uapi/openat.h>
+#include <davix/uapi/reboot.h>
 #include <davix/uapi/stat.h>
 #include <asm/syscall_nr.h>
 
@@ -118,6 +119,18 @@ show_stat (const char *path)
 	if (buf.st_valid & STAT_ATTR_DEV)	dmesg ("st_dev=%llu\n", buf.st_dev);
 }
 
+static inline int
+reboot (int cmd, int arg)
+{
+	register long r10 asm ("r10") = DAVIX_REBOOT_MAG1;
+	int ret;
+	asm volatile ("syscall" : "=a" (ret) : "a" (__SYS_reboot),
+			"D" (cmd), "S" (arg),
+			"d" (DAVIX_REBOOT_MAG0), "r" (r10)
+			: "r8", "r9", "cc", "rcx", "r11");
+	return ret;
+}
+
 void
 _start (void)
 {
@@ -133,6 +146,10 @@ _start (void)
 	show_stat ("/foo");
 
 	/** ... and now sleep... */
+#if 0	/* Enable this code to test SYS_reboot shutdown.  */
+	dmesg ("SYS_reboot(REBOOT_CMD_POWEROFF) returned %d\n",
+			reboot (REBOOT_CMD_POWEROFF, 0));
+#endif
 	asm volatile ("syscall" :: "a" (__SYS_exit),
 			"D" (0)
 			: "rsi", "rdx", "r10", "r8", "r9", "cc", "rcx", "r11");

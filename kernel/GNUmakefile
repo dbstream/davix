@@ -11,6 +11,7 @@ kobjs += interrupt.o
 kobjs += main.o
 kobjs += panic.o
 kobjs += printk.o
+kobjs += reboot.o
 kobjs += smp.o
 kobjs += task_creation.o
 
