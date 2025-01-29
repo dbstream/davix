@@ -13,6 +13,7 @@ kobjs += panic.o
 kobjs += printk.o
 kobjs += reboot.o
 kobjs += smp.o
+kobjs += syscall.o
 kobjs += task_creation.o
 
 FLAGS-main.o := "-DKERNELVERSION=\"$(KERNELVERSION)\""

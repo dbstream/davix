@@ -40,5 +40,30 @@ typedef int errno_t;
 #define ENAMETOOLONG 20
 #define ENOSPC 21
 
+#define __ALL_ERRNOS(macro) \
+	macro (ESUCCESS)		\
+	macro (ENOMEM)			\
+	macro (EIO)			\
+	macro (ENOTSUP)			\
+	macro (EAGAIN)			\
+	macro (ETIME)			\
+	macro (EINTR)			\
+	macro (EINVAL)			\
+	macro (EFAULT)			\
+	macro (EEXIST)			\
+	macro (ENOEXEC)			\
+	macro (E2BIG)			\
+	macro (ENOSYS)			\
+	macro (EPERM)			\
+	macro (ENXIO)			\
+	macro (ENOENT)			\
+	macro (ELOOP)			\
+	macro (EXDEV)			\
+	macro (ENOTDIR)			\
+	macro (EISDIR)			\
+	macro (ENAMETOOLONG)		\
+	macro (ENOSPC)			\
+
+
 #endif /* _DAVIX_ERRNO_H */
 

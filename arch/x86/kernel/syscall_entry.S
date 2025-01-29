@@ -39,7 +39,7 @@ asm_syscall_entry:
 	PUSHQ (%r11)			/*  rflags	*/
 	PUSHQ ($__USER64_CS)		/*  cs		*/
 	PUSHQ (%rcx)			/*  rip		*/
-	PUSHQ ($0)			/*  (unused)	*/
+	PUSHQ (%rax)			/*  error_code	*/
 	PUSHQ (%rax)
 	PUSHQ (%rdi)
 	PUSHQ (%rsi)

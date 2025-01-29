@@ -15,6 +15,8 @@ typedef struct entry_regs *syscall_regs_t;
 #define SYSCALL_ARG4(regs) ((regs)->saved_r10)
 #define SYSCALL_ARG5(regs) ((regs)->saved_r8)
 #define SYSCALL_ARG6(regs) ((regs)->saved_r9)
+#define SYSCALL_NR(regs) ((regs)->error_code)
+#define SYSCALL_RET(regs) ((regs)->saved_rax)
 
 #define __SYSCALL_RETURN_VOID(regs) do {		\
 	(regs)->saved_rax = 0;				\

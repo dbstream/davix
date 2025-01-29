@@ -48,7 +48,9 @@ x86_handle_syscall (struct entry_regs *regs)
 	regs->rsp = this_cpu_read (&__syscall_saved_rsp);
 	irq_enable ();
 
+	trace_syscall_enter (regs);
 	int is_error = handle_syscall (regs);
+	trace_syscall_exit (regs, is_error);
 
 	irq_disable ();
 	this_cpu_write (&__syscall_saved_rsp, regs->rsp);
@@ -72,7 +74,7 @@ x86_handle_syscall (struct entry_regs *regs)
 static int
 handle_syscall (struct entry_regs *regs)
 {
-	switch (regs->saved_rax) {
+	switch (regs->error_code) {
 #define dispatch_syscalls(name) case __SYS_##name:	return __wrap_sys_##name (regs);
 	ALL_SYSCALLS(dispatch_syscalls)
 #undef dispatch_syscalls

@@ -124,4 +124,10 @@ __wrap_sys_##name (syscall_regs_t __syscall_regs)			\
 }									\
 SYSCALL_PROTO6(type, __sys_##name, type1, arg1, type2, arg2, type3, arg3, type4, arg4, type5, arg5, type6, arg6)
 
+extern void
+trace_syscall_enter (syscall_regs_t regs);
+
+extern void
+trace_syscall_exit (syscall_regs_t regs, int is_error);
+
 #endif /**  _DAVIX_SYSCALL_H   */
