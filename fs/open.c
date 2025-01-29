@@ -103,7 +103,6 @@ do_mknod (const char *pathname, int dirfd, struct pathwalk_info *info,
 	case S_IFBLK:
 	case S_IFREG:
 	case S_IFIFO:
-	case S_IFLNK:
 	case S_IFSOCK:
 		break;
 	default:
