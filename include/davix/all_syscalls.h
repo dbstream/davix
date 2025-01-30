@@ -14,6 +14,7 @@
 	macro(stat)			\
 	macro(mknod)			\
 	macro(reboot)			\
+	macro(unlink)			\
 
 
 #endif /* _DAVIX_ALL_SYSCALLS_H  */

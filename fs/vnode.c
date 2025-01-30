@@ -442,3 +442,14 @@ vn_put (struct vnode *vnode)
 	} while (vnode);
 }
 
+void
+vnode_unlink (struct vnode *vnode)
+{
+	struct vnode *parent = vnode->vn_parent;
+	spin_lock (&parent->vn_lock);
+	spin_lock (&vnode->vn_lock);
+	__vn_unhook (vnode);
+	spin_unlock (&vnode->vn_lock);
+	spin_unlock (&parent->vn_lock);
+}
+

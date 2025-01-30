@@ -38,10 +38,43 @@ tmpfs_mknod (struct inode *parent, struct vnode *vnode,
 	return ESUCCESS;
 }
 
+static errno_t
+tmpfs_unlink (struct inode *parent, struct vnode *vnode)
+{
+	struct inode *child = vnode->vn_inode;
+
+	spin_lock (&child->i_lock);
+	mode_t mode = child->i_mode;
+	nlink_t nlink = child->i_nlink;
+
+	if (S_ISDIR (mode) && nlink != 2) {
+		spin_unlock (&child->i_lock);
+		return EEXIST;
+	}
+
+	if (S_ISDIR (mode))
+		child->i_nlink = 0;
+	else
+		child->i_nlink--;
+
+	spin_unlock (&child->i_lock);
+	vn_put (vnode);
+	vnode_unlink (vnode);
+
+	if (S_ISDIR (mode)) {
+		spin_lock (&parent->i_lock);
+		parent->i_nlink--;
+		spin_unlock (&parent->i_lock);
+	}
+
+	return ESUCCESS;
+}
+
 static const struct filesystem_ops tmpfs_operations = {};
 
 static const struct inode_ops tmpfs_inode_operations = {
-	.mknod = tmpfs_mknod
+	.mknod = tmpfs_mknod,
+	.unlink = tmpfs_unlink
 };
 
 static errno_t

@@ -142,6 +142,9 @@ do_mknod (const char *pathname, int dirfd, struct pathwalk_info *info,
 		if (target.vnode->vn_parent != parent.vnode)
 			/** we raced against rename()  */
 			e = EAGAIN;
+		else if (target.vnode->vn_inode)
+			/** don't create it if it already exists.  */
+			e = EEXIST;
 		spin_unlock (&target.vnode->vn_lock);
 
 		if (e == ESUCCESS) {
@@ -154,6 +157,76 @@ do_mknod (const char *pathname, int dirfd, struct pathwalk_info *info,
 			else
 				e = ENOTSUP;
 		}
+
+		i_unlock_exclusive (inode);
+	}
+
+	path_put (target);
+	path_put (parent);
+	return e;
+}
+
+static errno_t
+do_unlink (const char *path, int dirfd, struct pathwalk_info *info)
+{
+	struct path parent, target;
+	struct inode *inode, *ichild;
+
+	struct pathwalk_state state;
+	errno_t e = pathwalk_begin (&state, dirfd, info);
+	if (e != ESUCCESS)
+		return e;
+
+	e = do_pathwalk (&state, path);
+	if (e == ESUCCESS) {
+		if (!state.has_parent_component || !state.has_result_component)
+			e = EINVAL;
+		else {
+			parent = path_get (state.parent_component);
+			target = path_get (state.result_component);
+		}
+	}
+
+	pathwalk_finish (&state);
+	if (e != ESUCCESS)
+		return e;
+
+	if (parent.mount != target.mount)
+		e = EINVAL;
+
+	if (e == ESUCCESS) {
+		inode = parent.vnode->vn_inode;
+		ichild = target.vnode->vn_inode;
+
+		if (!inode || !ichild)
+			e = ENOENT;
+		else
+			e = inode_permission_check (inode, S_IWUSR | S_IXUSR);
+
+		if (info->flags & O_FILETYPE) {
+			spin_lock (&ichild->i_lock);
+			mode_t mode = ichild->i_mode;
+			spin_unlock (&ichild->i_lock);
+
+			if ((mode & S_IFMT) != (info->mode & S_IFMT))
+				e = S_ISDIR (info->mode) ? ENOTDIR : EISDIR;
+		}
+	}
+
+	if (e == ESUCCESS) {
+		i_lock_exclusive (inode);
+		spin_lock (&target.vnode->vn_lock);
+		if (target.vnode->vn_flags & VN_UNHOOKED)
+			e = ENOENT;
+		else if (target.vnode->vn_parent != parent.vnode)
+			/* we raced against rename()  */
+			e = ENOENT;
+		spin_unlock (&target.vnode->vn_lock);
+
+		if (e == ESUCCESS && inode->ops->unlink)
+			e = inode->ops->unlink (inode, target.vnode);
+		else if (e == ESUCCESS)
+			e = ENOTSUP;
 
 		i_unlock_exclusive (inode);
 	}
@@ -231,6 +304,34 @@ SYSCALL6 (void, mknod, const char *, path, int, dirfd,
 		syscall_return_error (e);
 
 	e = do_mknod (kpath, dirfd, &kpathwalk_info, mode, dev);
+	if (e == ESUCCESS)
+		syscall_return_void;
+	syscall_return_error (e);
+}
+
+SYSCALL4 (void, unlink, const char *, path, int, dirfd,
+		struct pathwalk_info *, info, size_t, info_size)
+{
+	char kpath[PATH_MAX];
+	struct pathwalk_info kpathwalk_info;
+
+	if (info_size > sizeof (kpathwalk_info))
+		syscall_return_error (E2BIG);
+
+	memset (&kpathwalk_info, 0, sizeof (kpathwalk_info));
+	errno_t e = ESUCCESS;
+	if (info_size)
+		e = memcpy_from_userspace (&kpathwalk_info, info, info_size);
+	if (e != ESUCCESS)
+		syscall_return_error (e);
+
+	kpathwalk_info.flags = O_NOFOLLOW | (kpathwalk_info.flags & O_FILETYPE);
+
+	e = get_path_from_userspace (kpath, path);
+	if (e != ESUCCESS)
+		syscall_return_error (e);
+
+	e = do_unlink (kpath, dirfd, &kpathwalk_info);
 	if (e == ESUCCESS)
 		syscall_return_void;
 	syscall_return_error (e);

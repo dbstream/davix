@@ -103,6 +103,20 @@ mknod (const char *path, int dirfd,
 	return ret;
 }
 
+static int
+unlink (const char *path, int dirfd,
+		struct pathwalk_info *pwinfo, size_t pwinfo_size)
+{
+	register long r10 asm ("r10") = pwinfo_size;
+
+	int ret;
+	asm volatile ("syscall" : "=a" (ret) : "a" (__SYS_unlink),
+			"D" (path), "S" (dirfd), "d" (pwinfo),
+			"r" (r10)
+			: "cc", "r8", "r9", "rcx", "r11");
+	return ret;
+}
+
 static void
 show_stat (const char *path)
 {
@@ -140,10 +154,22 @@ _start (void)
 	/** test the VFS... */
 	show_stat ("/");
 	show_stat ("/foo");
-	dmesg ("mknod (...) = %d\n",
-			mknod ("/foo", AT_FDROOT, NULL, 0, S_IFDIR | 0644, 0));
-	show_stat ("/");
-	show_stat ("/foo");
+
+	struct pathwalk_info pwinfo = {
+		.flags = O_FILETYPE,
+		.mode = S_IFREG
+	};
+
+	for (int i = 0; i < 2; i++) {
+		dmesg ("mknod (/foo) = %d\n",
+				mknod ("/foo", AT_FDROOT, NULL, 0, S_IFREG | 0644, 0));
+		show_stat ("/");
+		show_stat ("/foo");
+		dmesg ("unlink (/foo) = %d\n",
+				unlink ("/foo", AT_FDCWD, &pwinfo, sizeof (pwinfo)));
+		show_stat ("/");
+		show_stat ("/foo");
+	}
 
 	/** ... and now sleep... */
 #if 0	/* Enable this code to test SYS_reboot shutdown.  */

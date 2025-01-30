@@ -19,5 +19,6 @@
 #define __SYS_stat			3
 #define __SYS_mknod			4
 #define __SYS_reboot			5
+#define __SYS_unlink			6
 
 #endif /* __DAVIX_ASM_SYSCALL_NR_H  */

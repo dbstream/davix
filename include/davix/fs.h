@@ -262,6 +262,16 @@ vnode_install (struct vnode *vnode, struct inode *inode)
 }
 
 /**
+ * Unlink a vnode from the filesystem.
+ *
+ * @vnode	vnode to unlink
+ *
+ * This is used by e.g. unlink().
+ */
+extern void
+vnode_unlink (struct vnode *vnode);
+
+/**
  * Find or allocate a child vnode.
  *
  * @child	storage for the child vnode
@@ -405,6 +415,21 @@ struct inode_ops {
 	 */
 	errno_t (*mknod) (struct inode *parent, struct vnode *vnode,
 			uid_t uid, gid_t gid, mode_t mode, dev_t dev);
+
+	/**
+	 * Unlink a filesystem name.
+	 *
+	 * @parent	parent inode
+	 * @vnode	path of child inode being removed
+	 *
+	 * NOTE: The filesystem code must test that the vnode does not refer to
+	 * a non-empty directory before performing the unlink().
+	 *
+	 * This does not actually delete the inode.  It only removes the name
+	 * referring to it from the filesystem.  The inode is destroyed once
+	 * all references to it have been dropped.
+	 */
+	errno_t (*unlink) (struct inode *parent, struct vnode *vnode);
 };
 
 extern struct inode *
