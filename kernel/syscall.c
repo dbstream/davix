@@ -13,7 +13,13 @@
 static inline int
 syscall_tracing_enabled (void)
 {
-	return 0;
+	return 1;
+}
+
+static inline int
+syscall_trace_errors (void)
+{
+	return 1;
 }
 
 static inline const char *
@@ -45,6 +51,8 @@ trace_syscall_enter (syscall_regs_t regs)
 {
 	if (!syscall_tracing_enabled ())
 		return;
+	if (syscall_trace_errors ())
+		return;
 
 	printk ("trace_syscall_enter:  syscall %3lu  %s();\n",
 			(unsigned long) SYSCALL_NR(regs),
@@ -64,6 +72,9 @@ trace_syscall_exit (syscall_regs_t regs, int is_error)
 				(long) SYSCALL_RET(regs),
 				errno_to_string ((errno_t) SYSCALL_RET(regs)));
 	} else {
+		if (syscall_trace_errors ())
+			return;
+
 		printk ("trace_syscall_exit:   syscall %3lu  %s()=%ld\n",
 				(unsigned long) SYSCALL_NR(regs),
 				sysnr_to_string ((unsigned long) SYSCALL_NR(regs)),
