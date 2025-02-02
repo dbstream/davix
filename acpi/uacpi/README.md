@@ -289,6 +289,7 @@ If you want to contribute:
 | [Astral](https://github.com/mathewnd/astral) | Operating system written in C which aims be POSIX-compliant | 3,247,619 | Intel Core i5-13600K |
 | [ilobilix](https://github.com/ilobilo/ilobilix) | Yet another monolithic Linux clone wannabe. Currently under a rewrite | 2,751,309 | Intel Core i7-13700K |
 | [imaginarium](https://github.com/Khitiara/imaginarium) | Ziggy osdev experiments inspired by the NT kernel (using the zig general purpose allocator) | 2,388,082 | AMD Ryzen 7 3700X |
+| [davix](https://github.com/dbstream/davix) | Yet another unix-like by some bored nerd | 1,888,391 | AMD Ryzen 9 7950X3D |
 | [OBOS](https://github.com/OBOS-dev/obos) | Hybrid Kernel with advanced driver loading | 1,371,085 | Intel Core i7-13700K |
 | [NyauxKC](https://github.com/rayanmargham/NyauxKC) | Monolithic UNIX-like multi-architecture kernel | 985,988 | Intel Core Ultra 7 265K |
 
