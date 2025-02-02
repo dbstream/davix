@@ -1,6 +1,7 @@
 # Subdirectory Makefile.
 # Copyright (C) 2024-present  dbstream
 
+kobjs += cpulocal.o
 kobjs += initmem.o
 kobjs += kmalloc.o
 kobjs += mmap.o

@@ -26,7 +26,6 @@ struct pfn_entry {
 	unsigned long flags;
 	union {
 		struct {
-			spinlock_t lock;
 			unsigned int nfree;
 			void *pobj;
 			struct slab *slab;

@@ -2,6 +2,7 @@
  * x86 support for Simultaneous Multiprocessing.
  * Copyright (C) 2024  dbstream
  */
+#include <davix/cpulocal.h>
 #include <davix/cpuset.h>
 #include <davix/initmem.h>
 #include <davix/panic.h>
@@ -17,6 +18,8 @@
 static uint32_t bsp_apic_id;
 
 unsigned long __cpulocal_offsets[CONFIG_MAX_NR_CPUS];
+
+static char cpulocal_rt_mem[0x4000] __CPULOCAL;
 
 __INIT_TEXT
 static void
@@ -63,4 +66,7 @@ x86_smp_init (void)
 		that_cpu_write (&__this_cpu_id, i, i);
 		that_cpu_write (&__stack_canary, i, this_cpu_read (&__stack_canary));
 	}
+
+	cpulocal_rt_init ((unsigned long) &cpulocal_rt_mem[0],
+		(unsigned long) &cpulocal_rt_mem[0] + sizeof (cpulocal_rt_mem));
 }

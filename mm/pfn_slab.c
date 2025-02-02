@@ -3,14 +3,28 @@
  * Copyright (C) 2024  dbstream
  */
 #include <davix/align.h>
+#include <davix/cpulocal.h>
+#include <davix/cpuset.h>
 #include <davix/initmem.h>
 #include <davix/page.h>
 #include <davix/printk.h>
 #include <davix/slab.h>
 #include <davix/string.h>
+#include <asm/cpulocal.h>
+
+struct pcpu_quickbin {
+	unsigned long num;
+	void *ptrs[];
+};
 
 struct slab {
 	spinlock_t lock;
+
+	/**
+	 * Per-CPU quickbins.
+	 */
+	unsigned long quickbin_len;
+	struct pcpu_quickbin *quickbin;
 
 	/**
 	 * Full, partial, and empty pages.
@@ -65,15 +79,19 @@ static struct slab static_slab;
 static void
 slab_dump_one (struct slab *slab)
 {
-	unsigned long nr_full = atomic_load_relaxed (&slab->nr_full);
-	unsigned long nr_partial = atomic_load_relaxed (&slab->nr_partial);
-	unsigned long nr_empty = atomic_load_relaxed (&slab->nr_empty);
+	spin_lock (&slab->lock);
+	unsigned long nr_full = slab->nr_full;
+	unsigned long nr_partial = slab->nr_partial;
+	unsigned long nr_empty = slab->nr_empty;
+	unsigned long nr_obj_free = slab->nr_obj_free;
+	spin_unlock (&slab->lock);
+
 	printk (PR_INFO "  %16.16s %4lu %4lu %4lu  %4lu %4lu %4lu  %4lu %4lu\n",
 		slab->name,
 		slab->obj_size, slab->real_obj_size, slab->objs_per_page,
 		nr_full, nr_partial, nr_empty,
 		slab->objs_per_page * (nr_full + nr_partial + nr_empty),
-		atomic_load_relaxed (&slab->nr_obj_free));
+		nr_obj_free);
 }
 
 void
@@ -121,6 +139,16 @@ slab_init_new (struct slab *slab, const char *name, unsigned long obj_size)
 	slab->real_obj_size = real_size;
 	slab->objs_per_page = PAGE_SIZE / real_size;
 
+	slab->quickbin_len = min (unsigned long, 15, slab->objs_per_page - 1);
+	unsigned long quickbin_size = offsetof (struct pcpu_quickbin,
+			ptrs[slab->quickbin_len]);
+	slab->quickbin = cpulocal_rt_alloc (quickbin_size, 128);
+	if (!slab->quickbin)
+		printk (PR_ERR "slab: cpulocal_rt_alloc returned NULL, not using quickbins\n");
+	else
+		for_each_present_cpu (cpu)
+			that_cpu_write (&slab->quickbin->num, cpu, 0);
+
 	strncpy (slab->name, name, sizeof (slab->name));
 
 	bool flag = spin_lock_irq (&slab_list_lock);
@@ -156,131 +184,189 @@ slab_free_page (struct pfn_entry *page)
 	free_page (page, ALLOC_KERNEL);
 }
 
-static struct pfn_entry *
-slab_new_page (unsigned long obj_size, unsigned long objs_per_page)
-{
-	struct pfn_entry *page = slab_alloc_page ();
-	if (!page)
-		return NULL;
-
-	set_page_flags (page, PFN_SLAB);
-
-	spinlock_init (&page->pfn_slab.lock);
-	page->pfn_slab.nfree = objs_per_page;
-	page->pfn_slab.pobj = NULL;
-	while (objs_per_page--) {
-		void *p = (void *)
-			(pfn_entry_to_virt (page) + objs_per_page * obj_size);
-		*(void **) p = page->pfn_slab.pobj;
-		page->pfn_slab.pobj = p;
-	}
-
-	return page;
-}
-
-/* Allocate an object from a slab. */
+/**
+ * Allocate an object from a slab.
+ */
 void *
 slab_alloc (struct slab *slab)
 {
-	void *ret = NULL;
-	bool flag = spin_lock_irq (&slab->lock);
-	struct pfn_entry *page;
+	if (__builtin_expect (in_irq (), 0)) {
+		printk (PR_ERR "slab_alloc was called in IRQ context!  This is a kernel bug.\n");
+		return NULL;
+	}
 
-	/* Try grabbing from the pg_partial_list first. */
-	if (slab->nr_partial) {
-		page = list_item (struct pfn_entry,
-			pfn_slab.list, slab->pg_partial_list.next);
-
-		ret = page->pfn_slab.pobj;
-		page->pfn_slab.pobj = *(void **) ret;
-
-		if (!--page->pfn_slab.nfree) {
-			/* move the page from partial to empty */
-			list_delete (&page->pfn_slab.list);
-			slab->nr_partial--;
-			slab->nr_empty++;
+	/**
+	 * Allocation fastpath.
+	 *
+	 * This fastpath should be kept as small as possible.  It should compile
+	 * to something like this on x86:
+	 *
+	 *	movq offsetof(slab, quickbin)(%rdi), %rsi
+	 *	incl %gs:__preempt_state
+	 *	testq %rsi, %rsi
+	 *	jz .Lallocation_slowpath
+	 *	movq %gs:(%rsi), %rdx
+	 *	testq %rdx, %rdx
+	 *	jz .Lallocation_slowpath
+	 *	movq %gs:(%rsi,%rdx,8), %rax
+	 *	decl %rdx
+	 *	movq %rdx, %gs:(%rsi)
+	 *	decl %gs:__preempt_state
+	 *	jz .Lcall_preempt_resched
+	 *	ret
+	 * .Lcall_preempt_resched:
+	 *	movq %rax, -N(%rbp)
+	 *	call preempt_resched
+	 *	movq -N(%rbp), %rax
+	 *	leave
+	 *	ret
+	 * .Lallocation_slowpath:
+	 */
+	struct pcpu_quickbin *quick = slab->quickbin;
+	preempt_off ();
+	if (__builtin_expect (!!quick, 1)) {
+		unsigned long num = this_cpu_read (&quick->num);
+		if (__builtin_expect (!!num, 1)) {
+			num--;
+			this_cpu_write (&quick->num, num);
+			void *obj = this_cpu_read (&quick->ptrs[num]);
+			preempt_on ();
+			return obj;
 		}
-
-		goto out;
 	}
 
-	/* That didn't work, now look at pg_full_list. */
+	__spin_lock (&slab->lock);
+	struct pfn_entry *page = NULL;
 	if (slab->nr_full) {
-		page = list_item (struct pfn_entry,
-			pfn_slab.list, slab->pg_full_list.next);
-
-		ret = page->pfn_slab.pobj;
-		page->pfn_slab.pobj = *(void **) ret;
-
-		page->pfn_slab.nfree--;
-
-		/**
-		 * Move the page from full to partial.
-		 * A slab page cannot transition directly from full to empty, as
-		 * every slab page is guaranteed to fit at least two objects.
-		 */
-		list_delete (&page->pfn_slab.list);
-		list_insert (&slab->pg_partial_list, &page->pfn_slab.list);
+		page = list_item (struct pfn_entry, pfn_slab.list,
+				slab->pg_full_list.next);
 		slab->nr_full--;
-		slab->nr_partial++;
-
-		goto out;
-	}
-
-	/* We have to allocate a new page. */
-	page = slab_new_page (slab->real_obj_size, slab->objs_per_page);
-	if (page) {
-		/* Accounting */
-		page->pfn_slab.slab = slab;
-		slab->nr_obj_free += slab->objs_per_page;
-
-		ret = page->pfn_slab.pobj;
-		page->pfn_slab.pobj = *(void **) ret;
-		page->pfn_slab.nfree--;
-
-		list_insert (&slab->pg_partial_list, &page->pfn_slab.list);
-		slab->nr_partial++;
-	}
-out:
-	if (ret)
-		slab->nr_obj_free--;
-	spin_unlock_irq (&slab->lock, flag);
-	return ret;
-}
-
-/* Free an object back to the slab. */
-void
-slab_free (void *p)
-{
-	struct pfn_entry *page = virt_to_pfn_entry (p);
-	struct slab *slab = page->pfn_slab.slab;
-
-	bool flag = spin_lock_irq (&slab->lock);
-
-	*(void **) p = page->pfn_slab.pobj;
-	page->pfn_slab.pobj = p;
-
-	slab->nr_obj_free++;
-
-	unsigned long nfree = ++page->pfn_slab.nfree;
-	if (nfree == 1) {
-		list_insert (&slab->pg_partial_list, &page->pfn_slab.list);
-		slab->nr_empty--;
-		slab->nr_partial++;
-	} else if (nfree == slab->objs_per_page) {
+		list_delete (&page->pfn_slab.list);
+	} else if (slab->nr_partial) {
+		page = list_item (struct pfn_entry, pfn_slab.list,
+				slab->pg_partial_list.next);
 		slab->nr_partial--;
 		list_delete (&page->pfn_slab.list);
-		if (slab->nr_full >= 2) {
-			/* don't overfill the slab */
-			slab_free_page (page);
-			slab->nr_obj_free -= slab->objs_per_page;
-		} else {
-			list_insert (&slab->pg_full_list, &page->pfn_slab.list);
-			slab->nr_full++;
+	}
+
+	void *obj, *head;
+	if (page) {
+		obj = page->pfn_slab.pobj;
+		head = *(void **) obj;
+		unsigned long nalloc = 1;
+
+		if (__builtin_expect (!!quick, 1)) {
+			unsigned long i = 0;
+			for (; i < slab->quickbin_len; i++) {
+				if (!head)
+					break;
+				this_cpu_write (&quick->ptrs[i], head);
+				head = *(void **) head;
+			}
+			this_cpu_write (&quick->num, i);
+			nalloc += i;
+		}
+
+		page->pfn_slab.pobj = head;
+		page->pfn_slab.nfree -= nalloc;
+		slab->nr_obj_free -= nalloc;
+		if (head) {
+			slab->nr_partial++;
+			list_insert(&slab->pg_partial_list, &page->pfn_slab.list);
+		} else
+			slab->nr_empty++;
+	} else {
+		page = slab_alloc_page ();
+		if (__builtin_expect (!page, 0))
+			obj = NULL;	/* OOM, womp womp...  */
+		else {
+			set_page_flags (page, PFN_SLAB);
+			page->pfn_slab.slab = slab;
+
+			obj = (void *) pfn_entry_to_virt (page);
+			unsigned long nalloc = 1;
+			unsigned long i = 1;
+			if (__builtin_expect (!!quick, 1)) {
+				nalloc = 1 + slab->quickbin_len;
+				for (; i < nalloc; i++) {
+					head = obj + i * slab->real_obj_size;
+					this_cpu_write (&quick->ptrs[i - 1], head);
+				}
+				this_cpu_write (&quick->num, slab->quickbin_len);
+			}
+
+			head = NULL;
+			page->pfn_slab.nfree = slab->objs_per_page - i;
+			for (; i < slab->objs_per_page; i++) {
+				void *tmp = obj + i * slab->real_obj_size;
+				*(void **) tmp = head;
+				head = tmp;
+			}
+
+			page->pfn_slab.pobj = head;
+			if (head) {
+				slab->nr_partial++;
+				list_insert (&slab->pg_partial_list, &page->pfn_slab.list);
+			} else
+				slab->nr_empty++;
+		}
+	}
+	__spin_unlock (&slab->lock);
+	preempt_on ();
+	return obj;
+}
+
+/**
+ * Free an object back to the slab.
+ */
+void
+slab_free (void *ptr)
+{
+	if (__builtin_expect (in_irq (), 0)) {
+		printk (PR_ERR "slab_free was called in IRQ context!  This is a kernel bug.\n");
+		printk (PR_WARN "slab_free: leaking memory...\n");
+		return;
+	}
+
+	struct pfn_entry *page = virt_to_pfn_entry (ptr);
+	struct slab *slab = page->pfn_slab.slab;
+
+	struct pcpu_quickbin *quick = slab->quickbin;
+	preempt_off ();
+	if (__builtin_expect (!!quick, 1)) {
+		unsigned long num = this_cpu_read (&quick->num);
+		if (num != slab->quickbin_len) {
+			this_cpu_write (&quick->ptrs[num], ptr);
+			this_cpu_write (&quick->num, num + 1);
+			preempt_on ();
+			return;
 		}
 	}
 
-	spin_unlock_irq (&slab->lock, flag);
+	bool should_free_page = false;
+
+	__spin_lock (&slab->lock);
+	*(void **) ptr = page->pfn_slab.pobj;
+	page->pfn_slab.pobj = ptr;
+	page->pfn_slab.nfree++;
+	if (page->pfn_slab.nfree == 1) {
+		/** objs_per_page is never equal to 1.  */
+		slab->nr_partial++;
+		list_insert (&slab->pg_partial_list, &page->pfn_slab.list);
+	} else if (page->pfn_slab.nfree == slab->objs_per_page) {
+		slab->nr_partial--;
+		list_delete (&page->pfn_slab.list);
+		if (slab->nr_full < 2) {
+			slab->nr_full++;
+			list_insert (&slab->pg_full_list, &page->pfn_slab.list);
+		} else
+			should_free_page = true;
+	}
+	__spin_unlock (&slab->lock);
+	preempt_on ();
+
+	if (should_free_page)
+		slab_free_page (page);
 }
 
 static int slab_initialized;
