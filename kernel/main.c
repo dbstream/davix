@@ -8,6 +8,7 @@
 #include <davix/file.h>
 #include <davix/fs.h>
 #include <davix/initmem.h>
+#include <davix/kmalloc.h>
 #include <davix/ktest.h>
 #include <davix/main.h>
 #include <davix/mm.h>
@@ -123,6 +124,7 @@ main (void)
 	smp_init ();
 
 	vmap_init ();
+	kmalloc_init ();
 	smpboot_init ();
 
 	irq_enable ();

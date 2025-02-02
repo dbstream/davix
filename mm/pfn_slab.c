@@ -68,7 +68,7 @@ slab_dump_one (struct slab *slab)
 	unsigned long nr_full = atomic_load_relaxed (&slab->nr_full);
 	unsigned long nr_partial = atomic_load_relaxed (&slab->nr_partial);
 	unsigned long nr_empty = atomic_load_relaxed (&slab->nr_empty);
-	printk (PR_INFO "  %16.16s %4lu/%4lu/%4lu  %4lu/%4lu/%4lu  %4lu/%4lu\n",
+	printk (PR_INFO "  %16.16s %4lu %4lu %4lu  %4lu %4lu %4lu  %4lu %4lu\n",
 		slab->name,
 		slab->obj_size, slab->real_obj_size, slab->objs_per_page,
 		nr_full, nr_partial, nr_empty,

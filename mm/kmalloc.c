@@ -7,13 +7,13 @@
  * small (<=PAGE_SIZE/2) allocations.
  */
 #include <davix/align.h>
+#include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/initmem.h>
 #include <davix/kmalloc.h>
 #include <davix/page.h>
 #include <davix/slab.h>
 #include <davix/snprintf.h>
-#include <davix/spinlock.h>
 #include <davix/vmap.h>
 
 static struct pfn_entry *
@@ -77,39 +77,34 @@ kfree (void *ptr)
 _Static_assert (PAGE_SIZE == 4096, "PAGE_SIZE != 4096; fix kmalloc");
 _Static_assert (sizeof (long) == 8, "sizeof(long) != 8; fix kmalloc");
 
-static unsigned long slab_sizes[16] = {
-	8, 16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512, 768, 1024, 1536, 2048
-};
-
 static struct slab *slabs[16];
-static spinlock_t kmalloc_lock;
+
+void
+kmalloc_init (void)
+{
+	for (int i = 0; i < 16; i++){
+		char name[16];
+		snprintf (name, sizeof (name), "kmalloc-%lu", kmalloc_slab_sizes[i]);
+		slabs[i] = slab_create (name, kmalloc_slab_sizes[i]);
+		if (!slabs[i])
+			panic ("kmalloc_init: slab_create returned NULL!");
+	}
+}
 
 void *
-kmalloc (unsigned long size)
+kmalloc_known_slab (int slab_idx)
+{
+	return slab_alloc (slabs[slab_idx]);
+}
+
+void *
+kmalloc_normal (unsigned long size)
 {
 	if (size <= 2048) {
-		unsigned int i = 0;
-		while (slab_sizes[i] < size)
-			i++;
+		if (!size)
+			return NULL;
 
-		struct slab *slab = atomic_load_acquire (&slabs[i]);
-		if (!slab) {
-			spin_lock (&kmalloc_lock);
-			slab = atomic_load_relaxed (&slabs[i]);
-			if (!slab) {
-				char name[16];
-				snprintf (name, sizeof (name), "kmalloc-%lu", slab_sizes[i]);
-				slab = slab_create (name, slab_sizes[i]);
-				if (!slab) {
-					spin_unlock (&kmalloc_lock);
-					return NULL;
-				}
-				atomic_store_release (&slabs[i], slab);
-			}
-			spin_unlock (&kmalloc_lock);
-		}
-
-		return slab_alloc (slab);
+		return slab_alloc (slabs[kmalloc_find_slab (size)]);
 	}
 
 	if (size <= PAGE_SIZE)
