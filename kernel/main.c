@@ -15,6 +15,7 @@
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/sched.h>
+#include <davix/slab.h>
 #include <davix/smp.h>
 #include <davix/task_api.h>
 #include <davix/vmap.h>
@@ -97,6 +98,8 @@ start_init (void *arg)
 	uacpi_namespace_initialize ();
 	uacpi_finalize_gpe_initialization ();
 #endif
+
+	slab_dump ();
 
 	if (boot_module_start == boot_module_end)
 		panic ("No boot module was provided!");

@@ -12,6 +12,27 @@
 #include <davix/string.h>
 #include <asm/cpulocal.h>
 
+static __CPULOCAL struct kmalloc_stat {
+	unsigned long nr_quickbin_hit;
+	unsigned long nr_quickbin_miss;
+	unsigned long nr_alloc_page;
+	unsigned long nr_failed_alloc;
+	unsigned long nr_quickbin_free;
+	unsigned long nr_expensive_free;
+	unsigned long nr_free_page;
+} pcpu_slab_stat;
+
+#define inc_slab_stat(name) this_cpu_write (&pcpu_slab_stat.name,	\
+		this_cpu_read (&pcpu_slab_stat.name) + 1)
+
+#define inc_nr_quickbin_hit() inc_slab_stat(nr_quickbin_hit)
+#define inc_nr_quickbin_miss() inc_slab_stat(nr_quickbin_miss)
+#define inc_nr_alloc_page() inc_slab_stat(nr_alloc_page)
+#define inc_nr_failed_alloc() inc_slab_stat(nr_failed_alloc)
+#define inc_nr_quickbin_free() inc_slab_stat(nr_quickbin_free)
+#define inc_nr_expensive_free() inc_slab_stat(nr_expensive_free)
+#define inc_nr_free_page() inc_slab_stat(nr_free_page)
+
 struct pcpu_quickbin {
 	unsigned long num;
 	void *ptrs[];
@@ -94,6 +115,23 @@ slab_dump_one (struct slab *slab)
 		nr_obj_free);
 }
 
+static struct kmalloc_stat
+collect_kmalloc_stat (void)
+{
+	struct kmalloc_stat stat = { 0, 0, 0, 0, 0, 0, 0 };
+	for_each_present_cpu (cpu) {
+		struct kmalloc_stat *p = that_cpu_ptr (&pcpu_slab_stat, cpu);
+		stat.nr_quickbin_hit += p->nr_quickbin_hit;
+		stat.nr_quickbin_miss += p->nr_quickbin_miss;
+		stat.nr_alloc_page += p->nr_alloc_page;
+		stat.nr_failed_alloc += p->nr_failed_alloc;
+		stat.nr_quickbin_free += p->nr_quickbin_free;
+		stat.nr_expensive_free += p->nr_expensive_free;
+		stat.nr_free_page += p->nr_free_page;
+	}
+	return stat;
+}
+
 void
 slab_dump (void)
 {
@@ -108,6 +146,16 @@ slab_dump (void)
 
 	list_for_each (entry, &slab_list)
 		slab_dump_one (list_item (struct slab, slab_list, entry));
+
+	struct kmalloc_stat stat = collect_kmalloc_stat ();
+	printk (PR_INFO "Slab statistics:\n");
+	printk (PR_INFO "  nr_quickbin_hit    %lu\n", stat.nr_quickbin_hit);
+	printk (PR_INFO "  nr_quickbin_miss   %lu\n", stat.nr_quickbin_miss);
+	printk (PR_INFO "  nr_alloc_page      %lu\n", stat.nr_alloc_page);
+	printk (PR_INFO "  nr_failed_alloc    %lu\n", stat.nr_failed_alloc);
+	printk (PR_INFO "  nr_quickbin_free   %lu\n", stat.nr_quickbin_free);
+	printk (PR_INFO "  nr_expensive_free  %lu\n", stat.nr_expensive_free);
+	printk (PR_INFO "  nr_free_page       %lu\n", stat.nr_free_page);
 }
 
 static void
@@ -139,7 +187,7 @@ slab_init_new (struct slab *slab, const char *name, unsigned long obj_size)
 	slab->real_obj_size = real_size;
 	slab->objs_per_page = PAGE_SIZE / real_size;
 
-	slab->quickbin_len = min (unsigned long, 15, slab->objs_per_page - 1);
+	slab->quickbin_len = min (unsigned long, 31, slab->objs_per_page - 1);
 	unsigned long quickbin_size = offsetof (struct pcpu_quickbin,
 			ptrs[slab->quickbin_len]);
 	slab->quickbin = cpulocal_rt_alloc (quickbin_size, 128);
@@ -230,10 +278,12 @@ slab_alloc (struct slab *slab)
 			num--;
 			this_cpu_write (&quick->num, num);
 			void *obj = this_cpu_read (&quick->ptrs[num]);
+			inc_nr_quickbin_hit ();
 			preempt_on ();
 			return obj;
 		}
 	}
+	inc_nr_quickbin_miss ();
 
 	__spin_lock (&slab->lock);
 	struct pfn_entry *page = NULL;
@@ -276,10 +326,12 @@ slab_alloc (struct slab *slab)
 		} else
 			slab->nr_empty++;
 	} else {
+		inc_nr_alloc_page ();
 		page = slab_alloc_page ();
-		if (__builtin_expect (!page, 0))
+		if (__builtin_expect (!page, 0)) {
+			inc_nr_failed_alloc ();
 			obj = NULL;	/* OOM, womp womp...  */
-		else {
+		} else {
 			set_page_flags (page, PFN_SLAB);
 			page->pfn_slab.slab = slab;
 
@@ -306,6 +358,7 @@ slab_alloc (struct slab *slab)
 			page->pfn_slab.pobj = head;
 			if (head) {
 				slab->nr_partial++;
+				slab->nr_obj_free += page->pfn_slab.nfree;
 				list_insert (&slab->pg_partial_list, &page->pfn_slab.list);
 			} else
 				slab->nr_empty++;
@@ -338,19 +391,23 @@ slab_free (void *ptr)
 		if (num != slab->quickbin_len) {
 			this_cpu_write (&quick->ptrs[num], ptr);
 			this_cpu_write (&quick->num, num + 1);
+			inc_nr_quickbin_free ();
 			preempt_on ();
 			return;
 		}
 	}
 
+	inc_nr_expensive_free ();
 	bool should_free_page = false;
 
 	__spin_lock (&slab->lock);
 	*(void **) ptr = page->pfn_slab.pobj;
 	page->pfn_slab.pobj = ptr;
 	page->pfn_slab.nfree++;
+	slab->nr_obj_free++;
 	if (page->pfn_slab.nfree == 1) {
 		/** objs_per_page is never equal to 1.  */
+		slab->nr_empty--;
 		slab->nr_partial++;
 		list_insert (&slab->pg_partial_list, &page->pfn_slab.list);
 	} else if (page->pfn_slab.nfree == slab->objs_per_page) {
@@ -359,8 +416,11 @@ slab_free (void *ptr)
 		if (slab->nr_full < 2) {
 			slab->nr_full++;
 			list_insert (&slab->pg_full_list, &page->pfn_slab.list);
-		} else
+		} else {
 			should_free_page = true;
+			slab->nr_obj_free -= slab->objs_per_page;
+			inc_nr_free_page ();
+		}
 	}
 	__spin_unlock (&slab->lock);
 	preempt_on ();
