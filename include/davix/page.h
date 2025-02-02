@@ -54,7 +54,19 @@ get_page_flags (struct pfn_entry *entry)
 }
 
 /* pfn_entry->flags */
+/**
+ * Bits in pfn_entry->flags:
+ *	PFN_SLAB	Indicates that this page holds objects for the slab
+ *			allocator.
+ *	PFN_IO		IO is being performed on the page.
+ *	PFN_IOPOISON	The page has been "poisoned" by bad IO (e.g. read from
+ *			disk failing).
+ *	PFN_UNINIT	The page is "uninitialized" and cannot be read from.
+ */
 #define PFN_SLAB	(1UL << 1)
+#define PFN_IO		(1UL << 2)
+#define PFN_IOPOISON	(1UL << 3)
+#define PFN_UNINIT	(1UL << 4)
 
 _Static_assert (sizeof (struct pfn_entry) == ARCH_PFN_ENTRY_SIZE, "pfn_entry");
 
