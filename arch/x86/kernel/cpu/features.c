@@ -2,6 +2,7 @@
  * CPU feature enumeration.
  * Copyright (C) 2024  dbstream
  */
+#include <davix/stddef.h>
 #include <davix/string.h>
 #include <asm/cpuid.h>
 #include <asm/features.h>
@@ -17,6 +18,8 @@ unsigned int bsp_feature_array[6];
 unsigned int cpu_vendor = CPU_VENDOR_UNKNOWN;
 char cpu_brand[13] = "(unknown)";
 char cpu_model[49] = "(unknown)";
+
+unsigned long x86_max_phys_addr = 0x100000000UL;
 
 static void
 load_features (unsigned int *features,
@@ -80,6 +83,14 @@ load_features (unsigned int *features,
 
 	switch (a) {
 	default:
+		a = 0x80000008U;
+		c = 0;
+		__cpuid (&a, &b, &c, &d);
+
+		x86_max_phys_addr = 1UL << max (unsigned int, 32U,
+				min (unsigned int, 52U, a & 0xffU));
+		__attribute__ ((fallthrough));
+	case 0x80000007U:
 		a = 0x80000007U;
 		c = 0;
 		__cpuid (&a, &b, &c, &d);

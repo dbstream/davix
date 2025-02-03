@@ -299,6 +299,8 @@ arch_init (void)
 	x86_pgtable_init ();
 
 	printk (PR_NOTICE "CPU: %s %s\n", cpu_brand, cpu_model);
+	printk (PR_NOTICE "max_phys_addr=0x%lx  (%lu GiB)\n", x86_max_phys_addr,
+			x86_max_phys_addr >> 30U);
 
 	reserve_stuff ();
 	init_acpi_tables_early ();

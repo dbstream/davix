@@ -17,6 +17,8 @@ extern unsigned int cpu_vendor;
 extern char cpu_brand[];
 extern char cpu_model[];
 
+extern unsigned long x86_max_phys_addr;
+
 #define CPU_VENDOR_UNKNOWN	0
 #define CPU_VENDOR_AMD		1
 #define CPU_VENDOR_INTEL	2

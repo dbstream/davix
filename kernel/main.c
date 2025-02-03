@@ -8,6 +8,7 @@
 #include <davix/file.h>
 #include <davix/fs.h>
 #include <davix/initmem.h>
+#include <davix/ioresource.h>
 #include <davix/kmalloc.h>
 #include <davix/ktest.h>
 #include <davix/main.h>
@@ -123,6 +124,7 @@ main (void)
 	printk (PR_NOTICE "Davix version %s\n", kernel_version);
 
 	arch_init ();
+	init_ioresource ();
 	arch_init_pfn_entry ();
 	smp_init ();
 

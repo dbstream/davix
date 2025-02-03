@@ -8,6 +8,7 @@ kobjs += exec.o
 kobjs += exec_elf.o
 kobjs += exit.o
 kobjs += interrupt.o
+kobjs += ioresource.o
 kobjs += main.o
 kobjs += panic.o
 kobjs += printk.o
