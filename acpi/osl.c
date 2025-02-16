@@ -196,9 +196,7 @@ uacpi_kernel_unmap(void *addr, uacpi_size len)
 	(void) len;
 	vunmap (addr);
 }
-uacpi_status uacpi_kernel_io_read8(
-    uacpi_handle, uacpi_size offset, uacpi_u8 *out_value
-);
+
 void *
 uacpi_kernel_alloc (uacpi_size size)
 {
