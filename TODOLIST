@@ -5,21 +5,31 @@ currently doing and what I have planned, don't expect any correct or important
 information in here.
 
 Currently the kernel doesn't do much other than boot and print some messages to
-the QEMU debugcon port (port 0xe9).
+the framebuffer device, if there is one.
 
-Planned features, in rough order of implementation:
+Planned changes:
 
-- Async work scheduling
-  - Allow processors in normal and IRQ context to schedule work to run in normal
-    context on the same CPU. Useful for e.g. (non-smpboot) TSC synchronization,
-    where one CPU needs to send an IPI to another CPU while avoiding deadlock.
+- Implement a kernel backtrace mechanism.
 
-- Longterm: Make printk NMI-safe
-  - In printk_emit_message(), disable IRQs when printing
-  - If during NMI, store the message to a per-CPU message buffer and signal a
-    self-IPI (which will be handled the next time IRQs are enabled after
-    returning from NMI context).
+  - Implement an address->symbol mapping scheme so we can print symbol names
+    instead of addresses.
 
-- Longterm: Userspace
-  - Start out very basic, for example by mapping the initrd at a fixed address
-    and jumping to it.
+  - Perform DWARF unwinding in an offline tool that generates information in a
+    kernel-internal format.
+
+- Implement missing uACPI kernel APIs.
+
+  - Implement PCI configuration space access.
+
+  - Implement GPE work and notify work queues.
+
+  - Implement semaphores.
+
+- Have file contents.
+
+  - Implement a page cache that can be (ab)used by tmpfs to store file contents.
+
+  - Change the boot module to be a 'real' initrd that we unpack into root tmpfs
+    and execve(/init) from.
+
+
