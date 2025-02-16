@@ -229,6 +229,8 @@ fbcon_register_framebuffer (uint32_t width, uint32_t height, uint32_t pitch,
 	fbcon_flush (fbcon);
 
 	console_register (&fbcon->con);
+	printk ("fbcon:  registered new framebuffer at virt %p  (%ux%ux%d)\n",
+			front, width, height, fmt->bpp);
 	return fbcon;
 }
 
