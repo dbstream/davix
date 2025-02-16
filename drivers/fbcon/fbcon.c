@@ -6,6 +6,7 @@
 #include <davix/fbcon.h>
 #include <davix/kmalloc.h>
 #include <davix/printk.h>
+#include <davix/snprintf.h>
 #include <davix/string.h>
 
 extern uint8_t VGA9_F16[];
@@ -44,6 +45,7 @@ struct fbcon {
 	uint32_t c_warn;
 	uint32_t c_err;
 	uint32_t c_crit;
+	uint32_t c_msgtime;
 };
 
 static inline uint8_t *
@@ -145,10 +147,29 @@ static void
 fbcon_emit_message (struct console *con,
 		int level, usecs_t msg_time, const char *msg)
 {
-	(void) con;
-	(void) level;
-	(void) msg_time;
-	(void) msg;
+	struct fbcon *fbcon = struct_parent (struct fbcon, con, con);
+
+	char buf[24];
+	snprintf (buf, sizeof (buf), "[%5llu.%06llu] ",
+		msg_time / 1000000, msg_time % 1000000);
+
+	uint32_t fg, bg = fbcon->c_background;
+	uint32_t fg_colors[6] = {
+		fbcon->c_info,
+		fbcon->c_info,
+		fbcon->c_notice,
+		fbcon->c_warn,
+		fbcon->c_err,
+		fbcon->c_crit
+	};
+	if (level >= 6)
+		fg = fbcon->c_crit;
+	else
+		fg = fg_colors[level];
+
+	fbcon_print (fbcon, buf, bg, fbcon->c_msgtime);
+	fbcon_print (fbcon, msg, bg, fg);
+	fbcon_flush (fbcon);
 }
 
 struct fbcon *
@@ -185,6 +206,7 @@ fbcon_register_framebuffer (uint32_t width, uint32_t height, uint32_t pitch,
 	fbcon->c_warn =		get_color (fmt, 255, 127,   0);
 	fbcon->c_err =		get_color (fmt, 220,   0,   0);
 	fbcon->c_crit =		get_color (fmt, 255,   0,   0);
+	fbcon->c_msgtime =	get_color (fmt,   0, 255,   0);
 	if (back) {
 		fbcon->back = back;
 		fbcon->is_internal_back = false;
@@ -204,15 +226,6 @@ fbcon_register_framebuffer (uint32_t width, uint32_t height, uint32_t pitch,
 		for (uint32_t j = 0; j < fbcon->width; j++)
 			putpixel (&p, c, 32);
 	}
-	for (int i = 0; i < 30; i++)
-		fbcon_print (fbcon, "hello world\ngoodbye world\n", fbcon->c_background, fbcon->c_info);
-	fbcon_print (fbcon, "info\n", fbcon->c_background, fbcon->c_info);
-	fbcon_print (fbcon, "notice\n", fbcon->c_background, fbcon->c_notice);
-	fbcon_print (fbcon, "warn\n", fbcon->c_background, fbcon->c_warn);
-	fbcon_print (fbcon, "err\n", fbcon->c_background, fbcon->c_err);
-	fbcon_print (fbcon, "crit\n", fbcon->c_background, fbcon->c_crit);
-	fbcon_print (fbcon, "reeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaly looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong liiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiine\n",
-			fbcon->c_background, fbcon->c_notice);
 	fbcon_flush (fbcon);
 
 	console_register (&fbcon->con);

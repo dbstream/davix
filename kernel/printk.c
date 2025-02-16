@@ -4,6 +4,7 @@
  */
 #include <davix/console.h>
 #include <davix/export.h>
+#include <davix/spinlock.h>
 #include <davix/stdarg.h>
 #include <davix/stddef.h>
 #include <davix/printk.h>
@@ -12,16 +13,32 @@
 #include <davix/time.h>
 #include <asm/usercopy.h>
 
+static spinlock_t console_lock;
+static DEFINE_EMPTY_LIST (console_list);
+
 void
 console_register (struct console *con)
 {
-	(void) con;
+	bool flag = spin_lock_irq (&console_lock);
+	list_insert (&console_list, &con->list);
+	spin_unlock_irq (&console_lock, flag);
 }
 
 void
 console_unregister (struct console *con)
 {
-	(void) con;
+	bool flag = spin_lock_irq (&console_lock);
+	list_delete (&con->list);
+	spin_unlock_irq (&console_lock, flag);
+}
+
+static void
+__emit_message (int level, usecs_t msg_time, const char *msg)
+{
+	list_for_each (entry, &console_list) {
+		struct console *console = list_item (struct console, list, entry);
+		console->emit_message (console, level, msg_time, msg);
+	}
 }
 
 static void
@@ -36,6 +53,17 @@ emit_message (int level, usecs_t msg_time, const char *msg)
 		return;
 
 	arch_printk_emit (level, msg_time, msg);
+
+	if (in_nmi ()) {
+		if (spin_trylock (&console_lock)) {
+			__emit_message (level, msg_time, msg);
+			__spin_unlock (&console_lock);
+		}
+	} else {
+		bool flag = spin_lock_irq (&console_lock);
+		__emit_message (level, msg_time, msg);
+		spin_unlock_irq (&console_lock, flag);
+	}
 }
 
 VISIBLE
