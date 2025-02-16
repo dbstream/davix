@@ -12,6 +12,18 @@
 #include <davix/time.h>
 #include <asm/usercopy.h>
 
+void
+console_register (struct console *con)
+{
+	(void) con;
+}
+
+void
+console_unregister (struct console *con)
+{
+	(void) con;
+}
+
 static void
 emit_message (int level, usecs_t msg_time, const char *msg)
 {

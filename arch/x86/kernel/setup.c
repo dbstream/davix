@@ -6,11 +6,16 @@
 #include <acpi/tables.h>
 #include <davix/align.h>
 #include <davix/efi_types.h>
+#include <davix/fbcon.h>
 #include <davix/initmem.h>
+#include <davix/ioresource.h>
+#include <davix/kmalloc.h>
 #include <davix/main.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/stddef.h>
+#include <davix/string.h>
+#include <davix/vmap.h>
 #include <asm/acpi.h>
 #include <asm/apic.h>
 #include <asm/cregs.h>
@@ -320,9 +325,80 @@ arch_init (void)
 	apic_init ();
 }
 
+static void
+add_framebuffer (struct multiboot_framebuffer *tag)
+{
+	printk (PR_INFO "mbi framebuffer:  0x%lx  %ux%ux%d  type %d\n",
+			tag->framebuffer_addr, tag->width, tag->height,
+			tag->bpp, tag->framebuffer_type);
+	if (tag->framebuffer_type != MB2_FRAMEBUFFER_COLOR) {
+		printk (PR_WARN "mbi framebuffer: only color framebuffers (type 1) are supported at the moment\n");
+		return;
+	}
+
+	struct ioresource *res = kmalloc (sizeof (*res));
+	if (!res) {
+		printk (PR_ERR "mbi framebuffer: OOM in add_framebuffer\n");
+		return;
+	}
+
+	unsigned long size = (unsigned long) tag->height * tag->pitch;
+	unsigned long first = ALIGN_DOWN (tag->framebuffer_addr, PAGE_SIZE);
+	unsigned long last = ALIGN_UP (tag->framebuffer_addr + size, PAGE_SIZE) - 1;
+	res->vma_node.first = first;
+	res->vma_node.last = last;
+	strncpy (res->name, "mbi framebuffer", sizeof (res->name));
+	if (register_ioresource (&iores_system_memory, res) != ESUCCESS) {
+		printk (PR_ERR "mbi framebuffer: failed to register ioresource\n");
+		kfree (res);
+		return;
+	}
+
+	void *mapped = vmap_phys ("mbi framebuffer", tag->framebuffer_addr, size,
+			PAGE_KERNEL_DATA | PG_WC);
+	if (!mapped) {
+		printk (PR_ERR "mbi framebuffer: failed to vmap memory\n");
+		unregister_ioresource (res);
+		kfree (res);
+		return;
+	}
+
+	struct fbcon_format_info fmt = {
+		.bpp = tag->bpp,
+		.red_offset = tag->red_shift,
+		.green_offset = tag->green_shift,
+		.blue_offset = tag->blue_shift,
+		.red_mask = ((1U << tag->red_bits) - 1) << tag->red_shift,
+		.green_mask = ((1U << tag->green_bits) - 1) << tag->green_shift,
+		.blue_mask = ((1U << tag->green_bits) - 1) << tag->blue_shift
+	};
+	struct fbcon *con = fbcon_register_framebuffer (tag->width, tag->height,
+			tag->pitch, &fmt, mapped, NULL);
+	if (!con) {
+		vunmap (mapped);
+		unregister_ioresource (res);
+		kfree (res);
+	}
+}
+
 void
 arch_init_late (void)
 {
 	x86_mm_init_late ();
 	ioapic_init ();
+
+	/**
+	 * When arch_init_late is called, we have removed the lower-half
+	 * identity mapping that boot_params used to reside it.  Move it
+	 * to higher-half to make it accessible to us.
+	 */
+	boot_params = (struct multiboot_params *) phys_to_virt (boot_params);
+
+	struct multiboot_tag *tag;
+	for (tag = mb2_first (); tag; tag = mb2_next (tag)) {
+		switch (tag->type) {
+		case MB2_TAG_FRAMEBUFFER:
+			add_framebuffer ((struct multiboot_framebuffer *) tag);
+		}
+	}
 }

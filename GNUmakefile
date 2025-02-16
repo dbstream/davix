@@ -83,6 +83,7 @@ export CC AS LD OBJCOPY CPPFLAGS CFLAGS AFLAGS
 
 kobjs += acpi/
 kobjs += arch/$(ARCH)/
+kobjs += drivers/
 kobjs += fs/
 kobjs += kernel/
 kobjs += ktest/
