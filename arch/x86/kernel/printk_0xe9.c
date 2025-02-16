@@ -13,6 +13,8 @@
 #include <asm/io.h>
 #include <asm/irq.h>
 
+#if CONFIG_DEBUGCON
+
 static void
 write_string (const char *s)
 {
@@ -83,3 +85,15 @@ arch_printk_emit (int level, usecs_t msg_time, const char *msg)
 	write_string ("\e[0m");
 	ungrab_lock (status);
 }
+
+#else
+
+void
+arch_printk_emit (int level, usecs_t msg_time, const char *msg)
+{
+	(void) level;
+	(void) msg_time;
+	(void) msg;
+}
+
+#endif
