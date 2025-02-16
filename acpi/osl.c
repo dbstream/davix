@@ -186,8 +186,13 @@ uacpi_kernel_io_write32 (uacpi_handle base, uacpi_size offset, uacpi_u32 value)
 void *
 uacpi_kernel_map (uacpi_phys_addr addr, uacpi_size len)
 {
+	/**
+	 * FIXME: now we map everything as write-back, which is fine on x86
+	 * since the MTRRs correctly deal with caching modes.  But ideally we
+	 * only want to rely on ourselves for this.
+	 */
 	return vmap_phys ("uacpi_kernel_map", addr, len,
-			PAGE_KERNEL_DATA | PG_UC_MINUS);
+			PAGE_KERNEL_DATA /* | PG_UC_MINUS */);
 }
 
 void
