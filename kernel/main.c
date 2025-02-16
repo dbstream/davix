@@ -100,7 +100,7 @@ start_init (void *arg)
 	uacpi_finalize_gpe_initialization ();
 #endif
 
-	slab_dump ();
+//	slab_dump ();
 
 	if (boot_module_start == boot_module_end)
 		panic ("No boot module was provided!");

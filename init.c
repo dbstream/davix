@@ -151,6 +151,8 @@ _start (void)
 	/** note that we're alive...  */
 	dmesg ("\"%s\" from userspace!\n", "hello world");
 
+	if (1) goto exit;
+
 	/** test the VFS... */
 	show_stat ("/");
 	show_stat ("/foo");
@@ -176,6 +178,7 @@ _start (void)
 	dmesg ("SYS_reboot(REBOOT_CMD_POWEROFF) returned %d\n",
 			reboot (REBOOT_CMD_POWEROFF, 0));
 #endif
+exit:
 	asm volatile ("syscall" :: "a" (__SYS_exit),
 			"D" (0)
 			: "rsi", "rdx", "r10", "r8", "r9", "cc", "rcx", "r11");
