@@ -24,3 +24,4 @@ kobjs += task_switch.o
 kobjs += task.o
 kobjs += time.o
 kobjs += tsc.o
+kobjs += unwind.o

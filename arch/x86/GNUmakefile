@@ -68,11 +68,32 @@ LDSCRIPT-davix := $(obj)kernel.lds
 $(obj)kernel.lds: $(src)arch/$(ARCH)/kernel.lds.S FORCE
 	$(call cond_cmd,cpp)
 
-targets += $(obj)davix
+# FIXME: This is really annoying.  It also doesn't automatically re-run if
+# davix.elf changes.
+$(obj)kernel_end: $(obj)davix.elf
+	$(Q)printf '0x%x' $$(($$(nm build/davix.elf | awk '/[0-9a-f]+ T __kernel_end/ { print "0x"$$1 }') - 0xffffffff80000000)) > $@
+
+targets += $(obj)davix.intermediary
 pri_objcopy = OBJCOPY $(target)
-cmd_objcopy = $(OBJCOPY) -O binary $< $@
-$(obj)davix: $(obj)davix.elf FORCE
+cmd_objcopy = $(OBJCOPY) -O binary --pad-to=$(shell cat $(obj)kernel_end) $< $@
+$(obj)davix.intermediary: $(obj)davix.elf $(obj)kernel_end FORCE
 	$(call cond_cmd,objcopy)
+
+$(obj)arch/x86/tools/gen_embed: FORCE
+	$(Q)mkdir -p -- $(obj)arch/x86/tools
+	$(Q)$(MAKE) -f $(BUILD_MAKEFILE) subdir=$(subdir)arch/x86/tools/ $(obj)arch/x86/tools/gen_embed
+
+targets += $(obj)davix.embed
+pri_embed = EMBED   $(target)
+cmd_embed = $(obj)arch/x86/tools/gen_embed $< > $@
+$(obj)davix.embed: $(obj)davix.elf $(obj)arch/x86/tools/gen_embed FORCE
+	$(call cond_cmd,embed)
+
+targets += $(obj)davix
+pri_cat = CAT     $(target)
+cmd_cat = cat $(filter-out FORCE,$^) > $@
+$(obj)davix: $(obj)davix.intermediary $(obj)davix.embed FORCE
+	$(call cond_cmd,cat)
 
 all: $(obj)davix
 

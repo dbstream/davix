@@ -21,6 +21,7 @@
 #include <davix/task_api.h>
 #include <davix/vmap.h>
 #include <davix/workqueue.h>
+#include <asm/unwind.h>
 #include <asm/irq.h>
 #include <asm/mm.h>
 #include <asm/page.h>
@@ -101,6 +102,8 @@ start_init (void *arg)
 #endif
 
 //	slab_dump ();
+
+	dump_backtrace ();
 
 	if (boot_module_start == boot_module_end)
 		panic ("No boot module was provided!");

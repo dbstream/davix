@@ -79,8 +79,10 @@ reserve_stuff (void)
 	unsigned long header_start = (unsigned long) __header_start;
 	unsigned long kernel_end = (unsigned long) __kernel_end;
 
+	unsigned long embed_size = *(unsigned long *) kernel_end;
+
 	initmem_reserve (header_start - __KERNEL_START + kernel_load_offset,
-		kernel_end - header_start,
+		ALIGN_UP (embed_size, PAGE_SIZE) + kernel_end - header_start,
 		INITMEM_KERN_RESERVED);
 
 	initmem_reserve ((unsigned long) boot_params, boot_params->size,

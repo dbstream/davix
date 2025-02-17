@@ -391,11 +391,14 @@ x86_paging_init (void)
 	boot_pgt_end = ktext_pa (&boot_page_tables[
 		PAGE_SIZE * MAX_BOOT_PAGE_TABLES]);
 
+	unsigned long embed_size = *(unsigned long *) __kernel_end;
+
 	map_kernel_range (__text_start, __text_end, PAGE_KERNEL_TEXT);
 	map_kernel_range (__rodata_start, __rodata_end, PAGE_KERNEL_RODATA);
 	map_kernel_range (__data_start, __data_end, PAGE_KERNEL_DATA);
 	map_kernel_range (__cpulocal_virt_start, __cpulocal_virt_end, PAGE_KERNEL_DATA);
 	map_kernel_range (__init_start, __init_end, PAGE_KERNEL_DATA & ~__PG_NX);
+	map_kernel_range (__kernel_end, __kernel_end + embed_size, PAGE_KERNEL_RODATA);
 
 	/* allow early_memmap to work */
 	set_page (0xffffffffffe00000UL,
