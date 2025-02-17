@@ -16,6 +16,7 @@
 #include <davix/vmap.h>
 #include <asm/apic.h>
 #include <asm/cregs.h>
+#include <asm/features.h>
 #include <asm/fence.h>
 #include <asm/msr.h>
 #include <asm/smp.h>
@@ -111,6 +112,9 @@ static bool sync_point_2;
 static void
 start_additional_processor (void)
 {
+	if (bsp_has (FEATURE_PAT))
+		write_msr (MSR_PAT, 0x100070406UL);
+
 	mb ();
 
 	atomic_store_relaxed (&sync_point_0, true);
