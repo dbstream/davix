@@ -341,11 +341,11 @@ uacpi_kernel_install_interrupt_handler (uacpi_u32 irq,
 	h->ptr1 = fn;
 	h->ptr2 = ctx;
 	errno_t e = install_interrupt_handler (h, irq, 0);
-	if (e == ESUCCESS)
-		return UACPI_STATUS_OK;
+	if (e != ESUCCESS)
+		return UACPI_STATUS_INTERNAL_ERROR;
 
 	*out = h;
-	return UACPI_STATUS_INTERNAL_ERROR;
+	return UACPI_STATUS_OK;
 }
 
 uacpi_status
