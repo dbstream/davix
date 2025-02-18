@@ -29,24 +29,12 @@
 #include <asm/trap.h>
 #include "multiboot.h"
 
+extern void
+x86_enable_debugcon (void);
+
 __INIT_DATA static struct multiboot_params *boot_params;
 
 unsigned long kernel_load_offset;
-
-__INIT_TEXT
-void
-x86_start_kernel (struct multiboot_params *params, unsigned long load_offset)
-{
-	boot_params = params;
-	kernel_load_offset = load_offset;
-
-	__cpulocal_offsets[0] = this_cpu_read (&__cpulocal_offset);
-
-	__cr0_state = read_cr0 ();
-	__cr4_state = read_cr4 ();
-	bsp_features_init ();
-	main ();
-}
 
 static inline struct multiboot_tag *
 mb2_first (void)
@@ -70,6 +58,39 @@ mb2_next (struct multiboot_tag *tag)
 		tag = NULL;
 
 	return tag;
+}
+
+__INIT_TEXT
+void
+x86_start_kernel (struct multiboot_params *params, unsigned long load_offset)
+{
+	boot_params = params;
+	kernel_load_offset = load_offset;
+
+	__cpulocal_offsets[0] = this_cpu_read (&__cpulocal_offset);
+
+	__cr0_state = read_cr0 ();
+	__cr4_state = read_cr4 ();
+	bsp_features_init ();
+
+	/** TODO: implement global infrastructure for command-line parsing.  */
+	struct multiboot_tag *tag;
+	for (tag = mb2_first (); tag; tag = mb2_next (tag)) {
+		if (tag->type != MB2_TAG_CMDLINE)
+			continue;
+
+		struct multiboot_string *cmdline = (struct multiboot_string *) tag;
+		const char *e, *s = cmdline->value;
+		while (*s) {
+			e = strchrnul (s, ' ');
+			if (e - s == 8 && !memcmp (s, "debugcon", 8))
+				x86_enable_debugcon ();
+			s = e;
+		}
+		break;
+	}
+
+	main ();
 }
 
 __INIT_TEXT

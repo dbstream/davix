@@ -52,9 +52,11 @@ emit_message (int level, usecs_t msg_time, const char *msg)
 	if (!level)
 		return;
 
-	arch_printk_emit (level, msg_time, msg);
-
 	if (in_nmi ()) {
+		/**
+		 * FIXME: don't drop messages that are emitted from NMI context
+		 * if the spin_trylock fails.
+		 */
 		if (spin_trylock (&console_lock)) {
 			__emit_message (level, msg_time, msg);
 			__spin_unlock (&console_lock);

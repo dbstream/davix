@@ -27,4 +27,7 @@ strpcpy (char *dst, const char *src, unsigned long n);
 extern int
 strncmp (const char *s1, const char *s2, unsigned long n);
 
+const char *
+strchrnul (const char *s, char c);
+
 #endif /* _DAVIX_STRING_H */

@@ -5,7 +5,7 @@
 # This is simply YYYY.MM.DD.N, the date when I last bothered to change this. We
 # will probably move to some kind of major-minor-patch versioning scheme once
 # userspace gets going.
-KERNELVERSION	:= 2024.12.3.1
+KERNELVERSION	:= 2025.02.18.1
 export KERNELVERSION
 
 ifeq ($(obj),)

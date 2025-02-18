@@ -237,7 +237,15 @@ insmod efi_gop
 set default=0
 set timeout=1
 
-menuentry "Davix kernel" {
+menuentry "Davix kernel (with debugcon)" {
+	echo "Loading multiboot2 image..."
+	multiboot2 /davix debugcon
+	module2 /davixinit
+	echo "Booting..."
+	boot
+}
+
+menuentry "Davix kernel (without debugcon)" {
 	echo "Loading multiboot2 image..."
 	multiboot2 /davix
 	module2 /davixinit
@@ -254,7 +262,13 @@ else
 	cp $LIMINE_DATADIR/limine-uefi-cd.bin $LIMINE_DATADIR/limine-bios-cd.bin $LIMINE_DATADIR/limine-bios.sys /tmp/isodir
 	cat << EOF >> /tmp/isodir/limine.conf
 timeout: 1
-/Davix kernel
+/Davix kernel (with debugcon)
+	comment: davix operating system kernel (with debugcon output to 0xe9)
+	protocol: multiboot2
+	path: boot():/davix
+	cmdline: debugcon
+	module_path: boot():/davixinit
+/Davix kernel (without debugcon)
 	comment: davix operating system kernel
 	protocol: multiboot2
 	path: boot():/davix

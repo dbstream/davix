@@ -167,17 +167,6 @@ set_result (struct pathwalk_state *state, struct path path)
 	state->has_result_component = 1;
 }
 
-static const char *
-strchrnul (const char *s, char c)
-{
-	while (*s != c) {
-		if (!*s)
-			break;
-		s++;
-	}
-	return s;
-}
-
 struct components {
 	const char *cursor;
 	unsigned int trailing_slash :1;

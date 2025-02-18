@@ -109,3 +109,14 @@ strncmp(const char *s1, const char *s2, unsigned long n)
 
         return 0;
 }
+
+const char *
+strchrnul (const char *s, char c)
+{
+	while (*s != c) {
+		if (!*s)
+			break;
+		s++;
+	}
+	return s;
+}
