@@ -14,6 +14,7 @@
 #include <asm/ipi.h>
 #include <asm/irq.h>
 #include <asm/smp.h>
+#include <asm/unwind.h>
 
 /**
  * panic callbacks
@@ -127,7 +128,8 @@ __panic (const char *msg)
 
 	panic_invoke_callbacks ();
 	printk (PR_CRIT "Kernel panic on CPU%u: %s\n", this_cpu_id (), msg);
-	printk (PR_CRIT "Idling...\n");
+	dump_backtrace ();
+	printk (PR_NOTICE "Idling...\n");
 	panic_stop_self ();
 }
 

@@ -224,7 +224,7 @@ dump_backtrace (void)
 		return;
 	}
 
-	printk (PR_INFO "Stack trace:\n");
+	printk (PR_NOTICE "Stack trace:\n");
 
 	int num = 1;
 	bool unwind_bad = false;
@@ -253,7 +253,7 @@ dump_backtrace (void)
 		unsigned long frame_end;
 		if (status == UNWIND_BAD) {
 			if (!unwind_bad) {
-				printk (PR_INFO "    (CFI-based unwind failed)\n");
+				printk (PR_NOTICE "    (CFI-based unwind failed)\n");
 				unwind_bad = true;
 			}
 			frame_end = end;
@@ -266,16 +266,16 @@ dump_backtrace (void)
 			unsigned long addr = *(unsigned long *) state.current_sp;
 			struct symbol_data sym = find_symbol (addr);
 			if (state.current_sp == state.unwound_sp)
-				printk (PR_INFO "  #%02d    0x%lx  (%s+0x%lx)\n",
+				printk (PR_NOTICE "  #%02d    0x%lx  (%s+0x%lx)\n",
 						num++, addr,
 						sym.name, addr - sym.start);
 			else if (sym.size != 0)
-				printk (PR_INFO "  #%02d  ? 0x%lx  (%s+0x%lx)\n",
+				printk (PR_NOTICE "  #%02d  ? 0x%lx  (%s+0x%lx)\n",
 						num++, addr,
 						sym.name, addr - sym.start);
 			state.current_sp += 8;
 			if (num > 30) {
-				printk (PR_INFO "  --- stack trace truncated ---\n");
+				printk (PR_NOTICE "  --- stack trace truncated ---\n");
 				return;
 			}
 		}
@@ -299,5 +299,5 @@ dump_backtrace (void)
 					state.current_ip, state.current_sp);
 		}
 	}
-	printk (PR_INFO "  --- end of stack trace ---\n");
+	printk (PR_NOTICE "  --- end of stack trace ---\n");
 }
