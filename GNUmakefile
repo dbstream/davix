@@ -70,6 +70,7 @@ CFLAGS :=					\
 	-Wextra					\
 	-Werror					\
 	-O2					\
+	-g					\
 	-ffreestanding				\
 	-fvisibility=hidden			\
 	-nostdlib				\

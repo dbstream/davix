@@ -58,7 +58,6 @@ LDFLAGS-davix := \
 	--no-dynamic-linker	\
 	-static			\
 	--emit-relocs		\
-	--eh-frame-hdr		\
 	-T
 
 LDLIBS-davix :=
@@ -71,11 +70,11 @@ $(obj)kernel.lds: $(src)arch/$(ARCH)/kernel.lds.S FORCE
 # FIXME: This is really annoying.  It also doesn't automatically re-run if
 # davix.elf changes.
 $(obj)kernel_end: $(obj)davix.elf
-	$(Q)printf '0x%x' $$(($$(nm build/davix.elf | awk '/[0-9a-f]+ T __kernel_end/ { print "0x"$$1 }') - 0xffffffff80000000)) > $@
+	$(Q)printf '0x%x' $$(($$(nm $(obj)/davix.elf | awk '/[0-9a-f]+ . __kernel_end/ { print "0x"$$1 }') - 0xffffffff80000000)) > $@
 
 targets += $(obj)davix.intermediary
 pri_objcopy = OBJCOPY $(target)
-cmd_objcopy = $(OBJCOPY) -O binary --pad-to=$(shell cat $(obj)kernel_end) $< $@
+cmd_objcopy = $(OBJCOPY) -O binary --remove-section=.eh_frame --pad-to=$(shell cat $(obj)kernel_end) $< $@
 $(obj)davix.intermediary: $(obj)davix.elf $(obj)kernel_end FORCE
 	$(call cond_cmd,objcopy)
 

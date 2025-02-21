@@ -9,6 +9,11 @@
 #include <asm/sections.h>
 #include <asm/unwind.h>
 
+/**
+ * The format of the embedded information is documented in:
+ *	arch/x86/tools/gen_embed.cc
+ */
+
 static inline const char *
 get_embedded_name (unsigned long offset)
 {

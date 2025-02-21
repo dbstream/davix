@@ -16,6 +16,7 @@ PHDRS
 	data			PT_LOAD		FLAGS(6);
 	cpulocal		PT_LOAD		FLAGS(6);
 	init			PT_LOAD		FLAGS(7);
+	eh_frame		PT_LOAD		FLAGS(4);
 }
 
 SECTIONS
@@ -85,6 +86,14 @@ SECTIONS
 	__init_end = .;
 	__kernel_end = .;
 
+	/**
+	 * Emit .eh_frame into davix.elf.  It will be removed by objcopy when
+	 * creating davix.intermediary.
+	 */
+	.eh_frame	: AT(ADDR(.eh_frame) - __KERNEL_START)	{
+		*(.eh_frame)
+	}							:eh_frame
+
 	. = ASSERT(__cpulocal_offset == 0, "__cpulocal_offset must be 0");
 	. = ASSERT(__this_cpu_id == 8, "__this_cpu_id must be 8");
 	. = ASSERT(__preempt_state == 12, "__preempt_state must be 12");
@@ -94,7 +103,5 @@ SECTIONS
 	/DISCARD/	:					{
 		*(.comment)
 		*(.note .note.*)
-		*(.eh_frame)
-		*(.eh_frame_hdr)
 	}
 }
