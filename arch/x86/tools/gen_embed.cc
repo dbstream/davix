@@ -438,6 +438,9 @@ emit_row (const Row &row)
 					(unsigned long long) row.pos);
 			goto not_unwindable;
 		}
+
+		r.offset -= 8;
+		r.signal = true;
 	}
 
 	if (r.offset == 0xffff) {
@@ -647,8 +650,12 @@ parse_eh_frame (Elf_Data data)
 		cfa_interpret (row, info, info.insns_start, info.end);
 		cfa_interpret (row, info, p, P);
 
+		if (row.pos != end_pc)
+			emit_row (row);
+
 		UnwindRegion r;
 		r.unwindable = false;
+		r.signal = false;
 		r.addr = end_pc;
 		r.offset = 0;
 		unwind_regions.push_back (r);
@@ -830,10 +837,10 @@ main (int argc, char **argv)
 			continue;
 		prevpc = r.addr;
 		prevunwindable = r.unwindable;
-		
+
 		uint64_t offset = add_zeroes (16);
 		set_u64 (offset, r.addr);
-		set_u32 (offset + 8, (r.unwindable << 7) | (r.signal << 6));
+		set_u32 (offset + 8, (r.unwindable ? 0x80 : 0) | (r.signal ? 0x40 : 0));
 		set_u16 (offset + 12, 0);
 		set_u16 (offset + 14, r.offset);
 		num_unwind_regions++;

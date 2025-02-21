@@ -86,6 +86,8 @@ x86_setup_local_traps (void)
 			| ((unsigned long) __USER32_CS << 48));
 }
 
+void *x86_ist_stacks[TRAP_STK_NUM] __CPULOCAL;
+
 __INIT_TEXT
 static void
 setup_traps_for (unsigned int cpu)
@@ -96,6 +98,8 @@ setup_traps_for (unsigned int cpu)
 		void *stk = initmem_alloc_virt (TRAP_STK_SIZE, TRAP_STK_SIZE);
 		if (!stk)
 			panic ("Out-of-memory while allocating exception stacks.");
+
+		that_cpu_write (&x86_ist_stacks[i], cpu, stk);
 
 		/**
 		 * Store the kernel GSBASE at the start of the stack.

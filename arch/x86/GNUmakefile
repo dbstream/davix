@@ -44,7 +44,8 @@ CFLAGS += \
 	-fstack-protector	\
 	-mstack-protector-guard=tls		\
 	-mstack-protector-guard-reg=gs		\
-	-mstack-protector-guard-offset=40
+	-mstack-protector-guard-offset=40	\
+	-fasynchronous-unwind-tables
 
 AFLAGS += \
 	-march=x86-64		\

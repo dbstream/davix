@@ -5,6 +5,7 @@
 #include <davix/printk.h>
 #include <asm/entry.h>
 #include <asm/smp.h>
+#include <asm/unwind.h>
 
 static void
 dump_registers (struct entry_regs *regs)
@@ -32,4 +33,5 @@ handle_BP_interrupt_k (struct entry_regs *regs)
 {
 	printk (PR_INFO "INT3 exception from kernelspace\n");
 	dump_registers (regs);
+	dump_backtrace ();
 }

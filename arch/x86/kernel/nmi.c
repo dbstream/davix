@@ -7,6 +7,7 @@
 #include <davix/printk.h>
 #include <asm/entry.h>
 #include <asm/smp.h>
+#include <asm/unwind.h>
 
 /**
  * If we are in panic, halt the CPU. panic_nmi_handler only returns if the
@@ -33,6 +34,8 @@ handle_NMI (struct entry_regs *regs)
 	if (!check_panic ())
 		printk (PR_INFO "Received non-maskable interrupt on CPU%u\n",
 			this_cpu_id ());
+
+	dump_backtrace ();
 
 	preempt_leave_NMI (state);
 }

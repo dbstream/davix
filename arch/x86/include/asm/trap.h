@@ -51,5 +51,7 @@ x86_setup_local_traps (void);
 extern void
 x86_trap_init (void);
 
+extern void *x86_ist_stacks[] /* __CPULOCAL */;
+
 #endif /* __ASSEMBLER__ */
 #endif /* _ASM_TRAP_H */
