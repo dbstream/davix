@@ -11,6 +11,7 @@
 #include <asm/interrupt.h>
 #include <asm/io.h>
 #include <asm/irq.h>
+#include <asm/mmio.h>
 #include <asm/msr.h>
 #include <asm/sections.h>
 #include <asm/smp.h>
@@ -55,7 +56,7 @@ uint32_t cpu_to_apicid[CONFIG_MAX_NR_CPUS];
 uint32_t cpu_to_acpi_uid[CONFIG_MAX_NR_CPUS];
 
 #define APIC_MSR(offset) (0x800 + ((offset) >> 4))
-#define APIC_REG(offset) (*(volatile uint32_t *) (MAPPED_APIC_BASE + (offset)))
+#define APIC_REG(offset) ((void *) (MAPPED_APIC_BASE + (offset)))
 
 uint32_t
 apic_read (uint32_t offset)
@@ -63,7 +64,7 @@ apic_read (uint32_t offset)
 	if (apic_is_x2apic)
 		return read_msr (APIC_MSR (offset));
 	else
-		return APIC_REG (offset);
+		return mmio_read32 (APIC_REG (offset));
 }
 
 void
@@ -72,7 +73,7 @@ apic_write (uint32_t offset, uint32_t value)
 	if (apic_is_x2apic)
 		write_msr (APIC_MSR (offset), value);
 	else
-		APIC_REG (offset) = value;
+		mmio_write32 (APIC_REG (offset), value);
 }
 
 uint32_t
@@ -81,7 +82,7 @@ apic_read_id (void)
 	if (apic_is_x2apic)
 		return read_msr (APIC_MSR (APIC_ID));
 	else
-		return APIC_REG (APIC_ID) >> 24;
+		return mmio_read32 (APIC_REG (APIC_ID)) >> 24;
 }
 
 void
@@ -95,10 +96,10 @@ apic_write_icr (uint32_t value, uint32_t target)
 		 * protects against interrupts occuring after APIC_ICR_HIGH
 		 * is written but before APIC_ICR_LOW is written.
 		 */
-		uint32_t old = APIC_REG (APIC_ICR_HIGH);
-		APIC_REG (APIC_ICR_HIGH) = target << 24;
-		APIC_REG (APIC_ICR_LOW) = value;
-		APIC_REG (APIC_ICR_HIGH) = old;
+		uint32_t old = mmio_read32 (APIC_REG (APIC_ICR_HIGH));
+		mmio_write32 (APIC_REG (APIC_ICR_HIGH), target << 24);
+		mmio_write32 (APIC_REG (APIC_ICR_LOW), value);
+		mmio_write32 (APIC_REG (APIC_ICR_HIGH), old);
 	}
 }
 
@@ -109,7 +110,7 @@ apic_wait_icr (void)
 		/* x2APIC does not use the delivery status bit */
 		return;
 
-	while (APIC_REG (APIC_ICR_LOW) & APIC_IRQ_PENDING)
+	while (mmio_read32 (APIC_REG (APIC_ICR_LOW)) & APIC_IRQ_PENDING)
 		arch_relax ();
 }
 
