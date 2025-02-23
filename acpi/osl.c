@@ -13,6 +13,7 @@
 #include <davix/mutex.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <davix/semaphore.h>
 #include <davix/spinlock.h>
 #include <davix/time.h>
 #include <davix/vmap.h>
@@ -256,13 +257,16 @@ uacpi_kernel_free_mutex (uacpi_handle mtx)
 uacpi_handle
 uacpi_kernel_create_event (void)
 {
-	return (uacpi_handle) 1UL;
+	struct semaphore *sema = kmalloc (sizeof (*sema));
+	if (sema)
+		sema_init (sema);
+	return sema;
 }
 
 void
-uacpi_kernel_free_event (uacpi_handle evt)
+uacpi_kernel_free_event (uacpi_handle sema)
 {
-	(void) evt;
+	kfree (sema);
 }
 
 uacpi_thread_id
@@ -274,7 +278,12 @@ uacpi_kernel_get_thread_id (void)
 uacpi_status
 uacpi_kernel_acquire_mutex (uacpi_handle mtx, uacpi_u16 timeout)
 {
-	errno_t e = mutex_lock_timeout (mtx, 1000 * timeout);
+	usecs_t us;
+	if (timeout == 0xffff)
+		us = UINT64_MAX;
+	else
+		us = 1000 * timeout;
+	errno_t e = mutex_lock_timeout (mtx, us);
 	return e == ESUCCESS ? UACPI_STATUS_OK : UACPI_STATUS_TIMEOUT;
 }
 
@@ -284,29 +293,28 @@ uacpi_kernel_release_mutex(uacpi_handle mtx)
 	mutex_unlock (mtx);
 }
 
-uacpi_bool uacpi_kernel_wait_for_event(uacpi_handle evt, uacpi_u16 timeout)
+uacpi_bool uacpi_kernel_wait_for_event(uacpi_handle sema, uacpi_u16 timeout)
 {
-	(void) evt;
-	(void) timeout;
-
-	panic ("uacpi_kernel_wait_for_event unimplemented  :/");
-	return false;
+	usecs_t us;
+	if (timeout == 0xffff)
+		us = UINT64_MAX;
+	else
+		us = 1000 * timeout;
+	errno_t e = sema_lock_timeout (sema, us);
+	return e == ESUCCESS ? true : false;
 }
 
 void
-uacpi_kernel_signal_event (uacpi_handle evt)
+uacpi_kernel_signal_event (uacpi_handle sema)
 {
-	(void) evt;
-
-	panic ("uacpi_kernel_signal_event unimplemented  :/");
+	sema_unlock (sema);
 }
 
 void
-uacpi_kernel_reset_event (uacpi_handle evt)
+uacpi_kernel_reset_event (uacpi_handle sema)
 {
-	(void) evt;
-
-	panic ("uacpi_kernel_reset_event unimplemented  :/");
+	while (sema_lock_timeout (sema, 0) == ESUCCESS)
+		;
 }
 
 uacpi_status
