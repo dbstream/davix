@@ -3,6 +3,7 @@
  * Copyright (C) 2025-present  dbstream
  */
 #include <davix/align.h>
+#include <davix/context.h>
 #include <davix/exec.h>
 #include <davix/file.h>
 #include <davix/mm.h>

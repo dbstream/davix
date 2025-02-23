@@ -8,12 +8,12 @@
  * - The same task that holds a lock must unlock it.
  */
 #include <davix/atomic.h>
+#include <davix/context.h>
 #include <davix/mutex.h>
 #include <davix/panic.h>
 #include <davix/sched.h>
 #include <davix/timer.h>
-
-#include <davix/printk.h>
+#include <asm/irq.h>
 
 /**
  * A mutex contains three things:

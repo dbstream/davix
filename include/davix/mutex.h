@@ -12,7 +12,6 @@
 
 #include <davix/errno.h>
 #include <davix/list.h>
-#include <davix/spinlock.h>
 #include <davix/time.h>
 
 struct task;
