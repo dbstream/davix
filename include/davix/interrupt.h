@@ -60,6 +60,12 @@ extern void
 handle_interrupt (unsigned int vector);
 
 /**
+ * Wait for all in-flight interrupt handlers on @vector to finish.
+ */
+extern void
+sync_interrupts (unsigned int vector);
+
+/**
  * alloc_irq_vector and free_irq_vector are used by architecture-specific code
  * to allocate and free IRQ vectors in arch_configure_interrupt_pin.
  */

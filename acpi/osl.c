@@ -337,23 +337,31 @@ handle_uacpi_interrupt (struct interrupt_handler *h)
 		: INTERRUPT_NOT_HANDLED;
 }
 
+static struct interrupt_handler sci_handler;
+static bool sci_handler_installed;
+static spinlock_t sci_lock;
+
 uacpi_status
 uacpi_kernel_install_interrupt_handler (uacpi_u32 irq,
 		uacpi_interrupt_handler fn, uacpi_handle ctx, uacpi_handle *out)
 {
-	struct interrupt_handler *h = kmalloc (sizeof (*h));
-	if (!h)
-		return UACPI_STATUS_OUT_OF_MEMORY;
+	(void) out;
 
-	h->handler = handle_uacpi_interrupt;
-	h->ptr1 = fn;
-	h->ptr2 = ctx;
-	errno_t e = install_interrupt_handler (h, irq, 0);
-	if (e != ESUCCESS)
-		return UACPI_STATUS_INTERNAL_ERROR;
+	spin_lock (&sci_lock);
+	if (sci_handler_installed) {
+		spin_unlock (&sci_lock);
+		return UACPI_STATUS_ALREADY_EXISTS;
+	}
 
-	*out = h;
-	return UACPI_STATUS_OK;
+	sci_handler.handler = handle_uacpi_interrupt;
+	sci_handler.ptr1 = fn;
+	sci_handler.ptr2 = ctx;
+	errno_t e = install_interrupt_handler (&sci_handler, irq,
+			INTERRUPT_LEGACY);
+	if (e == ESUCCESS)
+		sci_handler_installed = true;
+	spin_unlock (&sci_lock);
+	return e == ESUCCESS ? UACPI_STATUS_OK : UACPI_STATUS_INTERNAL_ERROR;
 }
 
 uacpi_status
@@ -361,9 +369,17 @@ uacpi_kernel_uninstall_interrupt_handler (uacpi_interrupt_handler fn,
 		uacpi_handle handle)
 {
 	(void) fn;
+	(void) handle;
 
-	struct interrupt_handler *h = handle;
-	uninstall_interrupt_handler (h);
+	spin_lock (&sci_lock);
+	if (!sci_handler_installed) {
+		spin_unlock (&sci_lock);
+		return UACPI_STATUS_NOT_FOUND;
+	}
+
+	uninstall_interrupt_handler (&sci_handler);
+	sci_handler_installed = false;
+	spin_unlock (&sci_lock);
 	return UACPI_STATUS_OK;
 }
 
@@ -408,6 +424,11 @@ uacpi_kernel_schedule_work (uacpi_work_type tp,
 uacpi_status
 uacpi_kernel_wait_for_work_completion (void)
 {
+	spin_lock (&sci_lock);
+	if (sci_handler_installed)
+		sync_interrupts (sci_handler.vector_number);
+	spin_unlock (&sci_lock);
+
 	return UACPI_STATUS_OK;
 }
 

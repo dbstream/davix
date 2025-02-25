@@ -60,6 +60,20 @@ handle_interrupt (unsigned int vector)
 			vector, count);
 }
 
+void
+sync_interrupts (unsigned int vector)
+{
+	irq_disable ();
+	while (!spin_trylock (&vectors[vector].vector_lock)) {
+		irq_enable ();
+		arch_relax ();
+		arch_relax ();
+		irq_disable ();
+	}
+	__spin_unlock (&vectors[vector].vector_lock);
+	irq_enable ();
+}
+
 static bool inuse_vector_map[IRQ_VECTORS_PER_CPU];
 static spinlock_t vector_alloc_lock;
 
