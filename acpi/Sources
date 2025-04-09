@@ -1,0 +1,5 @@
+# ACPI-related kernel sources.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += uacpi/
+kobjs += osl.o

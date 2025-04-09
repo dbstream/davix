@@ -1,0 +1,8 @@
+# Sources for the x86 entry code.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += cpufeature.o
+kobjs += head.o
+kobjs += percpu.o
+kobjs += setup.o
+kobjs += startup.o

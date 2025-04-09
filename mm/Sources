@@ -1,0 +1,4 @@
+# Sources for the Davix memory manager.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += page_alloc.o

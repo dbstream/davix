@@ -1,0 +1,8 @@
+=====================
+Davix support library
+=====================
+
+This is the Davix support library.  It aims, to the furthest extent reasonable,
+to be a freestanding datastructure and algorithm support library providing small
+utility headers to be used elsewhere.  The Davix support library is written in
+C++ (-std=gnu++20).

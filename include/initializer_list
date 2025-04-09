@@ -1,0 +1,53 @@
+/**
+ * The kernel's implementation of std::initializer_list.
+ * Copyright (C) 2025-present  dbstream
+ */
+#pragma once
+
+#include <stddef.h>
+
+namespace std {
+
+template<class T>
+class initializer_list {
+public:
+	typedef T value_type;
+	typedef const T &reference;
+	typedef const T &const_reference;
+	typedef size_t size_type;
+	typedef const T *iterator;
+	typedef const T *const_iterator;
+
+private:
+	iterator m_array;
+	size_type m_length;
+
+	constexpr initializer_list (const_iterator array, size_type length)
+		: m_array (array), m_length (length)
+	{}
+
+public:
+	constexpr initializer_list (void)
+		: m_array (nullptr), m_length (0)
+	{}
+
+	constexpr size_type
+	size (void) const
+	{
+		return m_length;
+	}
+
+	constexpr iterator *
+	begin (void) const
+	{
+		return m_array;
+	}
+
+	constexpr iterator *
+	end (void) const
+	{
+		return m_array + m_length;
+	}
+};
+
+} /** namespace std  */

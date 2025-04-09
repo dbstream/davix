@@ -1,0 +1,23 @@
+# x86-specific targets added to the root Sources.
+# Copyright (C) 2025-present  dbstream
+
+LDFLAGS-davix.elf :=				\
+	-zmax-page-size=0x1000			\
+	-Wl,--no-dynamic-linker			\
+	-static					\
+	-T					\
+
+LDLIBS-davix.elf :=
+
+LDSCRIPT-davix.elf := $(obj)kernel.lds
+
+targets += $(obj)kernel.lds
+$(obj)kernel.lds: $(src)arch/$(ARCH)/kernel.lds.S FORCE
+	$(call cond_cmd,cpp)
+
+OBJCOPYFLAGS-davix := -O binary
+targets += $(obj)davix
+$(obj)davix: $(obj)davix.elf FORCE
+	$(call cond_cmd,objcopy)
+
+all: $(obj)davix

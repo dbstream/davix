@@ -1,0 +1,7 @@
+	ACPI subsystem
+
+The ACPI subsystem used is uACPI (https://github.com/uACPI/uACPI).  All files
+in the uacpi/ subdirectory belong to the uACPI project, except uacpi/Sources
+and uacpi/source/Sources.
+
+Current uACPI version: commit c163b24  (uacpi: version 2.1.1)

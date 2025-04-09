@@ -1,0 +1,14 @@
+# Sources for the Davix operating system kernel.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += acpi/
+kobjs += arch/$(ARCH)/
+kobjs += kernel/
+kobjs += mm/
+kobjs += util/
+
+include $(src)arch/$(ARCH)/Sources_root.include
+
+targets += $(obj)davix.elf
+$(obj)davix.elf: $(LDSCRIPT-davix.elf) $(obj)kernel.a FORCE
+	$(call cond_cmd,ld)

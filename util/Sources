@@ -1,0 +1,7 @@
+# Sources for util/
+# Copyright (C) 2025-present  dbstream
+
+kobjs += string.o
+kobjs += vsnprintf.o
+
+CXXFLAGS-string.o := -fno-tree-loop-distribute-patterns

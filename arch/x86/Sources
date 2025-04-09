@@ -1,0 +1,6 @@
+# Sources for x86.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += boot/
+kobjs += kernel/
+kobjs += mm/
