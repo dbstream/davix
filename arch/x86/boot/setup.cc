@@ -211,7 +211,7 @@ static uintptr_t max_supported_ram;
  * of a list of "blockers" - memory regions that cannot be allocated from (the
  * kernel and the boot information).
  */
-static constexpr int max_blockers = 2;
+static constexpr int max_blockers = 3;
 static int num_blockers = 0;
 static dsl::start_end<uintptr_t> blockers[max_blockers];
 
@@ -645,6 +645,7 @@ x86_start_kernel (multiboot_params *params, uintptr_t offset)
 
 	block_memory (sym_addr (__kernel_start), __kernel_end - __kernel_start);
 	block_memory ((uintptr_t) boot_params, boot_params->size);
+	block_memory (0, PAGE_SIZE);
 	setup_memory ();
 
 	start_kernel ();
