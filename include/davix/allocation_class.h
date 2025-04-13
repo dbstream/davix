@@ -16,7 +16,8 @@
  * __ALLOC_HIGHPRIO		Perform a high-priority allocation.  These
  *				bypass the low memory watermark.
  */
-enum allocation_class : unsigned int {
+typedef unsigned int allocation_class;
+enum : allocation_class {
 	__ALLOC_ZERO		= 1U << 0,
 	__ALLOC_WASRESERVED	= 1U << 1,
 	__ALLOC_HIGHPRIO	= 1U << 2,

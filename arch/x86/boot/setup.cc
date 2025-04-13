@@ -614,6 +614,7 @@ setup_memory (void)
 	boot_params = (multiboot_params *) phys_to_virt ((uintptr_t) boot_params);
 	memmap_tag = (multiboot_memmap *) phys_to_virt ((uintptr_t) memmap_tag);
 
+	pgalloc_init ();
 	setup_free_pages ();
 }
 

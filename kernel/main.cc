@@ -4,8 +4,10 @@
  */
 #include <asm/irql.h>
 #include <davix/dpc.h>
+#include <davix/kmalloc.h>
 #include <davix/page.h>
 #include <davix/printk.h>
+#include <davix/slab.h>
 #include <davix/start_kernel.h>
 
 static DPC hello_dpc;
@@ -28,4 +30,7 @@ start_kernel (void)
 	hello_dpc.enqueue ();
 
 	dump_pgalloc_stats ();
+
+	kmalloc_init ();
+	slab_dump ();
 }

@@ -23,9 +23,24 @@ pfn_to_phys (pfn_t pfn)
 #define virt_to_pfn(x) phys_to_pfn (virt_to_phys (x))
 #define pfn_to_virt(x) phys_to_virt (pfn_to_phys (x))
 
+struct SlabAllocator;
+
+typedef unsigned long PageFlags;
+enum : PageFlags {
+	PAGE_SLAB			= 1UL << 0,
+};
+
 struct Page {
 	dsl::ListHead node;
-	long filler[6];
+	unsigned long flags;
+	union {
+		struct {
+			unsigned int nfree;
+			void *pobj;
+			SlabAllocator *allocator;
+		} slab;
+		long filler[5];
+	};
 };
 
 static_assert (sizeof (Page) == 8 * sizeof (long));
@@ -48,6 +63,9 @@ page_to_pfn (Page *page)
 #define page_to_virt(x) pfn_to_virt (page_to_pfn (x))
 
 typedef dsl::TypedList<Page, &Page::node> PageList;
+
+void
+pgalloc_init (void);
 
 Page *
 alloc_page (allocation_class aclass);
