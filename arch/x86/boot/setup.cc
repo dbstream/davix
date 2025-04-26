@@ -3,6 +3,7 @@
  * Copyright (C) 2025-present  dbstream
  */
 #include <stddef.h>
+#include <string.h>
 #include <asm/asm.h>
 #include <asm/cpufeature.h>
 #include <asm/idt.h>
@@ -10,6 +11,7 @@
 #include <asm/kmap_fixed.h>
 #include <asm/pcpu_init.h>
 #include <asm/percpu.h>
+#include <davix/acpisetup.h>
 #include <davix/efi_types.h>
 #include <davix/page.h>
 #include <davix/panic.h>
@@ -18,7 +20,6 @@
 #include <dsl/align.h>
 #include <dsl/interval.h>
 #include <dsl/minmax.h>
-#include <string.h>
 #include "multiboot.h"
 
 static multiboot_params *boot_params;
@@ -175,6 +176,7 @@ memmap_entry_type (void *ptr)
 		case EFI_MEMORY_RT_SERVICES_DATA:
 			return MEM_RUNTIME_SERVICES;
 		case EFI_MEMORY_ACPI_RECLAIM:
+			return MEM_ACPI_RECLAIM;
 		case EFI_MEMORY_CONVENTIONAL_RAM:
 			if (desc->attribute & EFI_MEMORY_SP)
 				return MEM_SPECIAL_PURPOSE;
@@ -479,7 +481,7 @@ extern "C" char __percpu_start[];
 extern "C" char __percpu_end[];
 extern "C" char __kernel_end[];
 
-#define KERNEL_START 0xffffffff80000000
+#define KERNEL_START 0xffffffff80000000UL
 #define sym_addr(name) (load_offset + ((uintptr_t) (name)) - KERNEL_START)
 
 uintptr_t HHDM_OFFSET;
@@ -618,6 +620,37 @@ setup_memory (void)
 	setup_free_pages ();
 }
 
+static void
+setup_early_acpi (void)
+{
+	multiboot_tag *rsdp1 = nullptr, *rsdp2 = nullptr;
+	for (multiboot_tag *tag : mb2_tags) {
+		switch (tag->type) {
+		case MB2_TAG_RSDPv1:
+			rsdp1 = tag;
+			break;
+		case MB2_TAG_RSDPv2:
+			rsdp2 = tag;
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (rsdp2)
+		rsdp1 = rsdp2;
+	if (!rsdp1)
+		panic ("No ACPI RSD PTR was provided by the bootloader.");
+
+	acpi_set_rsdp (virt_to_phys ((uintptr_t) rsdp1) + 8);
+
+	/**
+	 * Setup early table access.
+	 * NB: this uses the boot_pagetables memory as the temporary buffer.
+	 */
+	uacpi_setup_early_table_access ((void *) (KERNEL_START + 0x4000), 0x2000UL);
+}
+
 extern "C" void
 x86_start_kernel (multiboot_params *params, uintptr_t offset)
 {
@@ -647,6 +680,7 @@ x86_start_kernel (multiboot_params *params, uintptr_t offset)
 	block_memory ((uintptr_t) boot_params, boot_params->size);
 	block_memory (0, PAGE_SIZE);
 	setup_memory ();
+	setup_early_acpi ();
 
 	start_kernel ();
 	for (;;)

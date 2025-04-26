@@ -1,6 +1,7 @@
 # x86-specific kernel sources.
 # Copyright (C) 2025-present  dbstream
 
+kobjs += acpi.o
 kobjs += entry.o
 kobjs += idt.o
 kobjs += irql.o

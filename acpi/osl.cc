@@ -2,32 +2,30 @@
  * uACPI operative system specific layer.
  * Copyright (C) 2025-present  dbstream
  */
+#include <davix/acpisetup.h>
 #include <davix/printk.h>
 #include <uacpi/kernel_api.h>
+
+static bool rsdp_valid = false;
+static uintptr_t rsdp = 0;
+
+void
+acpi_set_rsdp (uintptr_t addr)
+{
+	rsdp = addr;
+	rsdp_valid = true;
+	printk (PR_INFO "acpi: set RSDP address to %#tx\n", addr);
+}
 
 extern "C"
 uacpi_status
 uacpi_kernel_get_rsdp (uintptr_t *out)
 {
-	(void) out;
-	return UACPI_STATUS_UNIMPLEMENTED;
-}
+	if (!rsdp_valid)
+		return UACPI_STATUS_NOT_FOUND;
 
-extern "C"
-void *
-uacpi_kernel_map (uintptr_t addr, size_t len)
-{
-	(void) addr;
-	(void) len;
-	return nullptr;
-}
-
-extern "C"
-void
-uacpi_kernel_unmap (void *addr, size_t len)
-{
-	(void) addr;
-	(void) len;
+	*out = rsdp;
+	return UACPI_STATUS_OK;
 }
 
 extern "C"

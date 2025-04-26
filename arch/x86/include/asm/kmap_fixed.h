@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 #include <asm/pg_bits.h>
 #include <asm/pgtable.h>
@@ -20,6 +21,7 @@ enum {
 	KMAP_FIXED_IDX_P4D,
 	KMAP_FIXED_IDX_P5D,
 	KMAP_FIXED_IDX_SETUP_TMP,
+	KMAP_FIXED_IDX_FIRST_DYNAMIC
 };
 
 constexpr static inline uintptr_t
@@ -33,3 +35,15 @@ kmap_fixed_clear (int idx);
 
 void *
 kmap_fixed_install (int idx, pte_t value);
+
+int
+kmap_fixed_alloc_indices (int num);
+
+void
+kmap_fixed_free_indices (int idx);
+
+void *
+kmap_fixed (uintptr_t phys, size_t size, pteval_t flags);
+
+void
+kunmap_fixed (void *ptr);

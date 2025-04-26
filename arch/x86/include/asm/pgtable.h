@@ -38,6 +38,12 @@ make_empty_pte (void)
 }
 
 static inline pte_t
+__make_pte (uintptr_t phys_addr, pteval_t flags)
+{
+	return { phys_addr | flags };
+}
+
+static inline pte_t
 make_pte (uintptr_t phys_addr, bool read, bool write, bool exec)
 {
 	return { phys_addr

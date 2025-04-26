@@ -20,7 +20,7 @@ align_up (T value, A alignment)
 
 	if (a)
 		a--;
-	return static_cast<T> ((v + a) & ~a);
+	return static_cast<T> ((v + a) & ~static_cast<T_unsigned> (a));
 }
 
 template<Integral T, Integral A> T
@@ -34,7 +34,7 @@ align_down (T value, A alignment)
 
 	if (a)
 		a--;
-	return static_cast<T> (v & ~a);
+	return static_cast<T> (v & ~static_cast<T_unsigned> (a));
 }
 
 template<class T, Integral A> T *
@@ -47,7 +47,7 @@ align_up_ptr (T *value, A alignment)
 
 	if (a)
 		a--;
-	return reinterpret_cast <T *> ((v + a) & ~a);
+	return reinterpret_cast <T *> ((v + a) & ~static_cast<uintptr_t> (a));
 }
 
 template<class T, Integral A> T *
@@ -60,7 +60,7 @@ align_down_ptr (T *value, A alignment)
 
 	if (a)
 		a--;
-	return reinterpret_cast <T *> (v & ~a);
+	return reinterpret_cast <T *> (v & ~static_cast<uintptr_t> (a));
 }
 
 } /** namespace dsl  */
