@@ -4,6 +4,7 @@
  */
 #include <asm/irql.h>
 #include <davix/dpc.h>
+#include <davix/early_alloc.h>
 #include <davix/kmalloc.h>
 #include <davix/page.h>
 #include <davix/printk.h>
@@ -29,6 +30,8 @@ start_kernel (void)
 	hello_dpc.init (hello_dpc_routine, nullptr, nullptr);
 	hello_dpc.enqueue ();
 
+	pgalloc_init ();
+	early_free_everything_to_pgalloc ();
 	dump_pgalloc_stats ();
 
 	kmalloc_init ();

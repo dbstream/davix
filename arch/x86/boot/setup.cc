@@ -12,6 +12,7 @@
 #include <asm/pcpu_init.h>
 #include <asm/percpu.h>
 #include <davix/acpisetup.h>
+#include <davix/early_alloc.h>
 #include <davix/efi_types.h>
 #include <davix/page.h>
 #include <davix/panic.h>
@@ -241,7 +242,7 @@ static constexpr uintptr_t min_alloc_addr = 0x1000000UL;
  * must be 2^N for some integer N.
  */
 static uintptr_t
-early_alloc_phys (size_t size)
+alloc_from_memmap (size_t size)
 {
 	for (;;) {
 		void *eptr = memmap_entry_pointer (memmap_alloc_idx);
@@ -285,7 +286,7 @@ early_alloc_phys (size_t size)
 }
 
 static void
-setup_free_pages (void)
+setup_free_memory (void)
 {
 	for (;; memmap_alloc_idx--) {
 		void *eptr = memmap_entry_pointer (memmap_alloc_idx);
@@ -314,10 +315,7 @@ setup_free_pages (void)
 
 			x = dsl::align_up (x, PAGE_SIZE);
 			eend = dsl::align_down (eend, PAGE_SIZE);
-			for (; eend > x;) {
-				eend -= PAGE_SIZE;
-				free_page (phys_to_page (eend));
-			}
+			early_free_phys (x, eend - x);
 			eend = e;
 		}
 
@@ -346,7 +344,7 @@ get_next_pte (volatile uint64_t *entry, uintptr_t addr)
 			curr_mapped = value;
 		}
 	} else {
-		value = early_alloc_phys (PAGE_SIZE);
+		value = alloc_from_memmap (PAGE_SIZE);
 		kmap_fixed_install (kmap_idx, make_pte_k (value, true, true, false));
 		curr_mapped = value;
 
@@ -458,7 +456,7 @@ setup_page_struct (uintptr_t start, uintptr_t end)
 		if (*entry != 0)
 			continue;
 
-		uintptr_t value = early_alloc_phys (PAGE_SIZE);
+		uintptr_t value = alloc_from_memmap (PAGE_SIZE);
 		pte_t pte = make_pte_k (value, true, true, false);
 		volatile unsigned char *p = (volatile unsigned char *)
 				kmap_fixed_install (KMAP_FIXED_IDX_SETUP_TMP, pte);
@@ -553,7 +551,7 @@ setup_memory (void)
 				memory_type_string (type));
 	}
 
-	root_pgtable = early_alloc_phys (PAGE_SIZE);
+	root_pgtable = alloc_from_memmap (PAGE_SIZE);
 	uintptr_t root_vaddr;
 	if (has_feature (FEATURE_LA57)) {
 		kmap_fixed_install (KMAP_FIXED_IDX_P5D, make_pte_k (root_pgtable, true, true, false));
@@ -616,8 +614,7 @@ setup_memory (void)
 	boot_params = (multiboot_params *) phys_to_virt ((uintptr_t) boot_params);
 	memmap_tag = (multiboot_memmap *) phys_to_virt ((uintptr_t) memmap_tag);
 
-	pgalloc_init ();
-	setup_free_pages ();
+	setup_free_memory ();
 }
 
 static void

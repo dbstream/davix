@@ -48,6 +48,36 @@ phys_to_zone (uintptr_t phys)
 }
 
 /**
+ * zone_minaddr - get the lowest address that belongs to a given zone.
+ * @zone: index of the zone
+ * Returns the lowest physical address that belongs to the zone.
+ */
+constexpr uintptr_t
+zone_minaddr (int zone)
+{
+	switch (zone) {
+	case 0: return 4UL * 1024UL * 1024UL * 1024UL;
+	case 1: return 1024UL * 1024UL;
+	default: return 0;
+	}
+}
+
+/**
+ * zone_maxaddr - get the highest address that belongs to a given zone.
+ * @zone: index of the zone
+ * Returns the highest physical address that belongs to the zone.
+ */
+constexpr uintptr_t
+zone_maxaddr (int zone)
+{
+	switch (zone) {
+	case 0: return -1UL;
+	case 1: return 4UL * 1024UL * 1024UL * 1024UL - 1UL;
+	default: return 1024UL * 1024UL - 1UL;
+	}
+}
+
+/**
  * zone_has_fallback - test if an allocation zone has a fallback zone.
  * @zone: index of the zone to test
  * Returns true if there is a fallback zone.
