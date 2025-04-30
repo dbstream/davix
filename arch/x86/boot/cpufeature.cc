@@ -16,6 +16,10 @@ char cpu_model_string[49] = "(unknown)";
 uintptr_t x86_max_phys_addr = 0x100000000UL;
 
 uint64_t x86_nx_bit = 0;
+uint64_t PG_WT = __PG_PWT;
+uint64_t PG_UC_MINUS = __PG_PCD;
+uint64_t PG_UC = __PG_PCD | __PG_PWT;
+uint64_t PG_WC = __PG_PCD;
 
 uint32_t bsp_feature_array[FEATURE_MAX / 32];
 
@@ -129,4 +133,14 @@ cpufeature_init (void)
 		__efer_state |= _EFER_NXE;
 	}
 	write_msr (MSR_EFER, __efer_state);
+
+	if (has_feature (FEATURE_PAT)) {
+		/**
+		 * Other CPUs will check has_feature(PAT) and install the
+		 * correct table into MSR_PAT early in the process of being
+		 * brought online.
+		 */
+		write_msr (MSR_PAT, 0x100070406UL);
+		PG_WC = __PG_PAT;
+	}
 }

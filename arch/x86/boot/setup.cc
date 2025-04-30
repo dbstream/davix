@@ -237,6 +237,8 @@ static size_t memmap_alloc_idx;
 static uintptr_t memmap_alloc_wmark;
 static constexpr uintptr_t min_alloc_addr = 0x1000000UL;
 
+static bool use_early_alloc = false;
+
 /**
  * Allocate a 'size'-sized and 'size'-aligned block of physical memory.  'size'
  * must be 2^N for some integer N.
@@ -244,6 +246,13 @@ static constexpr uintptr_t min_alloc_addr = 0x1000000UL;
 static uintptr_t
 alloc_from_memmap (size_t size)
 {
+	if (use_early_alloc) {
+		uintptr_t phys = early_alloc_phys (size, size);
+		if (!phys)
+			panic ("OOM in early_alloc_phys");
+		return phys;
+	}
+
 	for (;;) {
 		void *eptr = memmap_entry_pointer (memmap_alloc_idx);
 		if (!should_allocate (memmap_entry_type (eptr))) {
@@ -288,6 +297,7 @@ alloc_from_memmap (size_t size)
 static void
 setup_free_memory (void)
 {
+	use_early_alloc = true;
 	for (;; memmap_alloc_idx--) {
 		void *eptr = memmap_entry_pointer (memmap_alloc_idx);
 		if (!should_allocate (memmap_entry_type (eptr))) {
@@ -648,6 +658,49 @@ setup_early_acpi (void)
 	uacpi_setup_early_table_access ((void *) (KERNEL_START + 0x4000), 0x2000UL);
 }
 
+static void
+setup_boot_console (void)
+{
+	multiboot_framebuffer *mfb = nullptr;
+
+	for (multiboot_tag *tag : mb2_tags) {
+		switch (tag->type) {
+		case MB2_TAG_FRAMEBUFFER:
+			mfb = (multiboot_framebuffer *) tag;
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (!mfb)
+		return;
+
+	uintptr_t addr = mfb->framebuffer_addr;
+	size_t nbytes = (size_t) mfb->height * (size_t) mfb->pitch;
+	printk (PR_INFO "framebuffer:  %#tx (%dx%dx%d, %zu bytes)\n",
+			addr, mfb->width, mfb->height, mfb->bpp, nbytes);
+	if (mfb->framebuffer_type != MB2_FRAMEBUFFER_COLOR) {
+		printk (PR_WARN "framebuffer:  type is %d; ignoring\n",
+				mfb->framebuffer_type);
+		return;
+	}
+
+	if (addr + nbytes > max_supported_ram) {
+		printk (PR_WARN "framebuffer:  address is too high, ignoring\n");
+		return;
+	}
+
+	uintptr_t offset = addr & (PAGE_SIZE - 1);
+	addr -= offset;
+	nbytes += offset;
+
+	uintptr_t virt = phys_to_virt (addr);
+	uint64_t flags = make_pte_k (0, true, true, false).value | PG_WC;
+	identity_map (virt, addr, nbytes, flags, 2);
+	memset ((void *) virt, 0, nbytes);
+}
+
 extern "C" void
 x86_start_kernel (multiboot_params *params, uintptr_t offset)
 {
@@ -677,6 +730,7 @@ x86_start_kernel (multiboot_params *params, uintptr_t offset)
 	block_memory ((uintptr_t) boot_params, boot_params->size);
 	block_memory (0, PAGE_SIZE);
 	setup_memory ();
+	setup_boot_console ();
 	setup_early_acpi ();
 
 	start_kernel ();

@@ -13,6 +13,10 @@
 struct Page;
 
 extern uint64_t x86_nx_bit;
+extern uint64_t PG_WT;
+extern uint64_t PG_UC_MINUS;
+extern uint64_t PG_UC;
+extern uint64_t PG_WC;
 
 extern uintptr_t HHDM_OFFSET;
 extern Page *page_map;
