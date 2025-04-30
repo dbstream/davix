@@ -1,0 +1,4 @@
+# Driver sources for the Davix operating system kernel.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += fbcon/

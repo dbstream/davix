@@ -3,6 +3,7 @@
 
 kobjs += acpi/
 kobjs += arch/$(ARCH)/
+kobjs += drivers/
 kobjs += kernel/
 kobjs += mm/
 kobjs += util/

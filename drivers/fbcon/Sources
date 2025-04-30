@@ -1,0 +1,4 @@
+# Sources for the fbcon framebuffer device driver.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += fbcon.o

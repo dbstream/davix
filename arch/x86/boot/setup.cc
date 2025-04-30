@@ -14,6 +14,7 @@
 #include <davix/acpisetup.h>
 #include <davix/early_alloc.h>
 #include <davix/efi_types.h>
+#include <davix/fbcon.h>
 #include <davix/page.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
@@ -658,6 +659,8 @@ setup_early_acpi (void)
 	uacpi_setup_early_table_access ((void *) (KERNEL_START + 0x4000), 0x2000UL);
 }
 
+struct fbcon boot_console;
+
 static void
 setup_boot_console (void)
 {
@@ -695,10 +698,27 @@ setup_boot_console (void)
 	addr -= offset;
 	nbytes += offset;
 
+	void *backbuf = early_alloc_virt (nbytes, PAGE_SIZE);
+	if (!backbuf) {
+		printk (PR_WARN "framebuffer:  couldn't allocate memory for backbuffer\n");
+		return;
+	}
+
 	uintptr_t virt = phys_to_virt (addr);
 	uint64_t flags = make_pte_k (0, true, true, false).value | PG_WC;
 	identity_map (virt, addr, nbytes, flags, 2);
-	memset ((void *) virt, 0, nbytes);
+
+	fbcon_format fmt {};
+	fmt.bpp = mfb->bpp;
+	fmt.red_bits = mfb->red_bits;
+	fmt.red_offset = mfb->red_shift;
+	fmt.green_bits = mfb->green_bits;
+	fmt.green_offset = mfb->green_shift;
+	fmt.blue_bits = mfb->blue_bits;
+	fmt.blue_offset = mfb->blue_shift;
+	fbcon_add_framebuffer (&boot_console,
+			mfb->width, mfb->height, mfb->pitch, &fmt,
+			(void *) virt, backbuf);
 }
 
 extern "C" void
