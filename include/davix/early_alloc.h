@@ -20,6 +20,12 @@ early_free_everything_to_pgalloc (void);
 uintptr_t
 early_alloc_phys_range (size_t size, size_t align, uintptr_t low, uintptr_t high);
 
+uintptr_t
+early_alloc_phys_zone (size_t size, size_t align, int zonenr);
+
+uintptr_t
+early_alloc_phys (size_t size, size_t align);
+
 void
 early_free_phys (uintptr_t addr, size_t size);
 

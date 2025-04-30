@@ -148,6 +148,45 @@ early_free_phys (uintptr_t addr, size_t size)
 }
 
 /**
+ * early_alloc_phys_zone - allocate physical memory from a specific zone.
+ * @size: size of memory to allocate
+ * @align: required alignment of memory to allocate
+ * @zonenr: the zone that the allocated memory has to belong to
+ * Returns the physical address of the allocated memory or zero on failure.
+ */
+uintptr_t
+early_alloc_phys_zone (size_t size, size_t align, int zonenr)
+{
+	uintptr_t low = zone_minaddr (zonenr);
+	uintptr_t high = zone_maxaddr (zonenr);
+
+	uintptr_t phys = early_alloc_phys_range (size, align, low, high);
+	return phys;
+}
+
+/**
+ * early_alloc_phys - allocate physical memory.
+ * @size: size of memory to allocate
+ * @align: required alignment of memory to allocate
+ */
+uintptr_t
+early_alloc_phys (size_t size, size_t align)
+{
+	int zonenr = allocation_zone (ALLOC_KERNEL);
+	goto loop;
+
+	while (zone_has_fallback (zonenr)) {
+		zonenr = fallback_zone (zonenr);
+loop:
+		uintptr_t phys = early_alloc_phys_zone (size, align, zonenr);
+		if (phys)
+			return phys;
+	}
+
+	return 0;
+}
+
+/**
  * early_alloc_virt_zone - allocate virtual memory from a specific zone.
  * @size: size of memory to allocate
  * @align: required alignment of memory to allocate
@@ -157,10 +196,7 @@ early_free_phys (uintptr_t addr, size_t size)
 void *
 early_alloc_virt_zone (size_t size, size_t align, int zonenr)
 {
-	uintptr_t low = zone_minaddr (zonenr);
-	uintptr_t high = zone_maxaddr (zonenr);
-
-	uintptr_t phys = early_alloc_phys_range (size, align, low, high);
+	uintptr_t phys = early_alloc_phys_zone (size, align, zonenr);
 	return phys ? (void *) phys_to_virt (phys) : nullptr;
 }
 
@@ -172,18 +208,8 @@ early_alloc_virt_zone (size_t size, size_t align, int zonenr)
 void *
 early_alloc_virt (size_t size, size_t align)
 {
-	int zonenr = allocation_zone (ALLOC_KERNEL);
-	goto loop;
-
-	while (zone_has_fallback (zonenr)) {
-		zonenr = fallback_zone (zonenr);
-loop:
-		void *ptr = early_alloc_virt_zone (size, align, zonenr);
-		if (ptr)
-			return ptr;
-	}
-
-	return nullptr;
+	uintptr_t phys = early_alloc_phys (size, align);
+	return phys ? (void *) phys_to_virt (phys) : nullptr;
 }
 
 /**
