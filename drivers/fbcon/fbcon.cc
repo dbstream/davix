@@ -2,10 +2,23 @@
  * Framebuffer console driver
  * Copyright (C) 2025-present  dbstream
  */
+#include <container_of.h>
 #include <string.h>
+#include <vsnprintf.h>
 #include <davix/fbcon.h>
 #include <davix/kmalloc.h>
 #include <davix/printk.h>
+
+#include "font.inl"
+
+static constexpr const uint8_t *default_font = VGA9_F16;
+
+enum : uint32_t {
+	FONT_WIDTH = 8,
+	FONT_HEIGHT = 16,
+	SYMBOL_WIDTH = 8,
+	LINE_HEIGHT = 16
+};
 
 /**
  * get_color - convert from RGB to framebuffer color
@@ -206,6 +219,144 @@ putpixel (uint8_t *&ptr, uint32_t x, uint8_t bpp)
 }
 
 /**
+ * fbcon_scroll - scroll the framebuffer
+ * @fbcon: struct fbcon
+ * @scroll: number of lines to scroll by
+ */
+static void
+fbcon_scroll (struct fbcon *fbcon, uint32_t scroll)
+{
+	uint8_t bpp = fbcon->fmt.bpp;
+	uint32_t c = fbcon->c_background;
+	size_t nbytes = fbcon->nbytes - scroll * fbcon->pitch;
+
+	memmove (get_row (fbcon, 0), get_row (fbcon, scroll), nbytes);
+	fbcon->cy -= scroll;
+
+	for (uint32_t i = fbcon->height - scroll; i < fbcon->height; i++) {
+		uint8_t *p = get_row (fbcon, i);
+		for (uint32_t j = 0; j < fbcon->width; j++)
+			putpixel (p, c, bpp);
+	}
+}
+
+/**
+ * fbcon_blit_character - draw a character to the framebuffer
+ * @fbcon: struct fbcon
+ * @c: character to draw
+ * @x: top left x
+ * @y: top left y
+ * @fg: foreground color
+ * @bg: background color
+ */
+static void
+fbcon_blit_character (struct fbcon *fbcon, uint8_t c,
+		uint32_t x, uint32_t y, uint32_t fg, uint32_t bg)
+{
+	uint8_t bpp = fbcon->fmt.bpp;
+	for (uint32_t i = 0; i < FONT_HEIGHT; i++) {
+		uint8_t data = default_font[FONT_HEIGHT * c + i];
+		uint8_t mask = 0x80;
+		uint8_t *p = get_pixel (fbcon, y + i, x);
+		for (uint32_t j = 0; j < FONT_WIDTH; j++) {
+			uint32_t x = (data & mask) ? fg : bg;
+			mask >>= 1;
+			putpixel (p, x, bpp);
+		}
+		for (uint32_t j = FONT_WIDTH; j < SYMBOL_WIDTH; j++)
+			putpixel (p, bg, bpp);
+	}
+	for (uint32_t i = FONT_HEIGHT; i < LINE_HEIGHT; i++) {
+		uint8_t *p = get_pixel (fbcon, y + i, x);
+		for (uint32_t j = 0; j < SYMBOL_WIDTH; j++)
+			putpixel (p, bg, bpp);
+	}
+}
+
+/**
+ * fbcon_putc - put a character on the framebuffer
+ * @fbcon: struct fbcon
+ * @c: character to display
+ * @fg: foreground color
+ * @bg: background color
+ */
+static void
+fbcon_putc (struct fbcon *fbcon, char c, uint32_t fg, uint32_t bg)
+{
+	if (c == '\n') {
+		fbcon->cx = 0;
+		fbcon->cy += LINE_HEIGHT;
+		if (fbcon->cy + LINE_HEIGHT > fbcon->height) {
+			uint32_t n = fbcon->cy + LINE_HEIGHT - fbcon->height;
+			fbcon_scroll (fbcon, n);
+		}
+
+		return;
+	}
+
+	fbcon_blit_character (fbcon, (uint8_t) c, fbcon->cx, fbcon->cy, fg, bg);
+	fbcon->cx += SYMBOL_WIDTH;
+	if (fbcon->cx + SYMBOL_WIDTH > fbcon->width) {
+		fbcon->cx = 0;
+		fbcon->cy += LINE_HEIGHT;
+		if (fbcon->cy + LINE_HEIGHT > fbcon->height) {
+			uint32_t n = fbcon->cy + LINE_HEIGHT - fbcon->height;
+			fbcon_scroll (fbcon, n);
+		}
+	}
+}
+
+/**
+ * fbcon_print - print a string to the fbcon
+ * @fbcon: struct fbcon
+ * @msg: string to display
+ * @fg: foreground color
+ * @bg: background color
+ */
+static void
+fbcon_print (struct fbcon *fbcon, const char *msg, uint32_t fg, uint32_t bg)
+{
+	for (; *msg; msg++)
+		fbcon_putc (fbcon, *msg, fg, bg);
+}
+
+/**
+ * fbcon_emit_message - printk handler
+ * @con: pointer to the Console member variable of struct fbcon
+ * @level: loglevel
+ * @msg_time: message time
+ * @msg: message contents
+ */
+static void
+fbcon_emit_message (Console *con, int level, usecs_t msg_time, const char *msg)
+{
+	struct fbcon *fbcon = container_of (&fbcon::con, con);
+	char buf[24];
+	snprintf (buf, sizeof (buf), "[%5llu.%06llu] ",
+			(unsigned long long) (msg_time / 1000000),
+			(unsigned long long) (msg_time % 1000000));
+
+	if (level < 0)
+		level = 0;
+	else if (level > 4)
+		level = 4;
+	uint32_t fg_colors[5] = {
+		fbcon->c_info,
+		fbcon->c_info,
+		fbcon->c_notice,
+		fbcon->c_warn,
+		fbcon->c_err
+	};
+
+	uint32_t bg = fbcon->c_background;
+	uint32_t fg = fg_colors[level];
+
+	fbcon_print (fbcon, buf, fbcon->c_msgtime, bg);
+	fbcon_print (fbcon, msg, fg, bg);
+	fbcon_flush (fbcon);
+}
+
+/**
  * fbcon_add_framebuffer - register a framebuffer with fbcon.
  * @fbcon: preallocated struct fbcon
  * @width: framebuffer width in pixels
@@ -254,8 +405,8 @@ fbcon_add_framebuffer (struct fbcon *fbcon,
 	asm ("" : "+r" (fbmem));
 	fbcon->fbmem = fbmem;
 
-	fbcon->cx = 1;
-	fbcon->cy = 1;
+	fbcon->cx = 0;
+	fbcon->cy = 0;
 	fbcon->c_background	= get_color (fmt,  20,  20,  20);
 	fbcon->c_info		= get_color (fmt, 220, 220, 220);
 	fbcon->c_notice		= get_color (fmt, 255, 255, 255);
@@ -271,5 +422,8 @@ fbcon_add_framebuffer (struct fbcon *fbcon,
 			putpixel (p, c, bpp);
 	}
 	fbcon_flush (fbcon);
+
+	fbcon->con.emit_message = fbcon_emit_message;
+	console_register (&fbcon->con);
 	return fbcon;
 }
