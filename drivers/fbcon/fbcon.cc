@@ -407,12 +407,12 @@ fbcon_add_framebuffer (struct fbcon *fbcon,
 
 	fbcon->cx = 0;
 	fbcon->cy = 0;
-	fbcon->c_background	= get_color (fmt,  20,  20,  20);
-	fbcon->c_info		= get_color (fmt, 220, 220, 220);
+	fbcon->c_background	= get_color (fmt,  35,  38,  39);
+	fbcon->c_info		= get_color (fmt, 200, 200, 200);
 	fbcon->c_notice		= get_color (fmt, 255, 255, 255);
-	fbcon->c_warn		= get_color (fmt, 255, 128,   0);
-	fbcon->c_err		= get_color (fmt, 255,   0,   0);
-	fbcon->c_msgtime	= get_color (fmt,   0, 255,   0);
+	fbcon->c_warn		= get_color (fmt, 253, 188,  75);
+	fbcon->c_err		= get_color (fmt, 237,  21,  21);
+	fbcon->c_msgtime	= get_color (fmt,  17, 209,  22);
 
 	uint32_t c = fbcon->c_background;
 	uint32_t bpp = fbcon->fmt.bpp;
