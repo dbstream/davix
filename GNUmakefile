@@ -9,6 +9,10 @@ ifneq ($(abspath $(dir $(lastword $(MAKEFILE_LIST)))),$(CURDIR))
 $(error Out-of-tree invocations are unsupported.)
 endif
 
+COMPILE_USER := $(shell whoami)
+COMPILE_HOST := $(shell uname -n)
+export COMPILE_USER COMPILE_HOST
+
 # Build directory: use make O=... option if specified, otherwise build/.
 ifeq ("$(origin O)","command line")
 objtree := $(O)
@@ -65,6 +69,9 @@ endif
 endif
 
 export AS CC CXX LD OBJCOPY
+
+CC_VERSION := $(shell $(CC) --version | head -n 1)
+export CC_VERSION
 
 # C preprocessor flags.
 CPPFLAGS :=					\

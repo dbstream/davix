@@ -5,3 +5,9 @@ kobjs += dpc.o
 kobjs += main.o
 kobjs += panic.o
 kobjs += printk.o
+kobjs += version.o
+
+CXXFLAGS-version.o :=				\
+	-DCOMPILE_USER="$(COMPILE_USER)"	\
+	-DCOMPILE_HOST="$(COMPILE_HOST)"	\
+	-DCC_VERSION="$(CC_VERSION)"		\

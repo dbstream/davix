@@ -22,10 +22,12 @@ hello_dpc_routine (DPC *dpc, void *arg1, void *arg2)
 	printk (PR_INFO "Hello, DPCs!\n");
 }
 
+extern const char davix_banner[];
+
 void
 start_kernel (void)
 {
-	printk (PR_NOTICE "Davix version 0.0.1\n");
+	printk (PR_NOTICE "%s\n", davix_banner);
 
 	arch_init ();
 
