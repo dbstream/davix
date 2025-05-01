@@ -27,6 +27,8 @@ start_kernel (void)
 {
 	printk (PR_NOTICE "Davix version 0.0.1\n");
 
+	arch_init ();
+
 	hello_dpc.init (hello_dpc_routine, nullptr, nullptr);
 	hello_dpc.enqueue ();
 

@@ -6,3 +6,7 @@
 
 void
 start_kernel (void);
+
+/** architecture-specific initialization function  */
+void
+arch_init (void);

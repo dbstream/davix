@@ -14,7 +14,6 @@ acpi_set_rsdp (uintptr_t addr)
 {
 	rsdp = addr;
 	rsdp_valid = true;
-	printk (PR_INFO "acpi: set RSDP address to %#tx\n", addr);
 }
 
 extern "C"
