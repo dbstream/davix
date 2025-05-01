@@ -16,8 +16,8 @@ static constexpr const uint8_t *default_font = VGA9_F16;
 enum : uint32_t {
 	FONT_WIDTH = 8,
 	FONT_HEIGHT = 16,
-	SYMBOL_WIDTH = 8,
-	LINE_HEIGHT = 16
+	SYMBOL_WIDTH = 9,
+	LINE_HEIGHT = 17
 };
 
 /**
