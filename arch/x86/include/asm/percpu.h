@@ -31,7 +31,7 @@ read__seg_gs [[gnu::always_inline]] (T *ptr)
 }
 
 template<class T>
-static inline T
+static inline void
 write__seg_gs [[gnu::always_inline]] (T *ptr, T value)
 {
 	if constexpr (sizeof (T) == 1) {
@@ -90,7 +90,7 @@ public:
 	inline void
 	write (T value) const
 	{
-		pcpu_detail::write__seg_gs<T> (m_ptr);
+		pcpu_detail::write__seg_gs<T> (m_ptr, value);
 	}
 };
 
