@@ -2,11 +2,14 @@
  * Kernel clocksource.
  * Copyright (C) 2025-present  dbstream
  */
+#include <asm/asm.h>
+#include <asm/cpufeature.h>
 #include <asm/io.h>
 #include <asm/kmap_fixed.h>
 #include <asm/mmio.h>
 #include <asm/time.h>
 #include <davix/atomic.h>
+#include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/time.h>
 #include <uacpi/acpi.h>
@@ -171,19 +174,141 @@ init_hpet (void)
 	use_hpet = true;
 }
 
-static uint64_t
+/**
+ * Convert the value from a HPET reading to nanoseconds.
+ */
+static nsecs_t
+hpet_conv_nsecs (uint64_t value)
+{
+	uint64_t ns = hpet_period_ns * value;
+	ns += (hpet_period_frac * value) / 1000000;
+	return ns;
+}
+
+static nsecs_t
 hpet_nsecs (void)
 {
-	uint64_t raw_value = hpet_read_counter ();
-	uint64_t ns = hpet_period_ns * raw_value;
-	ns += (hpet_period_frac * raw_value) / 1000000;
-	return ns;
+	return hpet_conv_nsecs (hpet_read_counter ());
+}
+
+static uint64_t tsc_khz = 0;
+
+/**
+ * Get a stable reading of the TSC and the HPET.  We read the TSC two times and
+ * read the HPET in-between.  If the difference between the TSC values is too
+ * big, we assume something happened (NMI, SMI) and retry.
+ */
+static uint64_t
+read_tsc_ref (uint64_t *ref)
+{
+	constexpr uint64_t maxdelta = 100000UL;
+	constexpr uint64_t gooddelta = 1000UL;
+
+	uint64_t besttsc, bestref, bestdelta = -1UL;
+	for (int i = 0; i < 10; i++) {
+		uint64_t tsc1 = rdtsc ();
+		uint64_t ref = hpet_read_counter ();
+		uint64_t tsc2 = rdtsc ();
+
+		uint64_t delta = tsc2 - tsc1;
+		if (delta < bestdelta) {
+			besttsc = tsc2;
+			bestref = ref;
+			bestdelta = delta;
+		}
+		if (bestdelta < gooddelta)
+			break;
+	}
+
+	if (bestdelta > maxdelta) {
+		printk (PR_WARN "read_tsc_ref: too big TSC delta; calibration failed\n");
+		return 0;
+	}
+
+	*ref = bestref;
+	return besttsc;
+}
+
+/**
+ * Convert the reference value from read_tsc_ref into nanoseconds.
+ */
+static nsecs_t
+tsc_ref_to_nsecs (uint64_t ref)
+{
+	return hpet_conv_nsecs (ref);
+}
+
+/**
+ * Spin for 50ms using the reference timer.
+ */
+static void
+tsc_ref_mdelay (uint64_t ref, msecs_t ms)
+{
+	uint64_t delta = (ms * 1000UL * 1000UL * 1000UL * 1000UL) / hpet_period;
+	uint64_t target = ref + delta;
+
+	do {
+		__builtin_ia32_pause ();
+	} while (hpet_read_counter () < target);
+}
+
+/**
+ * Calculate the time-stamp counter frequency against a nanosecond delta.
+ */
+static uint64_t
+calculate_tsc_khz (uint64_t tsc_delta, nsecs_t ref_delta)
+{
+	tsc_delta *= 1000000UL;
+	tsc_delta /= ref_delta;
+	return tsc_delta;
+}
+
+static void
+tsc_calibrate_early (void)
+{
+	uint64_t tsc1, tsc2, ref1, ref2;
+
+	tsc1 = read_tsc_ref (&ref1);
+	if (!tsc1)
+		return;
+
+	tsc_ref_mdelay (ref1, 50);
+	tsc2 = read_tsc_ref (&ref2);
+	if (!tsc2)
+		return;
+
+	uint64_t tsc_delta = tsc2 - tsc1;
+	uint64_t ref_delta = ref2 - ref1;
+
+	nsecs_t ns = tsc_ref_to_nsecs (ref_delta);
+	if (ns < 50UL * 1000UL * 1000UL) {
+		printk (PR_WARN "tsc_calibrate_early: failed to wait for 50 nanoseconds\n");
+		return;
+	}
+
+	tsc_khz = calculate_tsc_khz (tsc_delta, ns);
+	printk ("Early TSC calibration using HPET: %lu.%03luMHz\n",
+			tsc_khz / 1000UL, tsc_khz % 1000UL);
+	if (tsc_khz < 1000UL) {
+		printk (PR_WARN "tsc_calibrate_early: TSC is unreasonably slow; disabling TSC\n");
+		tsc_khz = 0;
+		return;
+	}
 }
 
 void
 x86_init_time (void)
 {
 	init_hpet ();
+	if (!use_hpet)
+		/**
+		 * We need the HPET for TSC calibration.
+		 */
+		panic ("HPET not usable!");
+
+	if (has_feature (FEATURE_TSC)) {
+		tsc_calibrate_early ();
+	}
 }
 
 nsecs_t

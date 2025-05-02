@@ -125,4 +125,39 @@ raw_irq_enable (void)
 	asm volatile ("sti" ::: "memory");
 }
 
+static inline bool
+raw_irqs_enabled (void)
+{
+	uint64_t rflags;
+	/* NB: we compile with -mno-red-zone, so this is safe */
+	asm volatile ("pushfq; pop %0" : "=r" (rflags));
+
+	return (rflags & (1LU << 9)) ? true : false;
+}
+
+static inline bool
+raw_irq_save (void)
+{
+	if (raw_irqs_enabled ()) {
+		raw_irq_disable ();
+		return true;
+	} else
+		return false;
+}
+
+static inline void
+raw_irq_restore (bool flag)
+{
+	if (flag)
+		raw_irq_enable ();
+}
+
+static inline uint64_t
+rdtsc (void)
+{
+	uint32_t low, high;
+	asm volatile ("rdtsc" : "=d" (high), "=a" (low));
+	return ((uint64_t) high << 32) | low;
+}
+
 #endif
