@@ -34,3 +34,30 @@ ms_since_boot (void)
 {
 	return ns_since_boot () / 1000000;
 }
+
+/**
+ * ndelay - stall the CPU.
+ * @ns: nanoseconds to stall for
+ */
+void
+ndelay (nsecs_t ns);
+
+/**
+ * udelay - stall the CPU.
+ * @us: microseconds to stall for
+ */
+static inline void
+udelay (usecs_t us)
+{
+	ndelay (us * 1000);
+}
+
+/**
+ * mdelay - stall the CPU.
+ * @ms: milliseconds to stall for
+ */
+static inline void
+mdelay (msecs_t ms)
+{
+	ndelay (ms * 1000000);
+}

@@ -414,3 +414,16 @@ ns_since_boot (void)
 
 	return 0;
 }
+
+void
+ndelay (nsecs_t ns)
+{
+	if (!use_tsc && !use_hpet)
+		return;
+
+	nsecs_t target = ns_since_boot () + ns;
+	do {
+		barrier ();
+		__builtin_ia32_pause ();
+	} while (ns_since_boot () < target);
+}
