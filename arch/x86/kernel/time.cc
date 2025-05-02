@@ -307,7 +307,9 @@ x86_init_time (void)
 		panic ("HPET not usable!");
 
 	if (has_feature (FEATURE_TSC)) {
+		bool flag = raw_irq_save ();
 		tsc_calibrate_early ();
+		raw_irq_restore (flag);
 	}
 }
 
