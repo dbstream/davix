@@ -77,6 +77,11 @@ enum {
 #define __arch_provides_smp_spinlock_hint
 #endif
 #endif
+#ifdef barrier
+#ifndef __arch_provides_barrier
+#define __arch_provides_barrier
+#endif
+#endif
 
 #ifndef __arch_provides_smp_mb
 static inline void smp_mb (void) { asm volatile ("" ::: "memory" ); }
@@ -92,4 +97,8 @@ static inline void smp_rmb (void) { asm volatile ("" ::: "memory"); }
 
 #ifndef __arch_provides_smp_spinlock_hint
 static inline void smp_spinlock_hint (void) { asm volatile ("" ::: "memory" ); }
+#endif
+
+#ifndef __arch_provides_barrier
+#define barrier() asm volatile ("" ::: "memory")
 #endif
