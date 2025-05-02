@@ -7,14 +7,17 @@
 #include <asm/io.h>
 #include <asm/kmap_fixed.h>
 #include <asm/mmio.h>
+#include <asm/percpu.h>
 #include <asm/time.h>
 #include <davix/atomic.h>
+#include <davix/irql.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/time.h>
 #include <uacpi/acpi.h>
 #include <uacpi/tables.h>
 
+static bool use_tsc = false;
 static bool use_hpet = false;
 
 static volatile void *hpet_regs;
@@ -194,6 +197,85 @@ hpet_nsecs (void)
 static uint64_t tsc_khz = 0;
 
 /**
+ * tsc->ns conversion: ns = 10^6 tsc/khz + offset
+ */
+struct tscconv {
+	uint64_t khz;
+	uint64_t offset;
+};
+
+static inline nsecs_t
+tsc2ns (uint64_t tscval, struct tscconv tscconv)
+{
+	return ((1000000UL * tscval) / tscconv.khz) + tscconv.offset;
+}
+
+struct tsc_pcpu {
+	struct tscconv conv[2];
+	uint64_t generation;
+};
+
+static DEFINE_PERCPU (struct tsc_pcpu, tsc_pcpu);
+
+static void
+write_tscconv (struct tscconv conv)
+{
+	uint64_t nextgen = percpu_read (tsc_pcpu.generation) + 1;
+	percpu_write (tsc_pcpu.conv[nextgen % 2], conv);
+	barrier ();
+	percpu_write (tsc_pcpu.generation, nextgen);
+}
+
+static uint64_t
+read_tsc_tscconv (struct tscconv *tscconv)
+{
+	uint64_t tsc;
+	uint64_t gen1, gen2 = percpu_read (tsc_pcpu.generation);
+	do {
+		barrier ();
+		gen1 = gen2;
+		tsc = rdtsc ();
+		*tscconv = percpu_read (tsc_pcpu.conv[gen1 % 2]);
+		barrier ();
+		gen2 = percpu_read (tsc_pcpu.generation);
+	} while (gen2 != gen1);
+	return tsc;
+}
+
+/**
+ * Update the tscconv struct on this CPU.
+ */
+static void
+set_tsc_conv (uint64_t tsc, nsecs_t ns)
+{
+	struct tscconv tscconv;
+	tscconv.khz = tsc_khz;
+	tscconv.offset = 0;
+
+	nsecs_t ns2 = tsc2ns (tsc, tscconv);
+	tscconv.offset = ns - ns2;
+
+	write_tscconv (tscconv);
+}
+
+static nsecs_t
+tsc_nsecs (void)
+{
+	uint64_t tsc;
+	struct tscconv tscconv;
+
+	{
+		/**
+		 * read_tsc_tscconv is safe against preemption but not migration
+		 */
+		scoped_irql g (IRQL_DISPATCH);
+		tsc = read_tsc_tscconv (&tscconv);
+	}
+
+	return tsc2ns (tsc, tscconv);
+}
+
+/**
  * Get a stable reading of the TSC and the HPET.  We read the TSC two times and
  * read the HPET in-between.  If the difference between the TSC values is too
  * big, we assume something happened (NMI, SMI) and retry.
@@ -294,6 +376,8 @@ tsc_calibrate_early (void)
 		tsc_khz = 0;
 		return;
 	}
+
+	set_tsc_conv (tsc2, tsc_ref_to_nsecs (ref2));
 }
 
 void
@@ -305,17 +389,26 @@ x86_init_time (void)
 		 * We need the HPET for TSC calibration.
 		 */
 		panic ("HPET not usable!");
+	else
+		printk (PR_INFO "Switched to HPET clock source.\n");
 
 	if (has_feature (FEATURE_TSC)) {
 		bool flag = raw_irq_save ();
 		tsc_calibrate_early ();
 		raw_irq_restore (flag);
+
+		if (tsc_khz) {
+			use_tsc = true;
+			printk (PR_INFO "Switched to TSC clock source.\n");
+		}
 	}
 }
 
 nsecs_t
 ns_since_boot (void)
 {
+	if (use_tsc)
+		return tsc_nsecs ();
 	if (use_hpet)
 		return hpet_nsecs ();
 
