@@ -5,3 +5,5 @@ kobjs += acpi.o
 kobjs += entry.o
 kobjs += idt.o
 kobjs += irql.o
+kobjs += setup.o
+kobjs += time.o

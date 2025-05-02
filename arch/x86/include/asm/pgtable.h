@@ -9,6 +9,32 @@
 
 typedef uint64_t pteval_t;
 
+enum page_cache_mode {
+	pcm_writeback = 0,
+	pcm_writethrough = 1,
+	pcm_uc_minus = 2,
+	pcm_uncached = 3,
+	pcm_writecombine = 4
+};
+
+static inline pteval_t
+pcm_pteval (page_cache_mode pcm)
+{
+	switch (pcm) {
+	case pcm_writethrough:	return PG_WT;
+	case pcm_uc_minus:	return PG_UC_MINUS;
+	case pcm_uncached:	return PG_UC;
+	case pcm_writecombine:	return PG_WC;
+	default:		return 0;
+	}
+}
+
+static inline pteval_t
+make_io_pteval (page_cache_mode pcm)
+{
+	return pcm_pteval (pcm) | __PG_PRESENT | __PG_WRITE | x86_nx_bit;
+}
+
 typedef struct pte_t {
 	pteval_t value;
 

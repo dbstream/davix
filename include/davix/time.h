@@ -14,12 +14,8 @@ typedef unsigned long long msecs_t;
 /**
  * ns_since_boot - query the number of nanoseconds that have passed since boot.
  */
-static inline nsecs_t
-ns_since_boot (void)
-{
-	// FIXME: make this not a stub.
-	return 0;
-}
+nsecs_t
+ns_since_boot (void);
 
 /**
  * us_since_boot - query the number of microseconds that have passed since boot.

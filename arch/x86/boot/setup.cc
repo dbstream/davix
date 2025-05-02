@@ -490,7 +490,6 @@ extern "C" char __percpu_start[];
 extern "C" char __percpu_end[];
 extern "C" char __kernel_end[];
 
-#define KERNEL_START 0xffffffff80000000UL
 #define sym_addr(name) (load_offset + ((uintptr_t) (name)) - KERNEL_START)
 
 uintptr_t HHDM_OFFSET;
@@ -750,14 +749,4 @@ x86_start_kernel (multiboot_params *params, uintptr_t offset)
 	start_kernel ();
 	for (;;)
 		asm volatile ("hlt");
-}
-
-void
-arch_init (void)
-{
-	/**
-	 * Setup early table access.
-	 * NB: this uses the boot_pagetables memory as the temporary buffer.
-	 */
-	 uacpi_setup_early_table_access ((void *) (KERNEL_START + 0x4000), 0x2000UL);
 }

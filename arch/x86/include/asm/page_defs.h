@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 
+#define KERNEL_START 0xffffffff80000000UL
 #define PAGE_SIZE UINT64_C(0x1000)
 #define P1D_SIZE UINT64_C(0x200000)
 #define P2D_SIZE UINT64_C(0x40000000)

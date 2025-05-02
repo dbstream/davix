@@ -39,10 +39,10 @@ enum {
 #define atomic_exchange_acq_rel(p, val) atomic_exchange((p), (val), mo_acq_rel)
 
 #define atomic_cmpxchg_weak(p, exp, des, success_mo, fail_mo)		\
-	__atomic_compare_exchange_n((p), (exp), (des), (success_mo), (fail_mo))
+	__atomic_compare_exchange_n((p), (exp), (des), 1, (success_mo), (fail_mo))
 
 #define atomic_cmpxchg(p, exp, des, success_mo, fail_mo)		\
-	__atomic_compare_exchange_n((p), (exp), (des), (success_mo), (fail_mo))
+	__atomic_compare_exchange_n((p), (exp), (des), 0, (success_mo), (fail_mo))
 
 #define atomic_cmpxchg_for_lock(p, exp, des)				\
 	atomic_cmpxchg((p), (exp), (des), mo_acquire, mo_relaxed)
