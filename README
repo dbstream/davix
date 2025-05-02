@@ -1,3 +1,27 @@
 	davix operating system kernel
 
-This is a hobby project, nothing serious (yet), so use at your own risk.
+This is a personal hobby project that I am doing to challenge myself and to
+learn about the inner workings of operating systems.  And also because I find it
+enjoyable.  Currently, it only targets 64-bit x86, as that is the most practical
+target for me, however in the future there will possibly be other targets.
+
+	Building it
+
+A Unix-like host with GNU GCC and GNU make is recommended (though it is probably
+possible to build with LLVM instead of GCC).
+
+To build the kernel, run 'make' at the root of the source tree.  A kernel image
+will be produced in the multiboot2 format in 'build/davix'.  The kernel is a
+multiboot2 kernel and can be loaded with a bootloader like GRUB.
+
+	Running it
+
+The recommended way to run the kernel is with QEMU, but it probably works in
+Bochs as well.  If you want early printk output, you should enable the Bochs
+debugcon (also known as the "port 0xe9 hack").  The './run' script in the root
+directory of the source tree by default builds the kernel, produces a GRUB
+rescue disc with the kernel installed, and launches QEMU.  See './run --help'
+for other alternatives.
+
+__Do not run the kernel on real hardware__.
+
