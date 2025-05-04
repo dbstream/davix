@@ -7,11 +7,14 @@
 #include <asm/asm.h>
 #include <asm/cpufeature.h>
 #include <asm/idt.h>
+#include <asm/io.h>
 #include <asm/irql.h>
 #include <asm/kmap_fixed.h>
 #include <asm/pcpu_init.h>
 #include <asm/percpu.h>
 #include <davix/acpisetup.h>
+#include <davix/cmdline.h>
+#include <davix/console.h>
 #include <davix/early_alloc.h>
 #include <davix/efi_types.h>
 #include <davix/fbcon.h>
@@ -22,6 +25,7 @@
 #include <dsl/align.h>
 #include <dsl/interval.h>
 #include <dsl/minmax.h>
+#include <vsnprintf.h>
 #include "multiboot.h"
 
 static multiboot_params *boot_params;
@@ -499,6 +503,8 @@ uintptr_t USER_VM_LAST;
 uintptr_t KERNEL_VM_FIRST;
 uintptr_t KERNEL_VM_LAST;
 
+static const char *cmdline = nullptr;
+
 static inline void
 setup_memory (void)
 {
@@ -623,7 +629,10 @@ setup_memory (void)
 	write_cr3 (root_pgtable);
 	boot_params = (multiboot_params *) phys_to_virt ((uintptr_t) boot_params);
 	memmap_tag = (multiboot_memmap *) phys_to_virt ((uintptr_t) memmap_tag);
-
+	if (cmdline) {
+		cmdline = (const char *) phys_to_virt ((uintptr_t) cmdline);
+		set_command_line (cmdline);
+	}
 	setup_free_memory ();
 }
 
@@ -714,6 +723,43 @@ setup_boot_console (void)
 			(void *) virt, backbuf);
 }
 
+static const char *debugcon_logprefix[5] = {
+	"\x1b[0m",
+	"\x1b[0m",
+	"\x1b[0;1m",
+	"\x1b[0;33m",
+	"\x1b[0;31m"
+};
+
+static void
+emit_0xe9 (const char *s)
+{
+	for (; *s; s++)
+		io_outb (0xe9, *s);
+}
+
+static void
+debugcon_emit (Console *con, int level, usecs_t msg_time, const char *msg)
+{
+	(void) con;
+
+	char buf[24];
+	snprintf (buf, sizeof (buf), "[%5llu.%06llu] ",
+			(unsigned long long) (msg_time / 1000000),
+			(unsigned long long) (msg_time % 1000000));
+
+	if (level < 0)
+		level = 0;
+	else if (level > 4)
+		level = 4;
+	emit_0xe9 ("\x1b[0;32m");
+	emit_0xe9 (buf);
+	emit_0xe9 (debugcon_logprefix[level]);
+	emit_0xe9 (msg);
+}
+
+static Console debugcon;
+
 extern "C" void
 x86_start_kernel (multiboot_params *params, uintptr_t offset)
 {
@@ -725,6 +771,30 @@ x86_start_kernel (multiboot_params *params, uintptr_t offset)
 	__write_irql_high (0 | __IRQL_NONE_PENDING);
 	__write_irql_dispatch (0 | __IRQL_NONE_PENDING);
 	call_pcpu_constructors_for (0);
+
+	multiboot_string *cmdline_tag = nullptr;
+	for (multiboot_tag *tag : mb2_tags) {
+		if (tag->type == MB2_TAG_CMDLINE) {
+			cmdline_tag = (multiboot_string *) tag;
+			break;
+		}
+	}
+
+	if (cmdline_tag)
+		cmdline = cmdline_tag->value;
+	if (cmdline)
+		set_command_line (cmdline);
+
+	for (int idx = 0;; idx++) {
+		const char *value = get_early_param ("console", idx);
+		if (!value)
+			break;
+		if (early_param_matches ("0xe9", value)) {
+			debugcon.emit_message = debugcon_emit;
+			console_register (&debugcon);
+			break;
+		}
+	}
 
 	printk (PR_NOTICE "x86_start_kernel: load_offset is 0x%tx  multiboot_params is 0x%tx\n",
 			load_offset,

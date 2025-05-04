@@ -243,6 +243,12 @@ menuentry "Davix kernel" {
 	echo "Booting..."
 	boot
 }
+menuentry "Davix kernel (with printk to 0xe9)" {
+	echo "Loading multiboot2 image..."
+	multiboot2 /davix console=0xe9
+	echo "Booting..."
+	boot
+}
 EOF
 	grub-mkrescue -o $OUTPUTISO $ISOTMPDIR
 else
@@ -256,6 +262,11 @@ timeout: 1
 	comment: davix operating system kernel
 	protocol: multiboot2
 	path: boot():/davix
+/Davix kernel (with printk to 0xe9)
+	comment: davix operating system kernel
+	protocol: multiboot2
+	path: boot():/davix
+	cmdline: console=0xe9
 EOF
 	xorriso -as mkisofs -R -r -J -b limine-bios-cd.bin -no-emul-boot	\
 		-boot-load-size 4 -boot-info-table -hfsplus			\

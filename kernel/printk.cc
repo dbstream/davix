@@ -9,28 +9,6 @@
 #include <davix/time.h>
 #include <vsnprintf.h>
 
-/**
- * HACK: printk to 0xe9 for now, with no locking.
- */
-#include <asm/io.h>
-
-static const char *prefix[5] = {
-	"",
-	"\x1b[0m",
-	"\x1b[0;1m",
-	"\x1b[0;33m",
-	"\x1b[0;31m"
-};
-
-static void
-emitmsg_0xe9 (int level, const char *msg)
-{
-	for (const char *s = prefix[level]; *s; s++)
-		io_outb (0xe9, *s);
-	for (; *msg; msg++)
-		io_outb (0xe9, *msg);
-}
-
 static Console *console_list;
 static spinlock_t console_lock;
 
@@ -92,6 +70,5 @@ printk (const char *fmt, ...)
 	if (level < 0 || level > 4)
 		level = 0;
 
-	emitmsg_0xe9 (level, p);
 	printk_emit (level, msg_time, p);
 }
