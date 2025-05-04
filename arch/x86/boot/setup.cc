@@ -790,8 +790,10 @@ x86_start_kernel (multiboot_params *params, uintptr_t offset)
 		if (!value)
 			break;
 		if (early_param_matches ("0xe9", value)) {
-			debugcon.emit_message = debugcon_emit;
-			console_register (&debugcon);
+			if (0xe9 == io_inb (0xe9)) {
+				debugcon.emit_message = debugcon_emit;
+				console_register (&debugcon);
+			}
 			break;
 		}
 	}
