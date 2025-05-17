@@ -89,6 +89,12 @@ make_pte_k (uintptr_t phys_addr, bool read, bool write, bool exec)
 	};
 }
 
+static inline pte_t
+make_io_pte (uintptr_t phys_addr, page_cache_mode pcm)
+{
+	return __make_pte (phys_addr, make_io_pteval (pcm));
+}
+
 template<int level>
 constexpr static inline int
 __pgtable_index (uintptr_t addr)

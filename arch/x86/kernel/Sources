@@ -2,6 +2,7 @@
 # Copyright (C) 2025-present  dbstream
 
 kobjs += acpi.o
+kobjs += apic.o
 kobjs += entry.o
 kobjs += idt.o
 kobjs += irq.o

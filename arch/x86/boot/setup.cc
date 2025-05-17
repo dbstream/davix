@@ -15,6 +15,7 @@
 #include <davix/acpisetup.h>
 #include <davix/cmdline.h>
 #include <davix/console.h>
+#include <davix/cpuset.h>
 #include <davix/early_alloc.h>
 #include <davix/efi_types.h>
 #include <davix/fbcon.h>
@@ -766,7 +767,7 @@ x86_start_kernel (multiboot_params *params, uintptr_t offset)
 	boot_params = params;
 	load_offset = offset;
 	asm volatile ("movq %%gs:0, %0" : "=r" (pcpu_detail::offsets[0]) :: "memory");
-
+	cpuset_init ();
 	x86_setup_idt ();
 	__write_irql_high (0 | __IRQL_NONE_PENDING);
 	__write_irql_dispatch (0 | __IRQL_NONE_PENDING);

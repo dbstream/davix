@@ -3,3 +3,4 @@
 
 kobjs += uacpi/
 kobjs += osl.o
+kobjs += parse_subtable.o
