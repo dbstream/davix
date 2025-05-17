@@ -122,3 +122,13 @@ irql_set_pending_dpc (void)
 {
 	__write_irql_dispatch (__read_irql_dispatch () & ~__IRQL_NONE_PENDING);
 }
+
+extern void
+irql_begin_irq_from_user (void);
+
+/** Returns true if IRQ handling can proceed, false if it should be deferred  */
+extern bool
+irql_begin_irq_from_kernel (int irq);
+
+extern void
+irql_leave_irq (void);

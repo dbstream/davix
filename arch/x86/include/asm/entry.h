@@ -68,4 +68,21 @@ struct entry_regs {
 	uint64_t ss;
 };
 
+extern void
+x86_do_deferred_irq_vector (int irq);
+
+static inline entry_regs *
+get_user_entry_regs (void)
+{
+	entry_regs *regs;
+	asm volatile ("movq %%gs:16, %0" : "=r" (regs) :: "memory");
+	return regs;
+}
+
+static inline void
+set_user_entry_regs (entry_regs *regs)
+{
+	asm volatile ("movq %0, %%gs:16" :: "r" (regs) : "memory");
+}
+
 #endif

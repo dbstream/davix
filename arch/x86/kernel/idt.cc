@@ -6,6 +6,7 @@
 #include <asm/entry.h>
 #include <asm/gdt.h>
 #include <asm/idt.h>
+#include <asm/interrupt.h>
 #include <asm/trap.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
@@ -50,11 +51,17 @@ load_idt (void)
 extern "C" char asm_handle_GP[];
 extern "C" char asm_handle_PF[];
 
+extern "C" void *asm_idtentry_vector_array[];
+
 void
 x86_setup_idt (void)
 {
 	set_idt_entry (X86_TRAP_GP, asm_handle_GP, 0, 0);
 	set_idt_entry (X86_TRAP_PF, asm_handle_PF, 0, 0);
+
+	for (int i = 0; i < IRQ_VECTOR_NUM; i++)
+		set_idt_entry (IRQ_VECTOR_OFFSET + i, asm_idtentry_vector_array[i], 0, 0);
+
 	load_idt ();
 }
 

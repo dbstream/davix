@@ -3,11 +3,13 @@
  * Copyright (C) 2025-present  dbstream
  */
 	.file "entry.S"
+	.altmacro
 	.code64
 
 #include <asm/asm.h>
 #include <asm/entry.h>
 #include <asm/gdt.h>
+#include <asm/interrupt.h>
 
 #define PUSHQ(value)			\
 	pushq value;			\
@@ -32,7 +34,7 @@
 	.cfi_offset rip, -40
 .endm
 
-.macro PUSH_ENTRY_REGS saveall
+.macro PUSH_ENTRY_REGS
 	XPUSHQ(rax)
 	XPUSHQ(rdi)
 	XPUSHQ(rsi)
@@ -43,19 +45,16 @@
 	XPUSHQ(r10)
 	XPUSHQ(r11)
 	XPUSHQ(rbp)
-.if \saveall == 1
 	XPUSHQ(rbx)
 	XPUSHQ(r12)
 	XPUSHQ(r13)
 	XPUSHQ(r14)
 	XPUSHQ(r15)
 	PUSHQ($0)
-.endif
-	leaq (-40 + 48*\saveall)(%rsp), %rdi
+	leaq 8(%rsp), %rdi
 .endm
 
-.macro POP_ENTRY_REGS saveall
-.if \saveall == 1
+.macro POP_ENTRY_REGS
 	addq $8, %rsp
 	.cfi_adjust_cfa_offset -8
 	XPOPQ(r15)
@@ -63,7 +62,6 @@
 	XPOPQ(r13)
 	XPOPQ(r12)
 	XPOPQ(rbx)
-.endif
 	XPOPQ(rbp)
 	XPOPQ(r11)
 	XPOPQ(r10)
@@ -76,7 +74,7 @@
 	XPOPQ(rax)
 .endm
 
-.macro idtentry_exception name has_err saveall user_func kernel_func
+.macro idtentry_exception name has_err user_func kernel_func
 	.globl \name
 	.balign 16
 SYM_FUNC_BEGIN(\name)
@@ -86,7 +84,7 @@ SYM_FUNC_BEGIN(\name)
 	PUSHQ($0)
 .endif
 
-	PUSH_ENTRY_REGS \saveall
+	PUSH_ENTRY_REGS
 	movq IRET_CS(%rdi), %rax
 	cmpq $__KERNEL_CS, %rax
 	je 1f
@@ -99,7 +97,7 @@ SYM_FUNC_BEGIN(\name)
 1:
 	call \kernel_func
 2:
-	POP_ENTRY_REGS \saveall
+	POP_ENTRY_REGS
 
 	addq $8, %rsp
 	.cfi_adjust_cfa_offset -8
@@ -108,7 +106,63 @@ SYM_FUNC_BEGIN(\name)
 SYM_FUNC_END(\name)
 .endm
 
+.macro idtentry_vector nr
+SYM_FUNC_BEGIN(asm_irq_\nr)
+	CFI_IRET_FRAME 0
+	PUSHQ($\nr)
+	jmp asm_handle_irq_common
+SYM_FUNC_END(asm_irq_\nr)
+.endm
+
+.macro idtentry_vector_array_entry nr
+	.quad asm_irq_\nr
+.endm
+
 	__TEXT
 
-idtentry_exception asm_handle_GP 1 0 handle_GP_exception handle_GP_exception_k
-idtentry_exception asm_handle_PF 1 0 handle_PF_exception handle_PF_exception_k
+	.balign 64
+SYM_FUNC_BEGIN(asm_handle_irq_common)
+	CFI_IRET_FRAME 8
+
+	PUSH_ENTRY_REGS
+	movq IRET_CS(%rdi), %rax
+	cmpq $__KERNEL_CS, %rax
+	je .Lirq_entry_from_kernelspace
+
+	swapgs
+	call __entry_from_irq_vector
+	swapgs
+	jmp .Lirq_entry_common
+
+.Lirq_entry_from_kernelspace:
+	call __entry_from_irq_vector_k
+
+.Lirq_entry_common:
+	POP_ENTRY_REGS
+
+	addq $8, %rsp
+	.cfi_adjust_cfa_offset -8
+
+	iretq
+SYM_FUNC_END(asm_handle_irq_common)
+
+idtentry_exception asm_handle_GP 1 handle_GP_exception handle_GP_exception_k
+idtentry_exception asm_handle_PF 1 handle_PF_exception handle_PF_exception_k
+
+	.set i, IRQ_VECTOR_OFFSET
+.rept IRQ_VECTOR_NUM
+	idtentry_vector %i
+	.set i, i + 1
+.endr
+
+	__RODATA
+
+	.balign 8
+	.globl asm_idtentry_vector_array
+SYM_DATA_BEGIN(asm_idtentry_vector_array)
+	.set i, IRQ_VECTOR_OFFSET
+.rept IRQ_VECTOR_NUM
+	idtentry_vector_array_entry %i
+	.set i, i + 1
+.endr
+SYM_DATA_END(asm_idtentry_vector_array)
