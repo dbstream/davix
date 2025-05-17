@@ -22,7 +22,7 @@ smp_wmb (void)
 static inline void
 smp_rmb (void)
 {
-	asm volatile ("sfence" ::: "memory");
+	asm volatile ("lfence" ::: "memory");
 }
 
 #define smp_spinlock_hint smp_spinlock_hint

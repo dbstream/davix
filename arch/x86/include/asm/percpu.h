@@ -24,7 +24,7 @@ read__seg_gs [[gnu::always_inline]] (T *ptr)
 	} else if constexpr (sizeof (T) == 8) {
 		asm volatile ("movq %%gs:%1, %0" : "=r" (value) : "m" (*ptr));
 	} else {
-		asm volatile ("addq %%gs:0, %0" : "+r" (ptr));
+		asm volatile ("addq %%gs:0, %0" : "+r" (ptr) :: "cc");
 		value = *ptr;
 	}
 	return value;
@@ -43,7 +43,7 @@ write__seg_gs [[gnu::always_inline]] (T *ptr, T value)
 	} else if constexpr (sizeof (T) == 8) {
 		asm volatile ("movq %0, %%gs:%1" :: "Nr" (value), "m" (*ptr));
 	} else {
-		asm volatile ("addq %%gs:0, %0" : "+r" (ptr));
+		asm volatile ("addq %%gs:0, %0" : "+r" (ptr) :: "cc");
 		*ptr = value;
 	}
 }
@@ -67,7 +67,7 @@ public:
 	operator T * (void) const
 	{
 		T *ret = m_ptr;
-		asm volatile ("addq %%gs:0, %0" : "+r" (ret));
+		asm volatile ("addq %%gs:0, %0" : "+r" (ret) :: "cc");
 		return ret;
 	}
 
