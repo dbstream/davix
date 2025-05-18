@@ -72,5 +72,12 @@ enum : unsigned int {
  */
 enum : unsigned int {
 	APIC_SPI_ENABLE		= 1U << 8,
-	APIC_SPI_FCC_ENABLE	= 1U << 9
+	/**
+	 *   Determines if focus processor checking is enabled (0) or disabled
+	 *   (1) when using the lowest priority delivery mode.  In Pentium 4 and
+	 *   Intel Xeon processors, this bit is reserved and should be cleared
+	 *   to 0.
+	 * (Intel 64 and IA-32 Architectures Software Developer's Manual)
+	 */
+	APIC_SPI_FCC_DISABLE	= 1U << 9
 };

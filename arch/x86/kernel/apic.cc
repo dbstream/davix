@@ -6,10 +6,12 @@
 #include <asm/apic.h>
 #include <asm/asm.h>
 #include <asm/cpufeature.h>
+#include <asm/interrupt.h>
 #include <asm/kmap_fixed.h>
 #include <asm/mmio.h>
 #include <asm/msr_bits.h>
 #include <davix/printk.h>
+#include <davix/time.h>
 
 static bool apic_is_x2apic;
 
@@ -120,6 +122,12 @@ setup_apic_base_x2APIC (void)
 	write_msr (MSR_APIC_BASE, xAPIC_base | _APIC_BASE_ENABLED | _APIC_BASE_X2APIC);
 }
 
+static void
+setup_local_apic (void);
+
+static void
+calibrate_apic_timer (void);
+
 void
 apic_init (void)
 {
@@ -141,4 +149,73 @@ apic_init (void)
 		kmap_fixed_install (KMAP_FIXED_IDX_LOCAL_APIC,
 				make_io_pte (xAPIC_base, pcm_uncached));
 	}
+
+	setup_local_apic ();
+	calibrate_apic_timer ();
+}
+
+static void
+setup_local_apic (void)
+{
+	/** Soft-disable then soft-enable the APIC.  */
+	apic_write (APIC_SPI, 0);
+	apic_write (APIC_SPI, VECTOR_SPURIOUS | APIC_SPI_ENABLE | APIC_SPI_FCC_DISABLE);
+}
+
+static uint64_t apic_khz;
+
+static void
+calibrate_apic_timer (void)
+{
+	/**
+	 * Writing zero to the timer initial count effectively disables the
+	 * local APIC timer.
+	 */
+	apic_write (APIC_TMR_ICR, 0);
+
+	/**
+	 * Setup the clock divisor to be 16.
+	 */
+	apic_write (APIC_TMR_DIV, 3);
+
+	/**
+	 * One-shot mode.  Mask the timer.
+	 */
+	apic_write (APIC_LVTTMR, APIC_IRQ_MASK | VECTOR_APIC_TIMER);
+
+	nsecs_t t0 = ns_since_boot ();
+	if (!t0) [[unlikely]] {
+		printk (PR_WARN "APIC: no reference timer for calibration available\n");
+		apic_khz = 1000000; // guess 1000MHz
+		return;
+	}
+
+	/**
+	 * Start the countdown.
+	 */
+	apic_write (APIC_TMR_ICR, 0xffffffffU);
+
+	nsecs_t t1, target = t0 + 100UL * 1000UL * 1000UL;  /** 100ms  */
+	do {
+		__builtin_ia32_pause ();
+		t1 = ns_since_boot ();
+	} while (t1 < target);
+	uint32_t ccr = apic_read (APIC_TMR_CCR);
+
+	/**
+	 * Disable the APIC timer.
+	 */
+	apic_write (APIC_TMR_ICR, 0);
+
+	uint32_t delta_ticks = 0xffffffffU - ccr;
+	nsecs_t delta_ns = t1 - t0;
+
+	/**
+	 * delta_ticks was measured with a clock divisor of 16.
+	 */
+	delta_ticks *= 16;
+
+	apic_khz = (1000000UL * delta_ticks) / delta_ns;
+	printk (PR_NOTICE "APIC: calibrated the local APIC timer clock frequency to %lu.%03luMHz\n",
+			apic_khz / 1000UL, apic_khz % 1000UL);
 }
