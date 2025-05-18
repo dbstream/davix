@@ -13,7 +13,7 @@
 #define UACPI_OVERRIDE_TYPES 1
 
 #ifndef CONFIG_MAX_NR_CPUS
-#define CONFIG_MAX_NR_CPUS 1
+#define CONFIG_MAX_NR_CPUS 256
 #endif
 
 #endif /** __davix_predef_h_included */

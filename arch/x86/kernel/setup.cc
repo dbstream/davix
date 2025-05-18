@@ -50,7 +50,10 @@ disable_legacy_PIC (void)
 uint32_t cpu_to_apic_array[CONFIG_MAX_NR_CPUS];
 uint32_t cpu_to_acpi_uid_array[CONFIG_MAX_NR_CPUS];
 
+static uint32_t bsp_apic_id;
 static acpi_madt *madt;
+
+static int cpu_count = 1;
 
 static uacpi_iteration_decision
 madt_lapic_addr_override (acpi_entry_hdr *entry, void *arg)
@@ -64,6 +67,46 @@ madt_lapic_addr_override (acpi_entry_hdr *entry, void *arg)
 		set_xAPIC_base (lapic_override->address);
 	}
 
+	return UACPI_ITERATION_DECISION_CONTINUE;
+}
+
+static uacpi_iteration_decision
+madt_cpus (acpi_entry_hdr *entry, void *arg)
+{
+	uint32_t apic_id, acpi_uid, flags;
+
+	if (entry->type == ACPI_MADT_ENTRY_TYPE_LAPIC) {
+		acpi_madt_lapic *lapic = (acpi_madt_lapic *) entry;
+		apic_id = lapic->id;
+		acpi_uid = lapic->uid;
+		flags = lapic->flags;
+	} else if (entry->type == ACPI_MADT_ENTRY_TYPE_LOCAL_X2APIC) {
+		acpi_madt_x2apic *x2apic = (acpi_madt_x2apic *) entry;
+		apic_id = x2apic->id;
+		acpi_uid = x2apic->uid;
+		flags = x2apic->flags;
+	} else
+		return UACPI_ITERATION_DECISION_CONTINUE;
+
+	if (apic_id == bsp_apic_id) {
+		if (arg)
+			cpu_to_acpi_uid_array[0] = acpi_uid;
+		return UACPI_ITERATION_DECISION_CONTINUE;
+	}
+
+	if (cpu_count >= CONFIG_MAX_NR_CPUS)
+		return UACPI_ITERATION_DECISION_BREAK;
+
+	if (!(flags & ACPI_PIC_ENABLED))
+		return UACPI_ITERATION_DECISION_CONTINUE;
+
+	if (arg) {
+		cpu_to_apic_array[cpu_count] = apic_id;
+		cpu_to_acpi_uid_array[cpu_count] = acpi_uid;
+		cpu_present.set (cpu_count);
+	}
+
+	cpu_count++;
 	return UACPI_ITERATION_DECISION_CONTINUE;
 }
 
@@ -94,4 +137,17 @@ arch_init (void)
 
 	disable_legacy_PIC ();
 	apic_init ();
+
+	bsp_apic_id = apic_read_id ();
+	cpu_to_apic_array[0] = bsp_apic_id;
+
+	cpu_count = 1;
+	acpi_parse_madt (madt, madt_cpus, nullptr);
+	set_nr_cpus (cpu_count);
+
+	cpu_count = 1;
+	acpi_parse_madt (madt, madt_cpus, (void *) 1);
+
+	madt = nullptr;
+	uacpi_table_unref (&madt_table);
 }

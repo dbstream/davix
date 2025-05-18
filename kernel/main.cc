@@ -4,6 +4,7 @@
  */
 #include <asm/irql.h>
 #include <davix/cmdline.h>
+#include <davix/cpuset.h>
 #include <davix/dpc.h>
 #include <davix/early_alloc.h>
 #include <davix/kmalloc.h>
@@ -175,6 +176,7 @@ start_kernel (void)
 	printk (PR_INFO "Kernel command line: %s\n", kernel_cmdline);
 
 	arch_init ();
+	printk (PR_INFO "CPUs: %d\n", nr_cpus);
 
 	hello_dpc.init (hello_dpc_routine, nullptr, nullptr);
 	hello_dpc.enqueue ();
