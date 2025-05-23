@@ -14,6 +14,8 @@
 #include <davix/start_kernel.h>
 #include <string.h>
 
+#include <davix/ktimer.h>
+
 static DPC hello_dpc;
 
 static void
@@ -169,6 +171,18 @@ early_param_matches (const char *expected, const char *value)
 
 extern const char davix_banner[];
 
+static KTimer hello_ktimer;
+
+static void
+hello_ktimer_routine (KTimer *ktimer, void *arg)
+{
+	(void) ktimer;
+	(void) arg;
+
+	hello_ktimer.enqueue (ns_since_boot () + 1000000000UL);
+	printk (PR_INFO "Hello, KTimers!\n");
+}
+
 void
 start_kernel (void)
 {
@@ -180,6 +194,9 @@ start_kernel (void)
 
 	hello_dpc.init (hello_dpc_routine, nullptr, nullptr);
 	hello_dpc.enqueue ();
+
+	hello_ktimer.init (hello_ktimer_routine, nullptr);
+	hello_ktimer.enqueue (ns_since_boot () + 10000000000ULL);
 
 	pgalloc_init ();
 	early_free_everything_to_pgalloc ();

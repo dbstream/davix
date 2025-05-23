@@ -3,6 +3,7 @@
 
 kobjs += cpuset.o
 kobjs += dpc.o
+kobjs += ktimer.o
 kobjs += main.o
 kobjs += panic.o
 kobjs += printk.o

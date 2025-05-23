@@ -232,5 +232,5 @@ apic_start_timer (void)
 	apic_write (APIC_TMR_ICR, 0);
 	apic_write (APIC_TMR_DIV, 3);
 	apic_write (APIC_LVTTMR, APIC_TMR_PERIODIC | VECTOR_APIC_TIMER);
-	apic_write (APIC_TMR_ICR, (1000 * apic_khz) / (16 * /* frequency: */ 1));
+	apic_write (APIC_TMR_ICR, (1000 * apic_khz) / (16 * /* frequency: */ 1000));
 }

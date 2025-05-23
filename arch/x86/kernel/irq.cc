@@ -6,6 +6,7 @@
 #include <asm/entry.h>
 #include <asm/interrupt.h>
 #include <asm/irql.h>
+#include <davix/ktimer.h>
 #include <davix/printk.h>
 
 static void
@@ -53,7 +54,7 @@ x86_handle_irq_vector (int irq)
 
 	if (irq == VECTOR_APIC_TIMER) {
 		apic_eoi ();
-		printk (PR_INFO "IRQ: got timer interrupt\n");
+		ktimer_handle_timer_interrupt ();
 		return;
 	}
 
