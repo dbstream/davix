@@ -1,0 +1,8 @@
+=====================
+Davix support library
+=====================
+
+This is the compiled part of the Davix support library.
+
+Currently, these components of the DSL use non-header code:
+	- AVL trees (AVLTree::fixup)
