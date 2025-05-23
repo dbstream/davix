@@ -44,41 +44,56 @@ struct spinlock_t {
 		atomic_store_release (&value, 0);
 	}
 
-	inline irql_cookie_t
-	lock (irql_t irql)
+	inline void
+	lock_dpc (void)
 	{
-		irql_cookie_t cookie = raise_irql (irql);
+		disable_dpc ();
 		raw_lock ();
-		return cookie;
 	}
 
 	inline void
-	unlock (irql_cookie_t cookie)
+	unlock_dpc (void)
 	{
 		raw_unlock ();
-		lower_irql (cookie);
+		enable_dpc ();
+	}
+
+	inline void
+	lock_irq (void)
+	{
+		disable_dpc ();
+		disable_irq ();
+		raw_lock ();
+	}
+
+	inline void
+	unlock_irq (void)
+	{
+		raw_unlock ();
+		enable_irq ();
+		enable_dpc ();
 	}
 };
 
-class scoped_spinlock {
+class scoped_spinlock_dpc {
 	spinlock_t *m_lock;
-	irql_cookie_t m_cookie;
 
 public:
 	inline
-	scoped_spinlock (spinlock_t &lock, irql_t irql)
+	scoped_spinlock_dpc (spinlock_t &lock)
 		: m_lock (&lock)
-		, m_cookie (lock.lock (irql))
-	{}
-
-	inline
-	~scoped_spinlock (void)
 	{
-		m_lock->unlock (m_cookie);
+		m_lock->lock_dpc ();
 	}
 
-	scoped_spinlock (void) = delete;
-	scoped_spinlock (scoped_spinlock &) = delete;
-	scoped_spinlock (scoped_spinlock &&) = delete;
-	scoped_spinlock &operator= (scoped_spinlock &&) = delete;
+	inline
+	~scoped_spinlock_dpc (void)
+	{
+		m_lock->unlock_dpc ();
+	}
+
+	scoped_spinlock_dpc (void) = delete;
+	scoped_spinlock_dpc (scoped_spinlock_dpc &) = delete;
+	scoped_spinlock_dpc (scoped_spinlock_dpc &&) = delete;
+	scoped_spinlock_dpc &operator= (scoped_spinlock_dpc &&) = delete;
 };

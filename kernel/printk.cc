@@ -19,7 +19,7 @@ static spinlock_t console_lock;
 void
 console_register (Console *con)
 {
-	scoped_spinlock g (console_lock, IRQL_DISPATCH);
+	scoped_spinlock_dpc g (console_lock);
 
 	con->link = &console_list;
 	con->next = console_list;
@@ -39,12 +39,14 @@ static spinlock_t printk_output_lock;
 static void
 printk_emit (int level, usecs_t msg_time, const char *msg)
 {
-	scoped_spinlock g (printk_output_lock, IRQL_HIGH);
+	printk_output_lock.lock_irq ();
 
 	Console *con = atomic_load (&console_list, mo_seq_cst);
 	for (; con; con = con->next) {
 		con->emit_message (con, level, msg_time, msg);
 	}
+
+	printk_output_lock.unlock_irq ();
 }
 
 extern "C"

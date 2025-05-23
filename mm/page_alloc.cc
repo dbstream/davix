@@ -40,7 +40,7 @@ dump_pgalloc_stats (void)
 	size_t zone_nfree[num_page_zones];
 
 	{
-		scoped_spinlock g (freelist_lock, IRQL_DISPATCH);
+		scoped_spinlock_dpc g (freelist_lock);
 		nfree = total_free_pages;
 		for (int i = 0; i < num_page_zones; i++)
 			zone_nfree[i] = zone_list[i].count;
@@ -62,7 +62,7 @@ alloc_page (allocation_class aclass)
 	int zone = allocation_zone (aclass);
 
 	{
-		scoped_spinlock g (freelist_lock, IRQL_DISPATCH);
+		scoped_spinlock_dpc g (freelist_lock);
 
 		for (;;) {
 			if (!zone_list[zone].free_list.empty ()) [[likely]] {
@@ -89,7 +89,7 @@ free_page (Page *page)
 	page->flags = 0;
 	int zone = page_zone (page);
 
-	scoped_spinlock g (freelist_lock, IRQL_DISPATCH);
+	scoped_spinlock_dpc g (freelist_lock);
 
 	zone_list[zone].free_list.push_front (page);
 	zone_list[zone].count++;

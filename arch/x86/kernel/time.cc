@@ -268,7 +268,7 @@ tsc_nsecs (void)
 		/**
 		 * read_tsc_tscconv is safe against preemption but not migration
 		 */
-		scoped_irql g (IRQL_DISPATCH);
+		scoped_dpc g;
 		tsc = read_tsc_tscconv (&tscconv);
 	}
 

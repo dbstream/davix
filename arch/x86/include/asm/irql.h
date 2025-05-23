@@ -7,7 +7,6 @@
 #include <stdint.h>
 
 typedef unsigned int irql_t;
-typedef struct { irql_t irql; } irql_cookie_t;
 
 enum : irql_t {
 	IRQL_NORMAL,
@@ -81,40 +80,30 @@ __pending_dpcs (void);
 extern void
 __pending_high (void);
 
-static inline irql_cookie_t
-raise_irql (irql_t target)
+static inline void
+disable_dpc (void)
 {
-	switch (target) {
-	case IRQL_DISPATCH:
-		__raise_irql_dispatch ();
-		break;
-	case IRQL_HIGH:
-		__raise_irql_dispatch ();
-		__raise_irql_high ();
-		break;
-	default:
-		/** IRQL_NORMAL  */
-		break;
-	}
-	return { target };
+	__raise_irql_dispatch ();
 }
 
 static inline void
-lower_irql (irql_cookie_t cookie)
+enable_dpc (void)
 {
-	switch (cookie.irql) {
-	case IRQL_HIGH:
-		if (__lower_irql_high ())
-			__pending_high ();
-		[[fallthrough]];
-	case IRQL_DISPATCH:
-		if (__lower_irql_dispatch ())
-			__pending_dpcs ();
-		break;
-	default:
-		/** IRQL_NORMAL  */
-		break;
-	}
+	if (__lower_irql_dispatch ())
+		__pending_dpcs ();
+}
+
+static inline void
+disable_irq (void)
+{
+	__raise_irql_high ();
+}
+
+static inline void
+enable_irq (void)
+{
+	if (__lower_irql_high ())
+		__pending_high ();
 }
 
 static inline void

@@ -51,7 +51,7 @@ slab_alloc (SlabAllocator *allocator, allocation_class aclass)
 {
 	aclass = ALLOC_KERNEL | (aclass & __ALLOC_HIGHPRIO);
 
-	scoped_spinlock g (allocator->lock, IRQL_DISPATCH);
+	scoped_spinlock_dpc g (allocator->lock);
 
 	Page *page = nullptr;
 	if (allocator->nr_full) {
@@ -104,7 +104,7 @@ slab_free (void *ptr)
 	SlabAllocator *allocator = page->slab.allocator;
 
 	{
-		scoped_spinlock g (allocator->lock, IRQL_DISPATCH);
+		scoped_spinlock_dpc g (allocator->lock);
 
 		void **head = new (ptr) void *;
 		*head = page->slab.pobj;
@@ -143,7 +143,7 @@ dump_one (SlabAllocator *allocator)
 	size_t per_page = allocator->objs_per_page;
 	size_t nr_full, nr_partial, nr_empty, nfree;
 	{
-		scoped_spinlock g (allocator->lock, IRQL_DISPATCH);
+		scoped_spinlock_dpc g (allocator->lock);
 		nr_full = allocator->nr_full;
 		nr_partial = allocator->nr_partial;
 		nr_empty = allocator->nr_empty;
@@ -164,7 +164,7 @@ slab_dump (void)
 	printk (PR_INFO "Slab allocators:\n");
 	printk (PR_INFO ".. name            size perpg full part empt  ntot nfree\n");
 	dump_one (&slab_allocator);
-	scoped_spinlock g (globalSlabSpinlock, IRQL_DISPATCH);
+	scoped_spinlock_dpc g (globalSlabSpinlock);
 	for (SlabAllocator *allocator : globalSlabList)
 		dump_one (allocator);
 }
@@ -217,7 +217,7 @@ slab_create (const char *name, size_t size, size_t align)
 
 	init_new_allocator (allocator, name, size, align, realsize);
 
-	scoped_spinlock g (globalSlabSpinlock, IRQL_DISPATCH);
+	scoped_spinlock_dpc g (globalSlabSpinlock);
 	globalSlabList.push_back (allocator);
 
 	return allocator;

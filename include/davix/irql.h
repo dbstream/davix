@@ -6,23 +6,32 @@
 
 #include <asm/irql.h>
 
-class scoped_irql {
-	irql_cookie_t m_cookie;
-
+class scoped_dpc {
 public:
 	inline
-	scoped_irql (irql_t irql)
-		: m_cookie (raise_irql (irql))
-	{}
-
-	inline
-	~scoped_irql (void)
+	scoped_dpc (void)
 	{
-		lower_irql (m_cookie);
+		disable_dpc ();
 	}
 
-	scoped_irql (void) = delete;
-	scoped_irql (scoped_irql &) = delete;
-	scoped_irql (scoped_irql &&) = delete;
-	scoped_irql &operator= (scoped_irql &&) = delete;
+	inline
+	~scoped_dpc (void)
+	{
+		enable_dpc ();
+	}
+};
+
+class scoped_irq {
+public:
+	inline
+	scoped_irq (void)
+	{
+		disable_irq ();
+	}
+
+	inline
+	~scoped_irq (void)
+	{
+		enable_irq ();
+	}
 };

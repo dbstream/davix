@@ -24,7 +24,7 @@ PERCPU_CONSTRUCTOR(kernel_dpc)
 bool
 DPC::enqueue (void)
 {
-	scoped_irql guard (IRQL_HIGH);
+	scoped_irq g;
 
 	if (m_is_enqueued)
 		return true;
@@ -43,7 +43,7 @@ void
 dispatch_DPCs (void)
 {
 	DPCList *list = percpu_ptr (globalDpcList);
-	irql_cookie_t cookie = raise_irql (IRQL_HIGH);
+	disable_irq ();
 	while (!list->empty ()) {
 		DPC *dpc = list->pop_front ();
 		dpc->m_is_enqueued = false;
@@ -52,9 +52,9 @@ dispatch_DPCs (void)
 		void *arg1 = dpc->m_arg1;
 		void *arg2 = dpc->m_arg2;
 
-		lower_irql (cookie);
+		enable_irq ();
 		routine (dpc, arg1, arg2);
-		cookie = raise_irql (IRQL_HIGH);
+		disable_irq ();
 	}
-	lower_irql (cookie);
+	enable_irq ();
 }
