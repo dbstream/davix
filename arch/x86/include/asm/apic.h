@@ -47,3 +47,6 @@ apic_init (void);
 
 void
 apic_eoi (void);
+
+void
+apic_start_timer (void);

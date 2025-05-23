@@ -93,6 +93,12 @@ apic_send_IPI (uint32_t value, uint32_t target)
 	apic_wait_icr ();
 }
 
+void
+apic_eoi (void)
+{
+	apic_write (APIC_EOI, 0);
+}
+
 static uintptr_t xAPIC_base;
 
 void
@@ -218,4 +224,13 @@ calibrate_apic_timer (void)
 	apic_khz = (1000000UL * delta_ticks) / delta_ns;
 	printk (PR_NOTICE "APIC: calibrated the local APIC timer clock frequency to %lu.%03luMHz\n",
 			apic_khz / 1000UL, apic_khz % 1000UL);
+}
+
+void
+apic_start_timer (void)
+{
+	apic_write (APIC_TMR_ICR, 0);
+	apic_write (APIC_TMR_DIV, 3);
+	apic_write (APIC_LVTTMR, APIC_TMR_PERIODIC | VECTOR_APIC_TIMER);
+	apic_write (APIC_TMR_ICR, (1000 * apic_khz) / (16 * /* frequency: */ 1));
 }

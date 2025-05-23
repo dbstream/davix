@@ -2,6 +2,7 @@
  * Low-level IRQ entry code.
  * Copyright (C) 2025-present  dbstream
  */
+#include <asm/apic.h>
 #include <asm/entry.h>
 #include <asm/interrupt.h>
 #include <asm/irql.h>
@@ -45,5 +46,16 @@ x86_do_deferred_irq_vector (int irq)
 static void
 x86_handle_irq_vector (int irq)
 {
+	if (irq == VECTOR_SPURIOUS) {
+		printk (PR_INFO "IRQ: got spurious interrupt\n");
+		return;
+	}
+
+	if (irq == VECTOR_APIC_TIMER) {
+		apic_eoi ();
+		printk (PR_INFO "IRQ: got timer interrupt\n");
+		return;
+	}
+
 	printk (PR_INFO "IRQ: got interrupt %d\n", irq);
 }

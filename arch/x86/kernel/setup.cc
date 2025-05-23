@@ -2,6 +2,7 @@
  * arch_init
  * Copyright (C) 2025-present  dbstream
  */
+#include <asm/asm.h>
 #include <asm/apic_def.h>
 #include <asm/apic.h>
 #include <asm/io.h>
@@ -150,4 +151,7 @@ arch_init (void)
 
 	madt = nullptr;
 	uacpi_table_unref (&madt_table);
+
+	apic_start_timer ();
+	raw_irq_enable ();
 }
