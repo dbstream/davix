@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#include <container_of.h>
+
 namespace dsl {
 
 struct AVLNode {
@@ -16,9 +18,9 @@ class AVLTree {
 public:
 	enum Dir { LEFT = 0, RIGHT = 1 };
 
-private:
 	AVLNode *m_root = nullptr;
 
+private:
 	void
 	fixup (AVLNode *fixup_node);
 
@@ -141,6 +143,101 @@ public:
 		Z->child[RIGHT] = node->child[RIGHT];
 		Z->child[RIGHT]->parent = Z;
 		fixup (Y);
+	}
+};
+
+/**
+ * class TypedAVLTree - typed interface to the AVL tree datastructure.
+ * @T: container node type
+ * @F: field in T with type AVLNode
+ * @Comparator: a function-like object with signature bool(const T*, const T*)
+ *
+ * The comparator serves a similar purpose to that of std::less in STL
+ * algorithms.  It should return true if lhs precedes rhs, false otherwise.
+ */
+template<class T, AVLNode T::*F, class Comparator>
+class TypedAVLTree {
+private:
+	AVLTree m_tree;
+	Comparator m_cmp;
+public:
+	constexpr
+	TypedAVLTree (void)
+		: m_tree (), m_cmp ()
+	{}
+
+	constexpr
+	TypedAVLTree (Comparator cmp)
+		: m_tree (), m_cmp (cmp)
+	{}
+
+	constexpr void
+	init (void)
+	{
+		m_tree.init ();
+	}
+
+	static inline T *
+	container_of (AVLNode *node)
+	{
+		return ::container_of<T, AVLNode> (F, node);
+	}
+
+	static inline const T *
+	const_container_of (const AVLNode *node)
+	{
+		return ::container_of<const T, const AVLNode> (F, node);
+	}
+
+	inline void
+	insert (T *node)
+	{
+		AVLNode *parent = nullptr;
+		AVLNode *x = m_tree.m_root;
+		AVLTree::Dir dir = AVLTree::LEFT;
+		while (x) {
+			if (m_cmp (const_container_of (x), node))
+				dir = AVLTree::LEFT;
+			else
+				dir = AVLTree::RIGHT;
+
+			parent = x;
+			x = x->child[dir];
+		}
+
+		m_tree.insert_at (parent, dir, &(node->*F));
+	}
+
+	inline void
+	remove (T *node)
+	{
+		m_tree.remove (&(node->*F));
+	}
+
+	inline T *
+	first (void)
+	{
+		AVLNode *x = m_tree.m_root;
+		if (!x)
+			return nullptr;
+
+		while (x->child[AVLTree::LEFT])
+			x = x->child[AVLTree::LEFT];
+
+		return container_of (x);
+	}
+
+	inline T *
+	last (void)
+	{
+		AVLNode *x = m_tree.m_root;
+		if (!x)
+			return nullptr;
+
+		while (x->child[AVLTree::RIGHT])
+			x = x->child[AVLTree::RIGHT];
+
+		return container_of (x);
 	}
 };
 
