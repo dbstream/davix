@@ -77,7 +77,7 @@ kmap_fixed (uintptr_t phys, size_t size, pteval_t flags)
 
 	for (int i = 0; i < npages; i++)
 		kmap_fixed_install (idx + i,
-				__make_pte (phys + i * PAGE_SIZE, flags));
+				make_pte_k (phys + i * PAGE_SIZE, flags));
 
 	return (void *) (kmap_fixed_address (idx) + offset);
 }

@@ -356,21 +356,21 @@ get_next_pte (volatile uint64_t *entry, uintptr_t addr)
 	if (value) {
 		value &= __PG_ADDR_MASK;
 		if (curr_mapped != value) {
-			kmap_fixed_install (kmap_idx, make_pte_k (value, true, true, false));
+			kmap_fixed_install (kmap_idx, make_pte_k (value, PAGE_KERNEL_DATA));
 			curr_mapped = value;
 		}
 	} else {
 		value = alloc_from_memmap (PAGE_SIZE);
-		kmap_fixed_install (kmap_idx, make_pte_k (value, true, true, false));
+		kmap_fixed_install (kmap_idx, make_pte_k (value, PAGE_KERNEL_DATA));
 		curr_mapped = value;
 
 		for (int i = 0; i < 512; i++)
 			table[i] = 0;
 
-		*entry = value | __PG_PRESENT | __PG_WRITE;
+		*entry = value | PAGE_KERNEL_PGTABLE;
 	}
 
-	return table + __pgtable_index<level> (addr);
+	return table + __pgtable_index (addr, level);
 }
 
 static volatile uint64_t *
@@ -380,12 +380,12 @@ get_p4e (uintptr_t addr)
 		volatile uint64_t *const table = (volatile uint64_t *)
 				kmap_fixed_address (KMAP_FIXED_IDX_P5D);
 
-		return get_next_pte<4> (table + __pgtable_index<5> (addr), addr);
+		return get_next_pte<4> (table + __pgtable_index (addr, 5), addr);
 	}
 
 	volatile uint64_t *const table = (volatile uint64_t *)
 			kmap_fixed_address (KMAP_FIXED_IDX_P4D);
-	return table + __pgtable_index<4> (addr);
+	return table + __pgtable_index (addr, 4);
 }
 
 static volatile uint64_t *
@@ -473,7 +473,7 @@ setup_page_struct (uintptr_t start, uintptr_t end)
 			continue;
 
 		uintptr_t value = alloc_from_memmap (PAGE_SIZE);
-		pte_t pte = make_pte_k (value, true, true, false);
+		pte_t pte = make_pte_k (value, PAGE_KERNEL_DATA);
 		volatile unsigned char *p = (volatile unsigned char *)
 				kmap_fixed_install (KMAP_FIXED_IDX_SETUP_TMP, pte);
 		for (uintptr_t i = 0; i < PAGE_SIZE; i++)
@@ -570,11 +570,12 @@ setup_memory (void)
 
 	root_pgtable = alloc_from_memmap (PAGE_SIZE);
 	uintptr_t root_vaddr;
+	pte_t toplevel_pte = make_pte_k (root_pgtable, PAGE_KERNEL_DATA);
 	if (has_feature (FEATURE_LA57)) {
-		kmap_fixed_install (KMAP_FIXED_IDX_P5D, make_pte_k (root_pgtable, true, true, false));
+		kmap_fixed_install (KMAP_FIXED_IDX_P5D, toplevel_pte);
 		root_vaddr = kmap_fixed_address (KMAP_FIXED_IDX_P5D);
 	} else {
-		kmap_fixed_install (KMAP_FIXED_IDX_P4D, make_pte_k (root_pgtable, true, true ,false));
+		kmap_fixed_install (KMAP_FIXED_IDX_P4D, toplevel_pte);
 		root_vaddr = kmap_fixed_address (KMAP_FIXED_IDX_P4D);
 	}
 
@@ -582,17 +583,14 @@ setup_memory (void)
 	for (int i = 0; i < 512; i++)
 		table[i] = 0;
 
-	uint64_t rx = make_pte_k (0, true, false, true).value;
-	uint64_t r = make_pte_k (0, true, false, false).value;
-	uint64_t rw = make_pte_k (0, true, true, false).value;
 	identity_map ((uintptr_t) __head_start, sym_addr (__head_start),
-			__head_end - __head_start, rw, 2);
+			__head_end - __head_start, PAGE_KERNEL_DATA, 2);
 	identity_map ((uintptr_t) __text_start, sym_addr (__text_start),
-			__text_end - __text_start, rx, 2);
+			__text_end - __text_start, PAGE_KERNEL_TEXT, 2);
 	identity_map ((uintptr_t) __rodata_start, sym_addr (__rodata_start),
-			__rodata_end - __rodata_start, r, 2);
+			__rodata_end - __rodata_start, PAGE_KERNEL_RODATA, 2);
 	identity_map ((uintptr_t) __data_start, sym_addr (__data_start),
-			__percpu_end - __data_start, rw, 2);
+			__percpu_end - __data_start, PAGE_KERNEL_DATA, 2);
 
 	int maxhuge = has_feature (FEATURE_PDPE1GB) ? 3 : 2;
 	uintptr_t mstart = 0, mend = 0;
@@ -614,7 +612,7 @@ setup_memory (void)
 		}
 		if (mstart != mend) {
 			identity_map (HHDM_OFFSET + mstart, mstart,
-					mend - mstart, rw, maxhuge);
+					mend - mstart, PAGE_KERNEL_DATA, maxhuge);
 			setup_page_struct (mstart, mend);
 		}
 		mstart = estart;
@@ -622,7 +620,7 @@ setup_memory (void)
 	}
 	if (mstart != mend) {
 		identity_map (HHDM_OFFSET + mstart, mstart,
-				mend - mstart, rw, maxhuge);
+				mend - mstart, PAGE_KERNEL_DATA, maxhuge);
 		setup_page_struct (mstart, mend);
 	}
 
@@ -708,7 +706,7 @@ setup_boot_console (void)
 	}
 
 	uintptr_t virt = phys_to_virt (addr);
-	uint64_t flags = make_pte_k (0, true, true, false).value | PG_WC;
+	uint64_t flags = make_io_pteval (pcm_writecombine);
 	identity_map (virt, addr, nbytes, flags, 2);
 
 	fbcon_format fmt {};

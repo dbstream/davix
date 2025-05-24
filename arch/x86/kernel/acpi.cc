@@ -11,7 +11,7 @@ extern "C"
 void *
 uacpi_kernel_map (uintptr_t addr, size_t len)
 {
-	return kmap_fixed (addr, len, make_pte_k (0, true, true, false).value);
+	return kmap_fixed (addr, len, PAGE_KERNEL_DATA);
 }
 
 extern "C"

@@ -7,6 +7,13 @@
 #include <asm/page_defs.h>
 #include <asm/pg_bits.h>
 
+#define PAGE_KERNEL_PGTABLE	(__PG_PRESENT | __PG_WRITE)
+#define PAGE_USER_PGTABLE	(__PG_PRESENT | __PG_WRITE | __PG_USER)
+
+#define PAGE_KERNEL_TEXT	(__PG_PRESENT | __PG_GLOBAL)
+#define PAGE_KERNEL_RODATA	(__PG_PRESENT | __PG_GLOBAL | x86_nx_bit)
+#define PAGE_KERNEL_DATA	(__PG_PRESENT | __PG_WRITE | __PG_GLOBAL | x86_nx_bit)
+
 typedef uint64_t pteval_t;
 
 enum page_cache_mode {
@@ -27,12 +34,6 @@ pcm_pteval (page_cache_mode pcm)
 	case pcm_writecombine:	return PG_WC;
 	default:		return 0;
 	}
-}
-
-static inline pteval_t
-make_io_pteval (page_cache_mode pcm)
-{
-	return pcm_pteval (pcm) | __PG_PRESENT | __PG_WRITE | x86_nx_bit;
 }
 
 typedef struct pte_t {
@@ -64,40 +65,37 @@ make_empty_pte (void)
 }
 
 static inline pte_t
-__make_pte (uintptr_t phys_addr, pteval_t flags)
+make_pte (uintptr_t phys_addr, pteval_t flags)
 {
+	if (flags & __PG_PRESENT)
+		flags |= __PG_USER;
+
 	return { phys_addr | flags };
 }
 
 static inline pte_t
-make_pte (uintptr_t phys_addr, bool read, bool write, bool exec)
+make_pte_k (uintptr_t phys_addr, pteval_t flags)
 {
-	return { phys_addr
-		| ((read || write || exec) ? (__PG_PRESENT | __PG_USER) : 0)
-		| (write ? __PG_WRITE : 0)
-		| (exec || !(read || write) ? 0 : x86_nx_bit)
-	};
+	if (flags & __PG_PRESENT)
+		flags |= __PG_GLOBAL;
+
+	return { phys_addr | flags };
 }
 
-static inline pte_t
-make_pte_k (uintptr_t phys_addr, bool read, bool write, bool exec)
+static inline pteval_t
+make_io_pteval (page_cache_mode pcm)
 {
-	return { phys_addr
-		| ((read || write || exec) ? (__PG_PRESENT | __PG_GLOBAL) : 0)
-		| (write ? __PG_WRITE : 0)
-		| (exec || !(read || write) ? 0 : x86_nx_bit)
-	};
+	return PAGE_KERNEL_DATA | pcm_pteval (pcm);
 }
 
 static inline pte_t
 make_io_pte (uintptr_t phys_addr, page_cache_mode pcm)
 {
-	return __make_pte (phys_addr, make_io_pteval (pcm));
+	return make_pte_k (phys_addr, make_io_pteval (pcm));
 }
 
-template<int level>
 constexpr static inline int
-__pgtable_index (uintptr_t addr)
+__pgtable_index (uintptr_t addr, int level)
 {
 	return (addr >> (3 + 9 * level)) & 511;
 }
