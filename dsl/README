@@ -6,3 +6,4 @@ This is the compiled part of the Davix support library.
 
 Currently, these components of the DSL use non-header code:
 	- AVL trees (AVLTree::fixup)
+	- VMA trees (any nontrivial function in VMATree)

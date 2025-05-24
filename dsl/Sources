@@ -2,3 +2,5 @@
 # Copyright (C) 2025-present  dbstream
 
 kobjs += avlfixup.o
+kobjs += vmafind.o
+kobjs += vmamodify.o

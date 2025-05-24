@@ -206,9 +206,9 @@ struct ListHead {
 
 template<class T, ListHead T::*F>
 struct TypedList {
-private:
-	ListHead m_list;
 public:
+	ListHead m_list;
+
 	constexpr
 	TypedList (void)
 		: m_list { &m_list, &m_list }
