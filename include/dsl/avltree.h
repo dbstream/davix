@@ -196,7 +196,7 @@ public:
 		AVLNode *x = m_tree.m_root;
 		AVLTree::Dir dir = AVLTree::LEFT;
 		while (x) {
-			if (m_cmp (const_container_of (x), node))
+			if (m_cmp (node, const_container_of (x)))
 				dir = AVLTree::LEFT;
 			else
 				dir = AVLTree::RIGHT;
