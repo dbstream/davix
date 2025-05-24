@@ -101,8 +101,8 @@ KTimer::enqueue (nsecs_t t)
 	disable_irq ();
 	if (t < queue->next_expiry)
 		queue->next_expiry = t;
-	queue->tree.insert (this);
 	enable_irq ();
+	queue->tree.insert (this);
 	return false;
 }
 
