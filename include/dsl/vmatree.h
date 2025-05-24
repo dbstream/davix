@@ -205,4 +205,104 @@ private:
 	fixup (VMANode *node);
 };
 
+template<class T, VMANode T::*F>
+class TypedVMATree {
+	VMATree m_tree;
+
+public:
+	constexpr
+	TypedVMATree (void)
+	{}
+
+	constexpr void
+	init (void)
+	{
+		m_tree.init ();
+	}
+
+	static inline T *
+	container_of (VMANode *node)
+	{
+		return ::container_of (F, node);
+	}
+
+	static inline T *
+	container_of_or_null (VMANode *node)
+	{
+		return node ? container_of (node) : nullptr;
+	}
+
+	inline void
+	insert (T *node)
+	{
+		m_tree.insert (&(node->*F));
+	}
+
+	inline void
+	remove (T *node)
+	{
+		m_tree.remove (&(node->*F));
+	}
+
+	inline T *
+	first (void)
+	{
+		return container_of_or_null (m_tree.first ());
+	}
+
+	inline T *
+	last (void)
+	{
+		return container_of_or_null (m_tree.last ());
+	}
+
+	inline T *
+	next (T *node)
+	{
+		return container_of_or_null (m_tree.next (&(node->*F)));
+	}
+
+	inline T *
+	prev (T *node)
+	{
+		return container_of_or_null (m_tree.prev (&(node->*F)));
+	}
+
+	inline T *
+	find (uintptr_t addr)
+	{
+		return container_of_or_null (m_tree.find (addr));
+	}
+
+	inline T *
+	find_above (uintptr_t addr)
+	{
+		return container_of_or_null (m_tree.find_above (addr));
+	}
+
+	inline T *
+	find_below (uintptr_t addr)
+	{
+		return container_of_or_null (m_tree.find_below (addr));
+	}
+
+	inline bool
+	find_free_bottomup (uintptr_t *out,
+			uintptr_t size, uintptr_t align,
+			uintptr_t min_addr, uintptr_t max_addr)
+	{
+		return m_tree.find_free_bottomup (out, size, align,
+				min_addr, max_addr);
+	}
+
+	inline bool
+	find_free_topdown (uintptr_t *out,
+			uintptr_t size, uintptr_t align,
+			uintptr_t min_addr, uintptr_t max_addr)
+	{
+		return m_tree.find_free_topdown (out, size, align,
+				min_addr, max_addr);
+	}
+};
+
 }
