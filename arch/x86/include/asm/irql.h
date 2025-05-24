@@ -121,3 +121,9 @@ irql_begin_irq_from_kernel (int irq);
 
 extern void
 irql_leave_irq (void);
+
+static inline void
+wait_for_interrupt (void)
+{
+	asm volatile ("nop; hlt");
+}

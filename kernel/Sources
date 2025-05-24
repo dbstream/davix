@@ -1,6 +1,7 @@
 # Sources for the kernel.
 # Copyright (C) 2025-present  dbstream
 
+kobjs += sched/
 kobjs += cpuset.o
 kobjs += dpc.o
 kobjs += ktimer.o

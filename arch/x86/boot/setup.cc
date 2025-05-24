@@ -820,6 +820,4 @@ x86_start_kernel (multiboot_params *params, uintptr_t offset)
 	setup_early_acpi ();
 
 	start_kernel ();
-	for (;;)
-		asm volatile ("hlt");
 }

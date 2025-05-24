@@ -1,0 +1,4 @@
+# Sources for the Davix scheduler.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += idle.o

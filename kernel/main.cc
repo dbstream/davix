@@ -10,6 +10,7 @@
 #include <davix/kmalloc.h>
 #include <davix/page.h>
 #include <davix/printk.h>
+#include <davix/sched.h>
 #include <davix/slab.h>
 #include <davix/start_kernel.h>
 #include <string.h>
@@ -204,4 +205,6 @@ start_kernel (void)
 
 	kmalloc_init ();
 	slab_dump ();
+
+	sched_idle ();
 }
