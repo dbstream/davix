@@ -29,7 +29,7 @@ node_max_gap (VMANode *node)
 }
 
 /** Propagate auxiliary data upwards.  Returns true if anything changed.  */
-static inline bool
+static inline void
 propagate (VMANode *node)
 {
 	int l_height = node_height (node->child[LEFT]);
@@ -40,12 +40,8 @@ propagate (VMANode *node)
 	int new_height = 1 + max (l_height, r_height);
 	uintptr_t new_gap = max (node->prev_gap, max (l_gap, r_gap));
 
-	if (new_height == node->height && new_gap == node->biggest_gap)
-		return false;
-
 	node->height = new_height;
 	node->biggest_gap = new_gap;
-	return true;
 }
 
 /**
@@ -89,15 +85,14 @@ VMATree::fixup (VMANode *node)
 		 * Test if we are already balanced.
 		 */
 		if (-1 <= balance && balance <= 1) {
-			/**
-			 * We are balanced: check if we can exit the loop early.
-			 *
-			 * We can exit the loop early if propagation does not
-			 * cause any changes.
-			 */
-			if (!propagate (node))
-				return;
-
+			 /**
+			  * We cannot do early exiting, because the successor
+			  * of the node we started at may have a modified
+			  * prev_gap and thus a dirty biggest_gap.  Early fixup
+			  * termination might leave biggest_gap in our ancestor
+			  * chain in an invalid state.
+			  */
+			propagate (node);
 			node = node->parent;
 			continue;
 		}
