@@ -49,17 +49,17 @@ wrap (SlabAllocator *allocator, allocation_class aclass, void *ptr)
 void *
 slab_alloc (SlabAllocator *allocator, allocation_class aclass)
 {
-	aclass = ALLOC_KERNEL | (aclass & __ALLOC_HIGHPRIO);
+	aclass = ALLOC_KERNEL | (aclass & (__ALLOC_HIGHPRIO | __ALLOC_ZERO));
 
 	scoped_spinlock_dpc g (allocator->lock);
 
 	Page *page = nullptr;
-	if (allocator->nr_full) {
-		page = allocator->page_full.pop_front ();
-		allocator->nr_full--;
-	} else if (allocator->nr_partial) {
+	if (allocator->nr_partial) {
 		page = allocator->page_partial.pop_front ();
 		allocator->nr_partial--;
+	} else if (allocator->nr_full) {
+		page = allocator->page_full.pop_front ();
+		allocator->nr_full--;
 	}
 
 	if (page) {
@@ -105,12 +105,14 @@ slab_free (void *ptr)
 
 	{
 		scoped_spinlock_dpc g (allocator->lock);
+		allocator->nfree++;
 
 		void **head = new (ptr) void *;
 		*head = page->slab.pobj;
 		page->slab.pobj = ptr;
 		page->slab.nfree++;
 		if (page->slab.nfree == 1) {
+			allocator->nr_empty--;
 			allocator->nr_partial++;
 			allocator->page_partial.push_front (page);
 			return;
