@@ -113,6 +113,11 @@ look_at_current:
 		if (alloc_start < gap_start || gap_end <= alloc_start)
 			goto look_at_right_subtree;
 
+		if (gap_end - alloc_start >= size) {
+			*out = alloc_start;
+			return true;
+		}
+
 		/* Do not keep looking for free areas above max_addr. */
 		if (gap_end >= max_addr)
 			return false;
