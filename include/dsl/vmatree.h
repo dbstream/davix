@@ -244,6 +244,12 @@ public:
 		m_tree.remove (&(node->*F));
 	}
 
+	inline void
+	adjust (T *node)
+	{
+		m_tree.adjust (&(node->*F));
+	}
+
 	inline T *
 	first (void)
 	{
