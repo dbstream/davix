@@ -196,6 +196,8 @@ VMATree::insert (VMANode *node)
 	node->parent = parent;
 	if (parent)
 		parent->child[dir] = node;
+	else
+		root = node;
 
 	if (pred)
 		pred->list.push_front (&node->list);
@@ -260,6 +262,7 @@ VMATree::remove (VMANode *node)
 			root = Z;
 
 		fixup (succ);
+		return;
 	}
 
 	/** Argh, this is the annoying case.  Replace node with succ.  */

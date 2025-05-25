@@ -123,6 +123,8 @@ LDLIBS := $(ARCH_LDLIBS)
 # Flags for objcopy.
 OBJCOPYFLAGS := $(ARCH_OBJCOPYFLAGS)
 
+include config.GNUmakefile
+
 export CPPFLAGS COMMONFLAGS AFLAGS CFLAGS CXXFLAGS LDFLAGS LDLIBS OBJCOPYFLAGS
 
 # Passthrough everything except clean to build.GNUmakefile.

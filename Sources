@@ -6,6 +6,7 @@ kobjs += arch/$(ARCH)/
 kobjs += drivers/
 kobjs += dsl/
 kobjs += kernel/
+kobjs-$(CONFIG_KTEST) += ktest/
 kobjs += mm/
 kobjs += util/
 

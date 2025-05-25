@@ -1,0 +1,5 @@
+# Kernel self-testing sources.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += ktest.o
+kobjs-$(CONFIG_KTEST_VMATREE) += vmatree.o

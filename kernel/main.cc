@@ -8,6 +8,7 @@
 #include <davix/dpc.h>
 #include <davix/early_alloc.h>
 #include <davix/kmalloc.h>
+#include <davix/ktest.h>
 #include <davix/page.h>
 #include <davix/printk.h>
 #include <davix/sched.h>
@@ -206,5 +207,6 @@ start_kernel (void)
 	kmalloc_init ();
 	slab_dump ();
 
+	run_ktests ();
 	sched_idle ();
 }

@@ -21,11 +21,14 @@ obj := $(objtree)/$(subdir)
 targets :=
 depfiles :=
 kobjs :=
+kobjs-y :=
 
 target = $(patsubst $(objtree)/%,%,$@)
 reltarget = $(patsubst $(obj)%,%,$@)
 
 include $(subdir)Sources
+
+kobjs += $(kobjs-y)
 
 dquote := "
 squote := '
