@@ -2,3 +2,4 @@
 # Copyright (C) 2025-present  dbstream
 
 kobjs += kmap_fixed.o
+kobjs += tlb.o

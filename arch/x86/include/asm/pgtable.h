@@ -24,6 +24,8 @@ enum page_cache_mode {
 	pcm_writecombine = 4
 };
 
+static constexpr page_cache_mode PCM_NORMAL_RAM = pcm_writeback;
+
 static inline pteval_t
 pcm_pteval (page_cache_mode pcm)
 {
@@ -56,12 +58,30 @@ typedef struct pte_t {
 	{
 		return (value & (__PG_PRESENT | __PG_WRITE)) == (__PG_PRESENT | __PG_WRITE);
 	}
+
+	constexpr inline bool
+	empty (void) const
+	{
+		return !value;
+	}
 } pte_t;
 
 static inline pte_t
 make_empty_pte (void)
 {
 	return { 0 };
+}
+
+static inline pte_t
+make_pte_pgtable (pte_t *table)
+{
+	return { virt_to_phys ((uintptr_t) table) | PAGE_USER_PGTABLE };
+}
+
+static inline pte_t
+make_pte_pgtable_k (pte_t *table)
+{
+	return { virt_to_phys ((uintptr_t) table) | PAGE_KERNEL_PGTABLE };
 }
 
 static inline pte_t
@@ -98,4 +118,10 @@ constexpr static inline int
 __pgtable_index (uintptr_t addr, int level)
 {
 	return (addr >> (3 + 9 * level)) & 511;
+}
+
+constexpr static inline uintptr_t
+__pgtable_entry_size (int level)
+{
+	return 1UL << (3 + 9 * level);
 }

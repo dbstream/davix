@@ -4,3 +4,4 @@
 kobjs += early_alloc.o
 kobjs += page_alloc.o
 kobjs += slab.o
+kobjs += vmap.o

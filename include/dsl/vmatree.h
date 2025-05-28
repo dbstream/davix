@@ -37,7 +37,7 @@ struct VMATree {
 	enum Dir { LEFT = 0, RIGHT = 1 };
 
 	VMAList list;
-	VMANode *root;
+	VMANode *root = nullptr;
 
 	/**
 	 * VMATree::init - initialize the tree.

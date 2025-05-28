@@ -12,6 +12,7 @@
 #include <asm/kmap_fixed.h>
 #include <asm/pcpu_init.h>
 #include <asm/percpu.h>
+#include <asm/pgtable_modify.h>
 #include <davix/acpisetup.h>
 #include <davix/cmdline.h>
 #include <davix/console.h>
@@ -341,6 +342,12 @@ setup_free_memory (void)
 }
 
 static uintptr_t root_pgtable;
+
+pte_t *
+get_vmap_pgtable (void)
+{
+	return (pte_t *) phys_to_virt (root_pgtable);
+}
 
 template<int level>
 static volatile uint64_t *
