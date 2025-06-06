@@ -65,6 +65,12 @@ x86_setup_idt (void)
 	load_idt ();
 }
 
+void
+x86_ap_setup_idt (void)
+{
+	load_idt ();
+}
+
 extern "C"
 void
 handle_GP_exception (entry_regs *regs)

@@ -46,6 +46,9 @@ void
 apic_init (void);
 
 void
+apic_init_ap (void);
+
+void
 apic_eoi (void);
 
 void

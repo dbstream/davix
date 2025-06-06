@@ -13,6 +13,12 @@ enum : allocation_class {
 	__ALLOC_LOW1M	= 1U << 31,
 };
 
+enum : int {
+	ZONE_DEFAULT = 0,
+	ZONE_LOW4G = 1,
+	ZONE_LOW1M = 2,
+};
+
 constexpr int num_page_zones = 3;
 
 /**
@@ -24,11 +30,11 @@ constexpr int
 allocation_zone (allocation_class aclass)
 {
 	if (aclass & __ALLOC_LOW1M)
-		return 2;
+		return ZONE_LOW1M;
 	else if (aclass & __ALLOC_LOW4G)
-		return 1;
+		return ZONE_LOW4G;
 	else
-		return 0;
+		return ZONE_DEFAULT;
 }
 
 /**
@@ -40,11 +46,11 @@ constexpr int
 phys_to_zone (uintptr_t phys)
 {
 	if (phys < 1024UL * 1024UL)
-		return 2;
+		return ZONE_LOW1M;
 	else if (phys < 4UL * 1024UL * 1024UL * 1024UL)
-		return 1;
+		return ZONE_LOW4G;
 	else
-		return 0;
+		return ZONE_DEFAULT;
 }
 
 /**
@@ -56,8 +62,8 @@ constexpr uintptr_t
 zone_minaddr (int zone)
 {
 	switch (zone) {
-	case 0: return 4UL * 1024UL * 1024UL * 1024UL;
-	case 1: return 1024UL * 1024UL;
+	case ZONE_DEFAULT: return 4UL * 1024UL * 1024UL * 1024UL;
+	case ZONE_LOW4G: return 1024UL * 1024UL;
 	default: return 0;
 	}
 }
@@ -71,8 +77,8 @@ constexpr uintptr_t
 zone_maxaddr (int zone)
 {
 	switch (zone) {
-	case 0: return -1UL;
-	case 1: return 4UL * 1024UL * 1024UL * 1024UL - 1UL;
+	case ZONE_DEFAULT: return -1UL;
+	case ZONE_LOW4G: return 4UL * 1024UL * 1024UL * 1024UL - 1UL;
 	default: return 1024UL * 1024UL - 1UL;
 	}
 }
@@ -85,7 +91,7 @@ zone_maxaddr (int zone)
 constexpr bool
 zone_has_fallback (int zone)
 {
-	return zone != 2;
+	return zone != ZONE_LOW1M;
 }
 
 /**
@@ -96,8 +102,8 @@ zone_has_fallback (int zone)
 constexpr int
 fallback_zone (int zone)
 {
-	if (zone == 0)
-		return 1;
+	if (zone == ZONE_DEFAULT)
+		return ZONE_LOW4G;
 	else
-		return 2;
+		return ZONE_LOW1M;
 }

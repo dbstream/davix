@@ -13,6 +13,7 @@
 #include <asm/pcpu_init.h>
 #include <asm/percpu.h>
 #include <asm/pgtable_modify.h>
+#include <asm/zone.h>
 #include <davix/acpisetup.h>
 #include <davix/cmdline.h>
 #include <davix/console.h>
@@ -29,6 +30,8 @@
 #include <dsl/minmax.h>
 #include <vsnprintf.h>
 #include "multiboot.h"
+
+static char static_root_pgtable alignas(PAGE_SIZE) [PAGE_SIZE];
 
 static multiboot_params *boot_params;
 static uintptr_t load_offset;
@@ -575,7 +578,7 @@ setup_memory (void)
 				memory_type_string (type));
 	}
 
-	root_pgtable = alloc_from_memmap (PAGE_SIZE);
+	root_pgtable = sym_addr (static_root_pgtable);
 	uintptr_t root_vaddr;
 	pte_t toplevel_pte = make_pte_k (root_pgtable, PAGE_KERNEL_DATA);
 	if (has_feature (FEATURE_LA57)) {
@@ -640,6 +643,29 @@ setup_memory (void)
 		set_command_line (cmdline);
 	}
 	setup_free_memory ();
+}
+
+uintptr_t trampoline_addr;
+
+extern "C" char trampoline_page[];
+extern "C" char trampoline_page_end[];
+
+static void
+setup_trampoline_page (void)
+{
+	uintptr_t mem = early_alloc_phys_zone (PAGE_SIZE, PAGE_SIZE, ZONE_LOW1M);
+	if (!mem)
+		panic ("OOM in setup_trampoline_page");
+
+	trampoline_addr = mem;
+	*get_p1e (mem) = mem | __PG_PRESENT | __PG_WRITE;
+
+	memcpy ((void *) trampoline_addr, trampoline_page, trampoline_page_end - trampoline_page);
+	*(uint32_t *) (trampoline_addr + 0x4) = trampoline_addr;
+	*(uint32_t *) (trampoline_addr + 0x800) = __cr4_state;
+	*(uint32_t *) (trampoline_addr + 0x804) = __efer_state;
+	*(uint32_t *) (trampoline_addr + 0x808) = __cr0_state;
+	*(uint32_t *) (trampoline_addr + 0x80c) = root_pgtable;
 }
 
 static void
@@ -762,6 +788,7 @@ debugcon_emit (Console *con, int level, usecs_t msg_time, const char *msg)
 	emit_0xe9 (buf);
 	emit_0xe9 (debugcon_logprefix[level]);
 	emit_0xe9 (msg);
+	emit_0xe9 ("\x1b[0m");
 }
 
 static Console debugcon;
@@ -822,6 +849,7 @@ x86_start_kernel (multiboot_params *params, uintptr_t offset)
 	block_memory (0, PAGE_SIZE);
 	setup_memory ();
 	setup_boot_console ();
+	setup_trampoline_page ();
 	setup_early_acpi ();
 
 	start_kernel ();

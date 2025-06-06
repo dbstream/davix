@@ -16,3 +16,4 @@
 #define __KERNEL_CS	0x20
 #define __KERNEL_DS	0x28
 #define __GDT_TSS	0x30
+#define GDT_NUM_ENTRIES 8

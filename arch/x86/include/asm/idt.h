@@ -6,3 +6,6 @@
 
 void
 x86_setup_idt (void);
+
+void
+x86_ap_setup_idt (void);

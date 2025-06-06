@@ -13,6 +13,7 @@
 #include <davix/printk.h>
 #include <davix/sched.h>
 #include <davix/slab.h>
+#include <davix/smp.h>
 #include <davix/start_kernel.h>
 #include <string.h>
 
@@ -206,6 +207,8 @@ start_kernel (void)
 
 	kmalloc_init ();
 	slab_dump ();
+
+	smp_boot_all_cpus ();
 
 	run_ktests ();
 	sched_idle ();

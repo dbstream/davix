@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#define smp_mb smp_bm
+#define smp_mb smp_mb
 static inline void
 smp_mb (void)
 {

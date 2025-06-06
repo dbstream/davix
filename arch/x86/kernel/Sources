@@ -8,4 +8,6 @@ kobjs += idt.o
 kobjs += irq.o
 kobjs += irql.o
 kobjs += setup.o
+kobjs += smpboot.o
+kobjs += task.o
 kobjs += time.o

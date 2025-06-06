@@ -54,6 +54,41 @@ SYM_FUNC_BEGIN(__startup_bsp)
 	lretq
 SYM_FUNC_END(__startup_bsp)
 
+	.globl __startup_ap
+SYM_FUNC_BEGIN(__startup_ap)
+	.cfi_undefined rip
+
+	/** Setup the stack pointer.  */
+	movq __ap_startup_rsp(%rip), %rsp
+
+	/** Call C code to announce ourselves and setup percpu.  */
+	call x86_smpboot_setup_percpu
+
+	/** Load the permanent GDT.  */
+	leaq percpu_GDT(%rip), %rax
+	addq %gs:0, %rax
+	subq $16, %rsp
+	movw $0x3f, (%rsp)
+	movq %rax, 2(%rsp)
+	lgdt (%rsp)
+	addq $16, %rsp
+
+	/** Reload the segment registers.  */
+	swapgs		/** Changing %gs clobbers GSBASE, so save it.  */
+	movl $__KERNEL_DS, %eax
+	movl %eax, %ds
+	movl %eax, %es
+	movl %eax, %fs
+	movl %eax, %gs
+	movl %eax, %ss
+	swapgs		/** Restore the saved GSBASE.  */
+
+	/** Return to start on __KERNEL_CS.  */
+	pushq $__KERNEL_CS
+	pushq $_start
+	lretq
+SYM_FUNC_END(__startup_ap)
+
 	.balign 16
 	.globl _start
 SYM_FUNC_BEGIN(_start)
@@ -68,10 +103,15 @@ SYM_FUNC_END(_start)
 
 	__DATA
 
+	.balign 16
 	.globl __startup_rip
-SYM_FUNC_BEGIN(__startup_rip)
+SYM_DATA_BEGIN(__startup_rip)
 	.quad x86_start_kernel
-SYM_FUNC_END(__startup_rip)
+SYM_DATA_END(__startup_rip)
+	.globl __ap_startup_rsp
+SYM_DATA_BEGIN(__ap_startup_rsp)
+	.quad 0
+SYM_DATA_END(__ap_startup_rsp)
 
 	.section ".percpu.fixed", "aw", @progbits
 

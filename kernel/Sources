@@ -8,6 +8,7 @@ kobjs += ktimer.o
 kobjs += main.o
 kobjs += panic.o
 kobjs += printk.o
+kobjs += smp.o
 kobjs += version.o
 
 CXXFLAGS-version.o :=				\

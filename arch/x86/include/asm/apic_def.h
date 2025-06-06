@@ -33,35 +33,31 @@ enum {
 	APIC_TMR_DIV		= 0x3e0
 };
 
-/**
- * Local APIC interrupt delivery modes.
- */
 enum : unsigned int {
+	/**
+	 * Local APIC interrupt delivery modes.
+	 */
 	APIC_DM_FIXED		= 0U << 8,
 	APIC_DM_LOWPRI		= 1U << 8,
 	APIC_DM_SMI		= 2U << 8,
 	APIC_DM_NMI		= 4U << 8,
 	APIC_DM_INIT		= 5U << 8,
-	APIC_DM_SIPI		= 6U << 8
-};
+	APIC_DM_SIPI		= 6U << 8,
 
-/**
- * Various local APIC flags.
- */
-enum : unsigned int {
+	/**
+	 * Various local APIC flags.
+	 */
 	APIC_DST_LOGICAL	= 1U << 11,
 	APIC_IRQ_PENDING	= 1U << 12,
 	APIC_POLARITY_LOW	= 1U << 13,
 	APIC_LEVEL_ASSERT	= 1U << 14,
 	APIC_LEVEL_TRIGGERED	= 1U << 15,
 	APIC_IRQ_MASK		= 1U << 16,
-	APIC_TMR_PERIODIC	= 1U << 17
-};
+	APIC_TMR_PERIODIC	= 1U << 17,
 
-/**
- * Local APIC destination shorthands.
- */
-enum : unsigned int {
+	/**
+	 * Local APIC destination shorthands.
+	 */
 	APIC_DST_SELF		= 1U << 18,
 	APIC_DST_ALL		= 2U << 18,
 	APIC_DST_OTHERS		= 3U << 18

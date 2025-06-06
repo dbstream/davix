@@ -27,6 +27,8 @@ name:
 
 #include <stdint.h>
 
+extern uintptr_t trampoline_addr;
+
 static inline void
 __invlpg (uintptr_t x)
 {
@@ -157,6 +159,14 @@ rdtsc (void)
 {
 	uint32_t low, high;
 	asm volatile ("rdtsc" : "=d" (high), "=a" (low));
+	return ((uint64_t) high << 32) | low;
+}
+
+static inline uint64_t
+rdtsc_strong (void)
+{
+	uint32_t low, high;
+	asm volatile ("lfence; rdtsc" : "=d" (high), "=a" (low));
 	return ((uint64_t) high << 32) | low;
 }
 

@@ -20,6 +20,8 @@ struct x86_pcpu_fixed {
 	char reserved3[16];
 };
 
+extern x86_pcpu_fixed __pcpu_fixed;
+
 static_assert (sizeof (x86_pcpu_fixed) == 64);
 static_assert (offsetof (x86_pcpu_fixed, pcpu_offset) == 0);
 static_assert (offsetof (x86_pcpu_fixed, cpu_id) == 8);

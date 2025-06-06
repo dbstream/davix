@@ -8,6 +8,7 @@
 #include <asm/kmap_fixed.h>
 #include <asm/mmio.h>
 #include <asm/percpu.h>
+#include <asm/smp.h>
 #include <asm/time.h>
 #include <davix/atomic.h>
 #include <davix/irql.h>
@@ -288,9 +289,9 @@ read_tsc_ref (uint64_t *ref)
 
 	uint64_t besttsc, bestref, bestdelta = -1UL;
 	for (int i = 0; i < 10; i++) {
-		uint64_t tsc1 = rdtsc ();
+		uint64_t tsc1 = rdtsc_strong ();
 		uint64_t ref = hpet_read_counter ();
-		uint64_t tsc2 = rdtsc ();
+		uint64_t tsc2 = rdtsc_strong ();
 
 		uint64_t delta = tsc2 - tsc1;
 		if (delta < bestdelta) {
@@ -426,4 +427,83 @@ ndelay (nsecs_t ns)
 		barrier ();
 		__builtin_ia32_pause ();
 	} while (ns_since_boot () < target);
+}
+
+enum {
+	TSC_SYNC_WAIT_FOR_VICTIM = 0,
+	TSC_SYNC_WAIT_FOR_CONTROL,
+	TSC_SYNC_CONTROL_READY,
+	TSC_SYNC_VICTIM_READY,
+	TSC_SYNC_DONE
+};
+
+static struct {
+	int value = TSC_SYNC_WAIT_FOR_VICTIM;
+	int pad[31];
+} tsc_sync_timeline alignas(128);
+static nsecs_t tsc_sync_ns;
+static uint64_t tsc_sync_value;
+
+void
+x86_synchronize_tsc_control (void)
+{
+	if (!has_feature (FEATURE_TSC))
+		return;
+
+	bool flag = raw_irq_save ();
+
+	tscconv conv;
+	read_tsc_tscconv (&conv);
+
+	while (atomic_load_relaxed (&tsc_sync_timeline.value) != TSC_SYNC_WAIT_FOR_CONTROL)
+		__builtin_ia32_pause ();
+
+	atomic_store_relaxed (&tsc_sync_timeline.value, TSC_SYNC_CONTROL_READY);
+	uint64_t tsc = rdtsc_strong ();
+	tsc_sync_value = tsc;
+	tsc_sync_ns = tsc2ns (tsc, conv);
+
+	while (atomic_load_relaxed (&tsc_sync_timeline.value) != TSC_SYNC_VICTIM_READY)
+		__builtin_ia32_pause ();
+
+	atomic_store_release (&tsc_sync_timeline.value, TSC_SYNC_DONE);
+	raw_irq_restore (flag);
+
+	while (atomic_load_acquire (&tsc_sync_timeline.value) != TSC_SYNC_WAIT_FOR_VICTIM)
+		__builtin_ia32_pause ();
+}
+
+static DEFINE_PERCPU(uint64_t, tsc_sync_delta);
+
+void
+x86_synchronize_tsc_victim (void)
+{
+	if (!has_feature (FEATURE_TSC))
+		return;
+
+	atomic_store_relaxed (&tsc_sync_timeline.value, TSC_SYNC_WAIT_FOR_CONTROL);
+	while (atomic_load_relaxed (&tsc_sync_timeline.value) != TSC_SYNC_CONTROL_READY)
+		__builtin_ia32_pause ();
+
+	uint64_t tsc = rdtsc_strong ();
+	atomic_store_relaxed (&tsc_sync_timeline.value, TSC_SYNC_VICTIM_READY);
+
+	while (atomic_load_acquire (&tsc_sync_timeline.value) != TSC_SYNC_DONE)
+		__builtin_ia32_pause ();
+
+	uint64_t control_tsc = tsc_sync_value;
+	set_tsc_conv (tsc, tsc_sync_ns);
+	atomic_store_release (&tsc_sync_timeline.value, TSC_SYNC_WAIT_FOR_VICTIM);
+
+	percpu_write (tsc_sync_delta, tsc - control_tsc);
+}
+
+void
+tsc_sync_dump (void)
+{
+	if (!has_feature (FEATURE_TSC))
+		return;
+
+	printk (PR_INFO "TSC: sync delta for CPU%u: %ld\n",
+			this_cpu_id (), (int64_t) percpu_read (tsc_sync_delta));
 }

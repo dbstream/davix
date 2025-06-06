@@ -160,6 +160,17 @@ apic_init (void)
 	calibrate_apic_timer ();
 }
 
+void
+apic_init_ap (void)
+{
+	if (has_feature (FEATURE_X2APIC))
+		setup_apic_base_x2APIC ();
+	else
+		setup_apic_base_xAPIC ();
+
+	setup_local_apic ();
+}
+
 static void
 setup_local_apic (void)
 {

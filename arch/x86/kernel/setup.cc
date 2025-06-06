@@ -7,14 +7,21 @@
 #include <asm/apic.h>
 #include <asm/io.h>
 #include <asm/page_defs.h>
+#include <asm/pcpu_init.h>
+#include <asm/percpu.h>
 #include <asm/time.h>
 #include <davix/acpi_table.h>
 #include <davix/cpuset.h>
+#include <davix/early_alloc.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/start_kernel.h>
 #include <uacpi/tables.h>
 #include <uacpi/uacpi.h>
+#include <string.h>
+
+extern "C" char __percpu_start[];
+extern "C" char __percpu_end[];
 
 /**
  * Remap the legacy PIC so it doesn't affect us.
@@ -151,6 +158,23 @@ arch_init (void)
 
 	madt = nullptr;
 	uacpi_table_unref (&madt_table);
+
+	/**
+	 * Setup percpu variables storage for other CPUs.
+	 */
+	printk (PR_INFO "Size of percpu variables: %zu bytes\n", __percpu_end - __percpu_start);
+	for (unsigned int cpu : cpu_present) {
+		if (cpu_online (cpu))
+			continue;
+
+		void *mem = early_alloc_virt (__percpu_end - __percpu_start, PAGE_SIZE);
+		if (!mem)
+			panic ("Failed to allocate percpu storage for CPU%u\n", cpu);
+
+		memset (mem, 0, __percpu_end - __percpu_start);
+		pcpu_detail::offsets[cpu] = (uintptr_t) mem;
+		call_pcpu_constructors_for (cpu);
+	}
 
 	apic_start_timer ();
 	raw_irq_enable ();

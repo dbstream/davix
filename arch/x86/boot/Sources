@@ -6,3 +6,4 @@ kobjs += head.o
 kobjs += percpu.o
 kobjs += setup.o
 kobjs += startup.o
+kobjs += trampoline.o
