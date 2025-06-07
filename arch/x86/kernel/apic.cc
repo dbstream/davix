@@ -176,7 +176,7 @@ setup_local_apic (void)
 {
 	/** Soft-disable then soft-enable the APIC.  */
 	apic_write (APIC_SPI, 0);
-	apic_write (APIC_SPI, VECTOR_SPURIOUS | APIC_SPI_ENABLE | APIC_SPI_FCC_DISABLE);
+	apic_write (APIC_SPI, VECTOR_SPURIOUS | APIC_SPI_ENABLE);
 }
 
 static uint64_t apic_khz;
