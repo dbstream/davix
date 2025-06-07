@@ -5,6 +5,7 @@ kobjs += acpi.o
 kobjs += apic.o
 kobjs += entry.o
 kobjs += idt.o
+kobjs += ipi.o
 kobjs += irq.o
 kobjs += irql.o
 kobjs += setup.o

@@ -112,6 +112,18 @@ irql_set_pending_dpc (void)
 	__write_irql_dispatch (__read_irql_dispatch () & ~__IRQL_NONE_PENDING);
 }
 
+static inline bool
+has_pending_dpc (void)
+{
+	return (__read_irql_dispatch () & __IRQL_NONE_PENDING) == 0;
+}
+
+static inline bool
+has_pending_irq (void)
+{
+	return (__read_irql_high () & __IRQL_NONE_PENDING) == 0;
+}
+
 extern void
 irql_begin_irq_from_user (void);
 

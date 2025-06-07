@@ -8,6 +8,7 @@
 #include <asm/irql.h>
 #include <davix/ktimer.h>
 #include <davix/printk.h>
+#include <davix/smp.h>
 
 static void
 x86_handle_irq_vector (int irq);
@@ -55,6 +56,12 @@ x86_handle_irq_vector (int irq)
 	if (irq == VECTOR_APIC_TIMER) {
 		apic_eoi ();
 		ktimer_handle_timer_interrupt ();
+		return;
+	}
+
+	if (irq == VECTOR_SMP_CALL_ON_ONE) {
+		apic_eoi ();
+		smp_handle_call_on_one_ipi ();
 		return;
 	}
 

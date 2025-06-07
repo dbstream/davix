@@ -48,6 +48,25 @@ struct ListHead {
 		next = nullptr;
 	}
 
+	/* Move all list entries from @other to this. */
+	constexpr void
+	adopt (ListHead *other)
+	{
+		ListHead *first = other->next;
+		ListHead *last = other->prev;
+		if (first == other) {
+			next = this;
+			prev = this;
+		} else {
+			other->next = other;
+			other->prev = other;
+			first->prev = this;
+			last->next = this;
+			next = first;
+			prev = last;
+		}
+	}
+
 	constexpr bool
 	empty (void) const
 	{
@@ -230,6 +249,12 @@ public:
 	push_back (T *value)
 	{
 		m_list.push_back (&(value->*F));
+	}
+
+	constexpr void
+	adopt (TypedList<T, F> *other)
+	{
+		m_list.adopt (&other->m_list);
 	}
 
 	constexpr bool

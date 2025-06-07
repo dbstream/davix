@@ -3,6 +3,7 @@
  * Copyright (C) 2025-present  dbstream
  */
 #include <asm/irql.h>
+#include <asm/smp.h>
 #include <davix/cmdline.h>
 #include <davix/cpuset.h>
 #include <davix/dpc.h>
@@ -206,10 +207,16 @@ start_kernel (void)
 	dump_pgalloc_stats ();
 
 	kmalloc_init ();
-	slab_dump ();
+//	slab_dump ();
 
 	smp_boot_all_cpus ();
 
 	run_ktests ();
+
+	for (unsigned int cpu : cpu_online) smp_call_on_cpu (cpu, [](void *arg){
+		(void) arg;
+		printk (PR_INFO "smpcall on CPU%u says hello!\n", this_cpu_id ());
+	}, nullptr);
+
 	sched_idle ();
 }

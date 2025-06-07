@@ -73,6 +73,25 @@ struct spinlock_t {
 		enable_irq ();
 		enable_dpc ();
 	}
+
+	inline void
+	lock_irq_atomic (void)
+	{
+		disable_dpc ();
+		disable_irq ();
+		for (;;) {
+			if (raw_trylock ())
+				break;
+
+			do {
+				if (has_pending_irq ()) {
+					enable_irq ();
+					disable_irq ();
+				} else
+					smp_spinlock_hint ();
+			} while (atomic_load_relaxed (&value));
+		}
+	}
 };
 
 class scoped_spinlock_dpc {
