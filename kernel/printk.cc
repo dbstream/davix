@@ -53,7 +53,7 @@ extern "C"
 void
 printk (const char *fmt, ...)
 {
-	char buf[512];
+	char buf[768];
 
 	usecs_t msg_time = us_since_boot ();
 

@@ -11,6 +11,7 @@
 #include <davix/panic.h>
 #include <davix/printk.h>
 #include <stdint.h>
+#include <vsnprintf.h>
 
 struct [[gnu::packed]] idt_entry {
 	uint16_t offset0;
@@ -71,20 +72,35 @@ x86_ap_setup_idt (void)
 	load_idt ();
 }
 
+static void
+panic_with_regs (const char *msg, entry_regs *regs)
+{
+	panic ("%s\n"
+		"  RIP: %016lx  RFLAGS: %016lx\n"
+		"  RAX: %016lx  RBX: %016lx  RCX: %016lx  RDX: %016lx\n"
+		"  RDI: %016lx  RSI: %016lx  RBP: %016lx  RSP: %016lx\n"
+		"  R8:  %016lx  R9:  %016lx  R10: %016lx  R11: %016lx\n"
+		"  R12: %016lx  R13: %016lx  R14: %016lx  R15: %016lx",
+		msg,
+		regs->rip, regs->rflags,
+		regs->saved_rax, regs->saved_rbx, regs->saved_rcx, regs->saved_rdx,
+		regs->saved_rdi, regs->saved_rsi, regs->saved_rbp, regs->rsp,
+		regs->saved_r8, regs->saved_r9, regs->saved_r10, regs->saved_r11,
+		regs->saved_r12, regs->saved_r13, regs->saved_r14, regs->saved_r15);
+}
+
 extern "C"
 void
 handle_GP_exception (entry_regs *regs)
 {
-	(void) regs;
-	panic ("ahhh GP exception!");
+	panic_with_regs ("General-Protection fault in userspace!", regs);
 }
 
 extern "C"
 void
 handle_GP_exception_k (entry_regs *regs)
 {
-	(void) regs,
-	panic ("ahhh GP exception in kernel space!");
+	panic_with_regs ("General-Protection fault in kernel space!", regs);
 }
 
 enum : uint32_t {
@@ -100,8 +116,9 @@ enum : uint32_t {
 };
 
 static void
-note_page_fault (uintptr_t addr, uint32_t error_code)
+panic_on_page_fault (uintptr_t addr, entry_regs *regs)
 {
+	uint32_t error_code = regs->error_code;
 	const char *by = (error_code & PF_US) ? "usermode" : "kernelmode";
 	const char *id = (error_code & PF_SS) ? "shadow stack" :
 		(error_code & PF_ID) ? "instruction" : "data";
@@ -111,26 +128,24 @@ note_page_fault (uintptr_t addr, uint32_t error_code)
 		(error_code & PF_PK) ? "protection-key rights disallow access" :
 		(error_code & PF_WR) ? "readonly PTE" : "unknown";
 
-	printk (PR_NOTICE "x86: Page fault on address 0x%lx.  Cause: %s %s %s with %s.\n",
+	char buf[128];
+	snprintf (buf, sizeof(buf), "Page fault on address 0x%lx! cause: %s %s %s with %s.",
 			addr, by, id, tp, cause);
+	panic_with_regs (buf, regs);
 }
 
 extern "C"
 void
 handle_PF_exception (entry_regs *regs)
 {
-	(void) regs;
 	uintptr_t fault_addr = read_cr2 ();
-	note_page_fault (fault_addr, regs->error_code);
-	panic ("ahhh page fault!");
+	panic_on_page_fault (fault_addr, regs);
 }
 
 extern "C"
 void
 handle_PF_exception_k (entry_regs *regs)
 {
-	(void) regs;
 	uintptr_t fault_addr = read_cr2 ();
-	note_page_fault (fault_addr, regs->error_code);
-	panic ("ahhh page fault in kernelspace!");
+	panic_on_page_fault (fault_addr, regs);
 }
