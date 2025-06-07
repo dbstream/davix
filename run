@@ -273,7 +273,7 @@ EOF
 		-apm-block-size 2048 --efi-boot limine-uefi-cd.bin		\
 		--efi-boot-part --efi-boot-image --protective-msdos-label	\
 		$ISOTMPDIR -o $OUTPUTISO
-	limine bios-install /tmp/bootable.iso
+	limine bios-install $OUTPUTISO
 fi
 rm -r $ISOTMPDIR
 
