@@ -6,64 +6,66 @@
  */
 #pragma once
 
+#include <davix/atomic.h>
 #include <stdint.h>
 
-extern int nr_cpus;
+extern unsigned int nr_cpus;
 
-static constexpr int cpuset_bitmap_size = (CONFIG_MAX_NR_CPUS + 63) / 64;
+static constexpr unsigned int cpuset_bitmap_size = (CONFIG_MAX_NR_CPUS + 63) / 64;
 
 struct cpuset {
 	uint64_t bitmap[cpuset_bitmap_size] {};
 
 	constexpr void
-	set (int cpu)
+	set (unsigned int cpu)
 	{
-		int word = cpu / 64;
+		unsigned int word = cpu / 64;
 		uint64_t bit = UINT64_C(1) << (cpu % 64);
 
-		bitmap[word] |= bit;
+		atomic_fetch_or (&bitmap[word], bit, mo_relaxed);
 	}
 
 	constexpr void
-	clear (int cpu)
+	clear (unsigned int cpu)
 	{
-		int word = cpu / 64;
+		unsigned int word = cpu / 64;
 		uint64_t bit = UINT64_C(1) << (cpu % 64);
 
-		bitmap[word] &= ~bit;
+		atomic_fetch_and (&bitmap[word], ~bit, mo_relaxed);
 	}
 
 	constexpr bool
-	get (int cpu) const
+	get (unsigned int cpu) const
 	{
-		int word = cpu / 64;
+		unsigned int word = cpu / 64;
 		uint64_t bit = UINT64_C(1) << (cpu % 64);
 
-		return (bitmap[word] & bit) ? true : false;
+		uint64_t data = atomic_load_relaxed (&bitmap[word]);
+		return (data & bit) ? true : false;
 	}
 
 	constexpr bool
-	operator() (int cpu) const
+	operator() (unsigned int cpu) const
 	{
 		return get (cpu);
 	}
 
-	constexpr int
-	next (int cpu) const
+	constexpr unsigned int
+	next (unsigned int cpu) const
 	{
 		while (cpu < nr_cpus) {
 			if (get (cpu))
 				return cpu;
 			cpu++;
 		}
-		return -1;
+		return -1U;
 	}
 
 	struct iterator {
 		const cpuset *set;
-		int cpu;
+		unsigned int cpu;
 
-		constexpr int
+		constexpr unsigned int
 		operator *(void) const
 		{
 			return cpu;
@@ -92,7 +94,7 @@ struct cpuset {
 	constexpr iterator
 	end (void) const
 	{
-		return { this, -1 };
+		return { this, -1U };
 	}
 };
 
@@ -103,4 +105,4 @@ void
 cpuset_init (void);
 
 void
-set_nr_cpus (int cpus);
+set_nr_cpus (unsigned int cpus);

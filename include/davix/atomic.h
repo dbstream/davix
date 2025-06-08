@@ -57,6 +57,12 @@ enum {
 #define atomic_inc_fetch(p, mo) atomic_add_fetch((p), 1, (mo))
 #define atomic_dec_fetch(p, mo) atomic_sub_fetch((p), 1, (mo))
 
+#define atomic_fetch_and(p, val, mo) __atomic_fetch_and((p), (val), (mo))
+#define atomic_fetch_or(p, val, mo) __atomic_fetch_or((p), (val), (mo))
+
+#define atomic_and_fetch(p, val, mo) __atomic_and_fetch((p), (val), (mo))
+#define atomic_or_fetch(p, val, mo) __atomic_or_fetch((p), (val), (mo))
+
 #ifdef smp_mb
 #ifndef __arch_provides_smp_mb
 #define __arch_provides_smp_mb

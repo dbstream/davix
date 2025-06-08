@@ -4,7 +4,7 @@
  */
 #include <davix/cpuset.h>
 
-int nr_cpus = 1;
+unsigned int nr_cpus = 1;
 
 cpuset cpu_online;
 cpuset cpu_present;
@@ -17,7 +17,7 @@ cpuset_init (void)
 }
 
 void
-set_nr_cpus (int cpus)
+set_nr_cpus (unsigned int cpus)
 {
 	nr_cpus = cpus;
 }
