@@ -66,7 +66,7 @@ enter_panic (void)
 			smp_spinlock_hint ();
 		} while (cpu_online (cpu));
 	}
-
+	smp_mb ();
 	return false;
 
 slow_cpus:
@@ -80,6 +80,7 @@ slow_cpus:
 			smp_spinlock_hint ();
 		} while (cpu_online (cpu));
 	}
+	smp_mb ();
 	return true;
 }
 
