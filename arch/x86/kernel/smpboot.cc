@@ -20,8 +20,6 @@
 #include <davix/vmap.h>
 #include <stdint.h>
 
-#include <davix/ktimer.h>
-
 static unsigned int currently_booting_cpu;
 extern "C" uintptr_t __startup_rip;
 extern "C" uintptr_t __ap_startup_rsp;
@@ -37,17 +35,6 @@ static bool sync_point_1;
 static bool sync_point_2;
 static bool sync_point_3;
 static bool sync_point_4;
-
-static DEFINE_PERCPU(KTimer, ap_ktimer);
-
-static void
-ap_ktimer_fn (KTimer *t, void *arg)
-{
-	(void) t;
-	(void) arg;
-
-	printk (PR_INFO "CPU%u KTimer says hello!\n", this_cpu_id ());
-}
 
 static void
 start_additional_processor (void)
@@ -75,9 +62,6 @@ start_additional_processor (void)
 //	tsc_sync_dump ();
 	apic_start_timer ();
 	raw_irq_enable ();
-	KTimer *t = percpu_ptr (ap_ktimer);
-	t->init (ap_ktimer_fn, nullptr);
-	t->enqueue (ns_since_boot () + 1000000000);
 	sched_idle ();
 }
 

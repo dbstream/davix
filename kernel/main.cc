@@ -212,11 +212,5 @@ start_kernel (void)
 	smp_boot_all_cpus ();
 
 	run_ktests ();
-
-	for (unsigned int cpu : cpu_online) smp_call_on_cpu (cpu, [](void *arg){
-		(void) arg;
-		printk (PR_INFO "smpcall on CPU%u says hello!\n", this_cpu_id ());
-	}, nullptr);
-
 	sched_idle ();
 }
