@@ -10,3 +10,6 @@ extern "C"
 void
 __attribute__ ((format (printf, 1, 2)))
 panic (const char *fmt, ...);
+
+bool
+in_panic (void);

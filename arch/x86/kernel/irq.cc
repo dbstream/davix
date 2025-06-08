@@ -6,7 +6,9 @@
 #include <asm/entry.h>
 #include <asm/interrupt.h>
 #include <asm/irql.h>
+#include <asm/smp.h>
 #include <davix/ktimer.h>
+#include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/smp.h>
 
@@ -63,6 +65,11 @@ x86_handle_irq_vector (int irq)
 		apic_eoi ();
 		smp_handle_call_on_one_ipi ();
 		return;
+	}
+
+	if (irq == VECTOR_SMP_PANIC) {
+		apic_eoi ();
+		panic ("CPU%u got SMP PANIC IPI\n", this_cpu_id ());
 	}
 
 	printk (PR_INFO "IRQ: got interrupt %d\n", irq);

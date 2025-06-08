@@ -14,3 +14,9 @@ this_cpu_id (void)
 
 void
 arch_send_smp_call_on_one_IPI (unsigned int cpu);
+
+void
+arch_send_panic_IPI_to_others (void);
+
+void
+arch_send_panic_NMI_to_others (void);
