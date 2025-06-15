@@ -211,9 +211,7 @@ SYM_FUNC_BEGIN(asm_ret_from_new_task)
 	movq %rsp, %gs:16
 
 	/* Call arch_ret_from_new_task on an aligned stack pointer.  */
-	subq $8, %rsp
 	call arch_ret_from_new_task
-	addq $8, %rsp
 
 	/* Return to userspace by loading register state from the iret frame.  */
 	POP_ENTRY_REGS

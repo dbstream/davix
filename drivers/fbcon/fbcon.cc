@@ -6,6 +6,7 @@
 #include <string.h>
 #include <vsnprintf.h>
 #include <davix/fbcon.h>
+#include <davix/fbcon_internal.h>
 #include <davix/kmalloc.h>
 #include <davix/printk.h>
 
@@ -143,7 +144,7 @@ validate_format (uint32_t width, uint32_t height, uint32_t pitch,
  * fbcon_flush - flush the output.
  * @fbcon: struct fbcon
  */
-static void
+void
 fbcon_flush (struct fbcon *fbcon)
 {
 	memcpy (fbcon->fbmem, fbcon->backbuf, fbcon->nbytes);
@@ -356,6 +357,8 @@ fbcon_emit_message (Console *con, int level, usecs_t msg_time, const char *msg)
 	fbcon_flush (fbcon);
 }
 
+struct fbcon *last_registered_fbcon = nullptr;
+
 /**
  * fbcon_add_framebuffer - register a framebuffer with fbcon.
  * @fbcon: preallocated struct fbcon
@@ -425,5 +428,30 @@ fbcon_add_framebuffer (struct fbcon *fbcon,
 
 	fbcon->con.emit_message = fbcon_emit_message;
 	console_register (&fbcon->con);
+	last_registered_fbcon = fbcon;
 	return fbcon;
+}
+
+struct fbcon *
+fbcon_find_one (void)
+{
+	return last_registered_fbcon;
+}
+
+uint32_t
+fbcon_get_color (struct fbcon *fbcon, uint32_t r, uint32_t g, uint32_t b)
+{
+	return get_color (&fbcon->fmt, r, g, b);
+}
+
+uint8_t *
+fbcon_get_pixel (struct fbcon *fbcon, uint32_t x, uint32_t y)
+{
+	return get_pixel (fbcon, y, x);
+}
+
+void
+fbcon_put_pixel (struct fbcon *fbcon, uint8_t *pixel, uint32_t color)
+{
+	putpixel (pixel, color, fbcon->fmt.bpp);
 }

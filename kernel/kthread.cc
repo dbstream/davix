@@ -2,6 +2,7 @@
  * Kernel thread helper.
  * Copyright (C) 2025-present  dbstream.
  */
+#include <asm/irql.h>
 #include <asm/task.h>
 #include <davix/kthread.h>
 #include <davix/printk.h>
@@ -12,6 +13,8 @@
 Task *
 kthread_create (const char *name, void (*function)(void *), void *arg)
 {
+	if (!function)
+		printk (PR_ERROR "kthread_create with NULL function!\n");
 	Task *task = alloc_task_struct ();
 	if (!task)
 		return nullptr;
@@ -33,4 +36,20 @@ kthread_start (Task *task)
 {
 	if (!sched_wake (task, SCHED_WAKE_INITIAL))
 		printk (PR_WARN "kthread_start: sched_wake returned false\n");
+}
+
+void
+kthread_exit (void)
+{
+	disable_dpc ();
+	set_current_state (TASK_ZOMBIE);
+	schedule ();
+}
+
+void
+reap_task (Task *tsk)
+{
+	/* TODO: properly handle non-kthread tasks  */
+	arch_free_task (tsk);
+	free_task_struct (tsk);
 }

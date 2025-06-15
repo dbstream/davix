@@ -48,3 +48,5 @@ free_task_struct (Task *tsk);
 void
 init_task_struct_fields (Task *tsk);
 
+void
+reap_task (Task *tsk);

@@ -52,7 +52,6 @@ asm_switch_to (Task *me, Task *next);
 Task *
 arch_context_switch (Task *me, Task *next)
 {
-	set_current_task (next);
 	entry_regs *old_eregs = get_user_entry_regs ();
 
 	/*
@@ -64,6 +63,7 @@ arch_context_switch (Task *me, Task *next)
 	irql_t dpc_count = __read_irql_dispatch () & ~__IRQL_NONE_PENDING;
 	irql_t irq_count = __read_irql_high () & ~__IRQL_NONE_PENDING;
 
+	set_current_task (next);
 	Task *prev = asm_switch_to (me, next);
 
 	/*
@@ -146,5 +146,12 @@ arch_create_task (Task *task, void (*entry_function)(void *), void *arg)
 void
 arch_free_task (Task *task)
 {
+	/*
+	 * FIXME: actually freeing task data causes faults.  Most likely because
+	 * of incorrect page table manipulation in vmap.
+	 */
+	if (1)
+		return;
+
 	kfree_large (task->arch.stack_bottom);
 }

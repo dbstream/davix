@@ -291,7 +291,8 @@ finish_context_switch (Task *prev)
 	int state = atomic_load_relaxed (&prev->task_state);
 
 	if (state == TASK_ZOMBIE) {
-		printk (PR_WARN "TODO: properly handle dying tasks...\n");
+		reap_task (prev);
+		return;
 	}
 
 	if (state == TASK_RUNNABLE) {

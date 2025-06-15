@@ -231,15 +231,17 @@ start_kernel (void)
 	sched_init ();
 	smp_boot_all_cpus ();
 
-	disable_dpc ();
-	for (int i = 0; i < 5; i++) {
-		char buf[10];
-		snprintf (buf, sizeof (buf), "foo-%d", i);
-		Task *task = kthread_create (buf, hello_kthread, (void *) (uintptr_t) i);
-		if (task)
-			kthread_start (task);
+	if (0) {
+		disable_dpc ();
+		for (int i = 0; i < 5; i++) {
+			char buf[10];
+			snprintf (buf, sizeof (buf), "foo-%d", i);
+			Task *task = kthread_create (buf, hello_kthread, (void *) (uintptr_t) i);
+			if (task)
+				kthread_start (task);
+		}
+		enable_dpc ();
 	}
-	enable_dpc ();
 
 	run_ktests ();
 	sched_idle ();
