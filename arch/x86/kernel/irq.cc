@@ -10,6 +10,7 @@
 #include <davix/ktimer.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <davix/sched.h>
 #include <davix/smp.h>
 
 static void
@@ -64,6 +65,12 @@ x86_handle_irq_vector (int irq)
 	if (irq == VECTOR_SMP_CALL_ON_ONE) {
 		apic_eoi ();
 		smp_handle_call_on_one_ipi ();
+		return;
+	}
+
+	if (irq == VECTOR_SMP_RESCHEDULE) {
+		apic_eoi ();
+		handle_reschedule_IPI ();
 		return;
 	}
 

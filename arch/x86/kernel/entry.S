@@ -155,6 +155,75 @@ idtentry_exception asm_handle_PF 1 handle_PF_exception handle_PF_exception_k
 	.set i, i + 1
 .endr
 
+	/**
+	 * asm_switch_to - task switching assembly
+	 */
+	.globl asm_switch_to
+SYM_FUNC_BEGIN(asm_switch_to)
+	/* push registers...  */
+	XPUSHQ(r15)
+	XPUSHQ(r14)
+	XPUSHQ(r13)
+	XPUSHQ(r12)
+	XPUSHQ(rbx)
+	XPUSHQ(rbp)
+
+	/* Store old stack pointer in old task...  */
+	movq %rsp, (%rdi)
+
+	/* Load new stack pointer from new task...  */
+	movq (%rsi), %rsp
+
+	/* Store the old task in %rax...  */
+	movq %rdi, %rax
+
+	/* pop registers...  */
+	XPOPQ(rbp)
+	XPOPQ(rbx)
+	XPOPQ(r12)
+	XPOPQ(r13)
+	XPOPQ(r14)
+	XPOPQ(r15)
+
+	/* Return with the old task in %rax  */
+	ret
+SYM_FUNC_END(asm_switch_to)
+
+	/**
+	 * asm_ret_from_new_task - return to userspace from a new task
+	 *
+	 * asm_switch_to returns here when a new task begins execution.
+	 * Initially, the stack pointer is 16-byte aligned and points to just
+	 * below a struct entry_regs (such that POP_ENTRY_REGS does the correct
+	 * thing).
+	 */
+	.globl asm_ret_from_new_task
+SYM_FUNC_BEGIN(asm_ret_from_new_task)
+	.cfi_undefined rip
+	/* asm_switch_to stores the previous task in %rax  */
+	movq %rax, %rsi
+
+	/* arch_create_task stashes the function and argument in %r12 and %r13  */
+	movq %r12, %rdx
+	movq %r13, %rdi
+
+	/* Setup get_user_entry_regs */
+	movq %rsp, %gs:16
+
+	/* Call arch_ret_from_new_task on an aligned stack pointer.  */
+	subq $8, %rsp
+	call arch_ret_from_new_task
+	addq $8, %rsp
+
+	/* Return to userspace by loading register state from the iret frame.  */
+	POP_ENTRY_REGS
+
+	/* Now, return to userspace.  */
+	addq $8, %rsp
+	iretq
+
+SYM_FUNC_END(asm_ret_from_new_task)
+
 	__RODATA
 
 	.balign 8

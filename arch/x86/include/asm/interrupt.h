@@ -20,6 +20,7 @@
 /**
  * The following vectors are reserved by the architecture:
  */
+#define VECTOR_SMP_RESCHEDULE		251
 #define VECTOR_SMP_PANIC		252
 #define VECTOR_SMP_CALL_ON_ONE		253
 #define VECTOR_APIC_TIMER		254

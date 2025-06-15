@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 struct entry_regs;
+struct Task;
 
 struct x86_pcpu_fixed {
 	void *pcpu_offset;
@@ -15,7 +16,8 @@ struct x86_pcpu_fixed {
 	uint8_t irql_level[3];
 	char reserved1[1];
 	entry_regs *current_user_regs;
-	char reserved2[16];
+	Task *current_task;
+	char reserved2[8];
 	void *canary;
 	char reserved3[16];
 };
@@ -27,4 +29,5 @@ static_assert (offsetof (x86_pcpu_fixed, pcpu_offset) == 0);
 static_assert (offsetof (x86_pcpu_fixed, cpu_id) == 8);
 static_assert (offsetof (x86_pcpu_fixed, irql_level) == 12);
 static_assert (offsetof (x86_pcpu_fixed, current_user_regs) == 16);
+static_assert (offsetof (x86_pcpu_fixed, current_task) == 24);
 static_assert (offsetof (x86_pcpu_fixed, canary) == 40);

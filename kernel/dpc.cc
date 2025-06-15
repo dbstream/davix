@@ -5,16 +5,20 @@
 #include <asm/percpu.h>
 #include <davix/dpc.h>
 #include <davix/irql.h>
+#include <davix/sched.h>
 #include <dsl/list.h>
 
 typedef dsl::TypedList<DPC, &DPC::m_listHead> DPCList;
 
 static DEFINE_PERCPU(DPCList, globalDpcList);
+static DEFINE_PERCPU(bool, pending_reschedule);
 
 PERCPU_CONSTRUCTOR(kernel_dpc)
 {
 	DPCList *list = percpu_ptr (globalDpcList).on (cpu);
 	list->init ();
+
+	*(percpu_ptr (pending_reschedule).on (cpu)) = false;
 }
 
 /**
@@ -56,5 +60,20 @@ dispatch_DPCs (void)
 		routine (dpc, arg1, arg2);
 		disable_irq ();
 	}
+	if (percpu_read (pending_reschedule))
+		schedule ();
 	enable_irq ();
+}
+
+void
+set_pending_reschedule (void)
+{
+	percpu_write (pending_reschedule, true);
+	irql_set_pending_dpc ();
+}
+
+void
+clear_pending_reschedule (void)
+{
+	percpu_write (pending_reschedule, false);
 }

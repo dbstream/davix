@@ -18,7 +18,10 @@
 #include <davix/start_kernel.h>
 #include <string.h>
 
+#include <davix/kthread.h>
 #include <davix/ktimer.h>
+
+#include <vsnprintf.h>
 
 static DPC hello_dpc;
 
@@ -187,6 +190,22 @@ hello_ktimer_routine (KTimer *ktimer, void *arg)
 	printk (PR_INFO "Hello, KTimers!\n");
 }
 
+static void
+hello_kthread (void *arg)
+{
+	int i = (int) (uintptr_t) arg;
+
+	for (int j = 0; j < 2; j++) {
+		printk (PR_INFO "CPU%u: hello kthreads!  [%2d] [%d]\n",
+				this_cpu_id (), i, j);
+		schedule ();
+	}
+
+	disable_dpc ();
+	set_current_state (TASK_ZOMBIE);
+	schedule ();
+}
+
 void
 start_kernel (void)
 {
@@ -209,7 +228,18 @@ start_kernel (void)
 	kmalloc_init ();
 //	slab_dump ();
 
+	sched_init ();
 	smp_boot_all_cpus ();
+
+	disable_dpc ();
+	for (int i = 0; i < 5; i++) {
+		char buf[10];
+		snprintf (buf, sizeof (buf), "foo-%d", i);
+		Task *task = kthread_create (buf, hello_kthread, (void *) (uintptr_t) i);
+		if (task)
+			kthread_start (task);
+	}
+	enable_dpc ();
 
 	run_ktests ();
 	sched_idle ();

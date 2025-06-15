@@ -14,6 +14,7 @@ void
 sched_idle (void)
 {
 	for (;;) {
+		schedule ();
 		wait_for_interrupt ();
 	}
 }

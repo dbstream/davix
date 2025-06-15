@@ -60,6 +60,7 @@ start_additional_processor (void)
 	atomic_store_relaxed (&sync_point_4, true);
 //	printk (PR_NOTICE "CPU%u says Hello!\n", this_cpu_id ());
 //	tsc_sync_dump ();
+	sched_init_this_cpu ();
 	apic_start_timer ();
 	raw_irq_enable ();
 	sched_idle ();

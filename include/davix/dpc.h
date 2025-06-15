@@ -41,3 +41,9 @@ struct DPC_T {
  */
 void
 dispatch_DPCs (void);
+
+void
+set_pending_reschedule (void);
+
+void
+clear_pending_reschedule (void);

@@ -6,6 +6,7 @@
 #include <asm/apic.h>
 #include <asm/interrupt.h>
 #include <asm/smp.h>
+#include <asm/switch_to.h>
 #include <davix/cpuset.h>
 
 void
@@ -42,4 +43,11 @@ arch_send_panic_NMI_to_others (void)
 		uint32_t apicid = cpu_to_apic_id (cpu);
 		apic_send_IPI (APIC_DM_NMI, apicid);
 	}
+}
+
+void
+arch_send_reschedule_IPI (unsigned int target)
+{
+	uint32_t apicid = cpu_to_apic_id (target);
+	apic_send_IPI (APIC_DM_FIXED | VECTOR_SMP_RESCHEDULE, apicid);
 }
