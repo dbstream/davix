@@ -167,6 +167,17 @@ rand_fixed48_16 (xoshiro256pp_state &rng)
 }
 
 static inline fixed48_16_t
+rand_fixed48_16_biased (xoshiro256pp_state &rng)
+{
+	fixed48_16_t ret;
+	int64_t a = xoshiro256pp (rng) % 65536;
+	int64_t b = xoshiro256pp (rng) % 65536;
+	if (a < b) a = b;
+	ret.raw_value = a;
+	return ret;
+}
+
+static inline fixed48_16_t
 rand_fixed48_16_sign (xoshiro256pp_state &rng)
 {
 	if (xoshiro256pp (rng) & 1)
@@ -247,6 +258,8 @@ particle_func (void *arg)
 	fixed48_16_t range = pdata->range;
 	seed_rng (rng, pdata->rngseed);
 	kfree (pdata);
+
+	range = range * rand_fixed48_16_biased (rng);
 
 	fixed48_16_t angle;
 	angle.raw_value = xoshiro256pp (rng) % 411774;
