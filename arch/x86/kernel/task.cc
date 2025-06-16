@@ -58,7 +58,7 @@ arch_context_switch (Task *me, Task *next)
 	 * We must save and restore DPC and IRQ state across context switches.
 	 * This is easiest to do by temporarily disabling raw IRQs.
 	 */
-	bool raw_irq_state = raw_irq_save ();
+	raw_irq_disable ();
 
 	irql_t dpc_count = __read_irql_dispatch () & ~__IRQL_NONE_PENDING;
 	irql_t irq_count = __read_irql_high () & ~__IRQL_NONE_PENDING;
@@ -77,7 +77,15 @@ arch_context_switch (Task *me, Task *next)
 	__write_irql_dispatch (dpc_pending | dpc_count);
 
 	set_user_entry_regs (old_eregs);
-	raw_irq_restore (raw_irq_state);
+
+	if (irq_pending == __IRQL_NONE_PENDING)
+		/*
+		 * When a task returns to us, we effectively inherit the
+		 * __IRQL_NONE_PENDING flag from when it ran on this CPU (it
+		 * may have changed).  That's why we don't use raw_irq_save.
+		 */
+		raw_irq_enable ();
+
 	return prev;
 }
 
@@ -102,7 +110,15 @@ arch_ret_from_new_task (void *arg, Task *prev, void (*entry_function)(void *))
 	 */
 	__write_irql_high (irq_pending | 1);
 	__write_irql_dispatch (dpc_pending | 1);
-	raw_irq_enable ();
+
+	if (irq_pending == __IRQL_NONE_PENDING)
+		/*
+		 * When we start, we inherit the __IRQL_NONE_PENDING flag from
+		 * the previous task that ran on this CPU.  This means we must
+		 * check if there is a pending lazy IRQ which has masked raw
+		 * IRQs.
+		 */
+		raw_irq_enable ();
 
 	/*
 	 * Finish the context switch.  We must do this with IRQs and DPCs
