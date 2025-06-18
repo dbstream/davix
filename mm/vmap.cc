@@ -132,8 +132,8 @@ kfree_large (void *ptr)
 		return;
 	}
 
-	vmap_tree.remove (vma);
 	free_pte_range_entire_vma (vma, true);
+	vmap_tree.remove (vma);
 	vmap_lock.unlock_dpc ();
 	kfree (vma);
 }
