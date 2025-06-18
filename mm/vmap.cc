@@ -34,6 +34,7 @@ __free_pte_range (uintptr_t start, uintptr_t end,
 
 	if (!level) {
 		pte_clear (pte);
+		tlb_add_range (tlb, start, start + PAGE_SIZE);
 		if (free_pages)
 			free_page (phys_to_page (value.phys_addr ()));
 		return;
