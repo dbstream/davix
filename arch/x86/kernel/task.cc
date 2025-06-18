@@ -162,12 +162,5 @@ arch_create_task (Task *task, void (*entry_function)(void *), void *arg)
 void
 arch_free_task (Task *task)
 {
-	/*
-	 * FIXME: actually freeing task data causes faults.  Most likely because
-	 * of incorrect page table manipulation in vmap.
-	 */
-	if (1)
-		return;
-
 	kfree_large (task->arch.stack_bottom);
 }
