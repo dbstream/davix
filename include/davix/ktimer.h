@@ -37,7 +37,7 @@ struct KTimer {
 		on_queue = false;
 	}
 
-	/** Returns true if the KTimer was already on the queue.  */
+	/** Returns false if the KTimer was already on the queue.  */
 	bool
 	enqueue (nsecs_t t);
 

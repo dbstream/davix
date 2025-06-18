@@ -91,7 +91,7 @@ KTimer::enqueue (nsecs_t t)
 	scoped_dpc g;
 
 	if (on_queue)
-		return true;
+		return false;
 
 	on_queue = true;
 	expiry_ns = t;
@@ -103,7 +103,7 @@ KTimer::enqueue (nsecs_t t)
 		queue->next_expiry = t;
 	enable_irq ();
 	queue->tree.insert (this);
-	return false;
+	return true;
 }
 
 bool

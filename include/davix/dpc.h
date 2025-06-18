@@ -28,7 +28,7 @@ struct DPC_T {
 	/**
 	 * Schedule a DPC for execution on the currently-running processor.
 	 *
-	 * This function returns true if the DPC was already scheduled for
+	 * This function returns false if the DPC was already scheduled for
 	 * execution.
 	 */
 	bool

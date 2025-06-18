@@ -23,7 +23,7 @@ PERCPU_CONSTRUCTOR(kernel_dpc)
 
 /**
  * DPC::enqueue - schedule a DPC for execution.
- * Returns true if the DPC was already enqueued.
+ * Returns false if the DPC was already enqueued.
  */
 bool
 DPC::enqueue (void)
@@ -31,12 +31,12 @@ DPC::enqueue (void)
 	scoped_irq g;
 
 	if (m_is_enqueued)
-		return true;
+		return false;
 
 	DPCList *list = percpu_ptr (globalDpcList);
 	list->push_back (this);
 	irql_set_pending_dpc ();
-	return false;
+	return true;
 }
 
 /**
