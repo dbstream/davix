@@ -5,6 +5,7 @@
 #pragma once
 
 #include <asm/current_task.h>
+#include <davix/time.h>
 #include <stdint.h>
 
 struct Task;
@@ -59,3 +60,9 @@ handle_reschedule_IPI (void);
 
 void
 finish_context_switch (Task *prev);
+
+void
+sched_timeout_ticket (nsecs_t expiry, int state, sched_ticket_t ticket);
+
+void
+sched_timeout (nsecs_t expiry, int state);

@@ -3,3 +3,4 @@
 
 kobjs += idle.o
 kobjs += main.o
+kobjs += timeout.o
