@@ -52,10 +52,30 @@ struct sched_runqueue {
 static DEFINE_PERCPU(sched_runqueue, runqueue);
 static DEFINE_PERCPU(KTimer, sched_timer);
 
+static DEFINE_PERCPU(RQTaskList, reap_list);
+static DEFINE_PERCPU(DPC, reap_dpc);
+
+/**
+ * reap_dpc_func - reap tasks in a DPC.
+ */
+static void
+reap_dpc_func (DPC *dpc, void *arg1, void *arg2)
+{
+	(void) dpc;
+	(void) arg1;
+	(void) arg2;
+
+	RQTaskList *rl = percpu_ptr (reap_list);
+	while (!rl->empty ())
+		reap_task (rl->pop_front ());
+}
+
 PERCPU_CONSTRUCTOR(sched_pcpu)
 {
 	sched_runqueue *rq = percpu_ptr (runqueue).on (cpu);
 	KTimer *tmr = percpu_ptr (sched_timer).on (cpu);
+	RQTaskList *rl = percpu_ptr (reap_list).on (cpu);
+	DPC *rd = percpu_ptr (reap_dpc).on (cpu);
 
 	for (int prio = MIN_TASK_PRIORITY; prio <= MAX_TASK_PRIORITY; prio++) {
 		int idx = prio - MIN_TASK_PRIORITY;
@@ -69,6 +89,9 @@ PERCPU_CONSTRUCTOR(sched_pcpu)
 	rq->rq_load = 0;
 
 	tmr->init (sched_timer_fn, nullptr);
+
+	rl->init ();
+	rd->init (reap_dpc_func, nullptr, nullptr);
 }
 
 /**
@@ -291,7 +314,16 @@ finish_context_switch (Task *prev)
 	int state = atomic_load_relaxed (&prev->task_state);
 
 	if (state == TASK_ZOMBIE) {
-		reap_task (prev);
+		/*
+		 * NB: we cannot call reap_task with interrupts disabled, as the
+		 * architecture may use kfree_large to free the kernel stack at
+		 * reap_task time.  Therefore we must reap tasks in a DPC.
+		 */
+		RQTaskList *rl = percpu_ptr (reap_list);
+		DPC *dpc = percpu_ptr (reap_dpc);
+
+		rl->push_back (prev);
+		dpc->enqueue ();
 		return;
 	}
 
