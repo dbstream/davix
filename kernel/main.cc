@@ -3,36 +3,16 @@
  * Copyright (C) 2025-present  dbstream
  */
 #include <asm/irql.h>
-#include <asm/smp.h>
 #include <davix/cmdline.h>
 #include <davix/cpuset.h>
-#include <davix/dpc.h>
 #include <davix/early_alloc.h>
 #include <davix/kmalloc.h>
 #include <davix/ktest.h>
 #include <davix/page.h>
 #include <davix/printk.h>
 #include <davix/sched.h>
-#include <davix/slab.h>
 #include <davix/smp.h>
 #include <davix/start_kernel.h>
-#include <string.h>
-
-#include <davix/kthread.h>
-#include <davix/ktimer.h>
-
-#include <vsnprintf.h>
-
-static DPC hello_dpc;
-
-static void
-hello_dpc_routine (DPC *dpc, void *arg1, void *arg2)
-{
-	(void) dpc;
-	(void) arg1;
-	(void) arg2;
-	printk (PR_INFO "Hello, DPCs!\n");
-}
 
 const char *kernel_cmdline = "";
 
@@ -178,34 +158,6 @@ early_param_matches (const char *expected, const char *value)
 
 extern const char davix_banner[];
 
-static KTimer hello_ktimer;
-
-static void
-hello_ktimer_routine (KTimer *ktimer, void *arg)
-{
-	(void) ktimer;
-	(void) arg;
-
-	hello_ktimer.enqueue (ns_since_boot () + 1000000000UL);
-	printk (PR_INFO "Hello, KTimers!\n");
-}
-
-static void
-hello_kthread (void *arg)
-{
-	int i = (int) (uintptr_t) arg;
-
-	for (int j = 0; j < 2; j++) {
-		printk (PR_INFO "CPU%u: hello kthreads!  [%2d] [%d]\n",
-				this_cpu_id (), i, j);
-		schedule ();
-	}
-
-	disable_dpc ();
-	set_current_state (TASK_ZOMBIE);
-	schedule ();
-}
-
 void
 start_kernel (void)
 {
@@ -214,12 +166,6 @@ start_kernel (void)
 
 	arch_init ();
 	printk (PR_INFO "CPUs: %d\n", nr_cpus);
-
-	hello_dpc.init (hello_dpc_routine, nullptr, nullptr);
-	hello_dpc.enqueue ();
-
-	hello_ktimer.init (hello_ktimer_routine, nullptr);
-	hello_ktimer.enqueue (ns_since_boot () + 10000000000ULL);
 
 	pgalloc_init ();
 	early_free_everything_to_pgalloc ();
@@ -230,18 +176,6 @@ start_kernel (void)
 
 	sched_init ();
 	smp_boot_all_cpus ();
-
-	if (0) {
-		disable_dpc ();
-		for (int i = 0; i < 5; i++) {
-			char buf[10];
-			snprintf (buf, sizeof (buf), "foo-%d", i);
-			Task *task = kthread_create (buf, hello_kthread, (void *) (uintptr_t) i);
-			if (task)
-				kthread_start (task);
-		}
-		enable_dpc ();
-	}
 
 	run_ktests ();
 	sched_idle ();
