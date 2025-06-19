@@ -177,6 +177,12 @@ public:
 		m_tree.init ();
 	}
 
+	constexpr bool
+	empty (void) const
+	{
+		return m_tree.empty ();
+	}
+
 	static inline T *
 	container_of (AVLNode *node)
 	{
