@@ -6,7 +6,9 @@
 #include <asm/creg_bits.h>
 #include <asm/irql.h>
 #include <asm/pgtable_modify.h>
+#include <davix/cpuset.h>
 #include <davix/page.h>
+#include <davix/smp.h>
 
 pte_t *
 alloc_pgtable (int level)
@@ -49,18 +51,31 @@ do_flush_tlb (tlb_accumulator *tlb)
 	}
 }
 
+static void
+flush_tlb_one (void *tlb)
+{
+	do_flush_tlb ((tlb_accumulator *) tlb);
+}
+
 void
 tlb_end_kernel (tlb_accumulator *tlb)
 {
 	if (tlb_accumulator_empty (tlb))
 		return;
 
-	// also flush the TLB on other CPUs
-	do_flush_tlb (tlb);
+	/*
+	 * TODO: this is ridiculously inefficient and doesn't scale at all.  Do
+	 * something better in the future, e.g. via some smp_call_on_every_cpu.
+	 */
+	for (unsigned int cpu : cpu_online)
+		smp_call_on_cpu (cpu, flush_tlb_one, tlb);
 
 	while (!tlb->deferred_pages.empty ())
 		free_page (tlb->deferred_pages.pop_front ());
 
-	// in case someone forgets it...
+	/*
+	 * Call tlb_begin_kernel in case someone accidentally continues using
+	 * this TLB accumulator without calling tlb_begin_kernel.
+	 */
 	tlb_begin_kernel (tlb);
 }
