@@ -21,7 +21,6 @@ struct sched_timeout_struct {
 	Task *task;
 	sched_ticket_t ticket;
 	bool removed;
-	timeout_cpu_data *td;
 };
 
 struct sched_timer_comparator {
@@ -107,7 +106,6 @@ sched_timeout_ticket (nsecs_t expiry, int state, sched_ticket_t ticket)
 
 	disable_dpc ();
 	timeout_cpu_data *td = percpu_ptr (timeout_data);
-	entry.td = td;
 
 	td->lock.raw_lock ();
 	td->tree.insert (&entry);
