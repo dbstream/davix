@@ -97,12 +97,9 @@ random_color (xoshiro256pp_state &state)
 }
 
 static void
-poor_mans_sleep (nsecs_t ns)
+fwork_sleep (nsecs_t ns)
 {
-	nsecs_t target = ns_since_boot () + ns;
-	do {
-		schedule ();
-	} while (ns_since_boot () < target);
+	sched_timeout (ns_since_boot () + ns, TASK_UNINTERRUPTIBLE);
 }
 
 struct fixed48_16_t {
@@ -272,7 +269,7 @@ particle_func (void *arg)
 	for (int i = 0; i < expire_in; ) {
 		plot (data.x, data.y, data.color, true);
 
-		poor_mans_sleep (16666000ULL);
+		fwork_sleep (16666000ULL);
 		i += 16;
 
 		plot (data.x, data.y, 0, false);
@@ -320,7 +317,7 @@ explodeable_func (void *arg)
 	int expire_in = 500 + (xoshiro256pp (rng) % 500);
 	for (int i = 0; i < expire_in; ) {
 		plot (data.x, data.y, data.color, true);
-		poor_mans_sleep (16666000ULL);
+		fwork_sleep (16666000ULL);
 		i += 16;
 
 		plot (data.x, data.y, 0, false);
@@ -373,7 +370,7 @@ spawner_thread (void *arg)
 		for (int i = 0; i < spawn_count; i++)
 			spawn_explodeable (xoshiro256pp (rng));
 
-		poor_mans_sleep (2000000000 + (xoshiro256pp (rng) % 2000000000));
+		fwork_sleep (2000000000 + (xoshiro256pp (rng) % 2000000000));
 	}
 }
 
