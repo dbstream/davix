@@ -44,8 +44,8 @@ struct ListHead {
 		prev->next = next;
 
 		/** poison this node to prevent mistakes  */
-		prev = nullptr;
-		next = nullptr;
+		prev = (ListHead *) 0xdeadbeefUL;
+		next = (ListHead *) 0xcafebabeUL;
 	}
 
 	/* Move all list entries from @other to this. */
