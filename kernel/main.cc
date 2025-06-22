@@ -10,6 +10,7 @@
 #include <davix/ktest.h>
 #include <davix/page.h>
 #include <davix/printk.h>
+#include <davix/rcu.h>
 #include <davix/sched.h>
 #include <davix/smp.h>
 #include <davix/start_kernel.h>
@@ -158,9 +159,20 @@ early_param_matches (const char *expected, const char *value)
 
 extern const char davix_banner[];
 
+static RCUHead hello_rcu_head;
+
+static void
+hello_rcu (RCUHead *rh)
+{
+	(void) rh;
+	printk (PR_INFO "Hello, RCU!\n");
+}
+
 void
 start_kernel (void)
 {
+	rcu_enable ();
+
 	printk (PR_NOTICE "%s\n", davix_banner);
 	printk (PR_INFO "Kernel command line: %s\n", kernel_cmdline);
 
@@ -176,6 +188,8 @@ start_kernel (void)
 
 	sched_init ();
 	smp_boot_all_cpus ();
+
+	rcu_call (&hello_rcu_head, hello_rcu);
 
 	run_ktests ();
 	sched_idle ();

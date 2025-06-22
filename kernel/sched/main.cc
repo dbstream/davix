@@ -14,6 +14,7 @@
 #include <davix/ktimer.h>
 #include <davix/panic.h>
 #include <davix/printk.h>
+#include <davix/rcu.h>
 #include <davix/sched.h>
 #include <davix/slab.h>
 #include <davix/spinlock.h>
@@ -450,6 +451,7 @@ schedule (void)
 	Task *me = get_current_task ();
 
 	disable_dpc ();
+	rcu_quiesce ();
 	clear_pending_reschedule ();
 
 	sched_runqueue *rq = percpu_ptr (runqueue);
@@ -583,6 +585,7 @@ sched_init_this_cpu (void)
 {
 	sched_runqueue *rq = percpu_ptr (runqueue);
 	set_current_task (rq->idle_task);
+	rcu_enable ();
 }
 
 Task *

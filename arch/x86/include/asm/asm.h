@@ -170,4 +170,10 @@ rdtsc_strong (void)
 	return ((uint64_t) high << 32) | low;
 }
 
+static inline void
+raw_irq_enable_wfi (void)
+{
+	asm volatile ("sti; hlt" ::: "memory");
+}
+
 #endif
