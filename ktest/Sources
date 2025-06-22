@@ -4,4 +4,5 @@
 kobjs += ktest.o
 
 kobjs-$(CONFIG_KTEST_FIREWORKS) += fireworks.o
+kobjs-$(CONFIG_KTEST_MUTEX) += mutex.o
 kobjs-$(CONFIG_KTEST_VMATREE) += vmatree.o
