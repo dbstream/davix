@@ -7,6 +7,7 @@ kobjs += dpc.o
 kobjs += kthread.o
 kobjs += ktimer.o
 kobjs += main.o
+kobjs += mutex.o
 kobjs += panic.o
 kobjs += printk.o
 kobjs += smp.o

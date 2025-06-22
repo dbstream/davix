@@ -611,3 +611,9 @@ init_task_struct_fields (Task *tsk)
 	tsk->comm[0] = '\0';
 }
 
+bool
+has_pending_signal (void)
+{
+	return false;
+}
+
