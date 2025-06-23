@@ -11,6 +11,7 @@ kobjs += mutex.o
 kobjs += panic.o
 kobjs += printk.o
 kobjs += rcu.o
+kobjs += rwmutex.o
 kobjs += smp.o
 kobjs += version.o
 
