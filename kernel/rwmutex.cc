@@ -65,6 +65,12 @@ RWMutex::read_lock (void)
 		return;
 
 	reader_mutex.lock ();
+
+	if (inc_unless_zero (&reader_count)) {
+		reader_mutex.unlock ();
+		return;
+	}
+
 	common_mutex.lock ();
 	atomic_store_release (&reader_count, 1);
 	reader_mutex.unlock ();
@@ -79,6 +85,12 @@ RWMutex::read_lock_interruptible (void)
 	int error = reader_mutex.lock_interruptible ();
 	if (error)
 		return error;
+
+	if (inc_unless_zero (&reader_count)) {
+		reader_mutex.unlock ();
+		return 0;
+	}
+
 	error = common_mutex.lock_interruptible ();
 	if (!error)
 		atomic_store_release (&reader_count, 1);
@@ -95,6 +107,12 @@ RWMutex::read_lock_timeout (nsecs_t ns)
 	int error = reader_mutex.lock_timeout (ns);
 	if (error)
 		return error;
+
+	if (inc_unless_zero (&reader_count)) {
+		reader_mutex.unlock ();
+		return 0;
+	}
+
 	error = common_mutex.lock_timeout (ns);
 	if (!error)
 		atomic_store_release (&reader_count, 1);
@@ -111,6 +129,12 @@ RWMutex::read_lock_timeout_interruptible (nsecs_t ns)
 	int error = reader_mutex.lock_timeout_interruptible (ns);
 	if (error)
 		return error;
+
+	if (inc_unless_zero (&reader_count)) {
+		reader_mutex.unlock ();
+		return 0;
+	}
+
 	error = common_mutex.lock_timeout_interruptible (ns);
 	if (!error)
 		atomic_store_release (&reader_count, 1);
