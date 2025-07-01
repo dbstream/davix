@@ -1,9 +1,11 @@
 /**
- * Singly-linked list.
+ * Doubly-linked list.
  * Copyright (C) 2025-present  dbstream
  *
- * This file provides an implementation of a singly-linked list, suitable for
- * use in e.g. hash maps.
+ * This file provides an implementation of a doubly-linked list, suitable for
+ * use in hash maps.  It differs from dsl::List in that the 'list' itself only
+ * takes up one word (a pointer to the first element; thus, it is not possible
+ * to quickly access the last element of a HList).
  */
 #pragma once
 
@@ -11,8 +13,8 @@
 
 namespace dsl {
 
-struct SListHead {
-	SListHead *next, **link;
+struct HListHead {
+	HListHead *next, **link;
 
 	constexpr void
 	remove (void)
@@ -22,13 +24,13 @@ struct SListHead {
 		*link = next;
 
 		/** poison next and link */
-		next = (SListHead *) 0xdeadbeefUL;
-		link = (SListHead **) 0xcafebabeUL;
+		next = (HListHead *) 0xdeadbeefUL;
+		link = (HListHead **) 0xcafebabeUL;
 	}
 };
 
-struct SList {
-	SListHead *head = nullptr;
+struct HList {
+	HListHead *head = nullptr;
 
 	constexpr void
 	init (void)
@@ -37,7 +39,7 @@ struct SList {
 	}
 
 	constexpr void
-	push (SListHead *entry)
+	push (HListHead *entry)
 	{
 		entry->next = head;
 		entry->link = &head;
@@ -107,8 +109,8 @@ struct SList {
 		}
 	};
 
-	typedef _iterator_impl<SListHead> iterator;
-	typedef _iterator_impl<SListHead> const_iterator;
+	typedef _iterator_impl<HListHead> iterator;
+	typedef _iterator_impl<HListHead> const_iterator;
 
 	constexpr iterator
 	begin (void)
@@ -147,10 +149,10 @@ struct SList {
 	}
 };
 
-template<class T, SListHead T::*F>
-struct TypedSList {
+template<class T, HListHead T::*F>
+struct TypedHList {
 public:
-	SList m_list;
+	HList m_list;
 
 	constexpr void
 	init (void)
@@ -171,42 +173,42 @@ public:
 	}
 
 	static inline T *
-	container_of (SListHead *node)
+	container_of (HListHead *node)
 	{
-		return ::container_of<T, SListHead> (F, node);
+		return ::container_of<T, HListHead> (F, node);
 	}
 
 	static inline const T *
-	const_container_of (const SListHead *node)
+	const_container_of (const HListHead *node)
 	{
-		return ::container_of<const T, const SListHead> (F, node);
+		return ::container_of<const T, const HListHead> (F, node);
 	}
 
-	struct iterator : SList::iterator {
+	struct iterator : HList::iterator {
 		T *
 		operator * (void) const
 		{
-			return container_of (SList::iterator::operator * ());
+			return container_of (HList::iterator::operator * ());
 		}
 
 		T *
 		operator-> (void) const
 		{
-			return container_of (SList::iterator::operator * ());
+			return container_of (HList::iterator::operator * ());
 		}
 	};
 
-	struct const_iterator : SList::const_iterator {
+	struct const_iterator : HList::const_iterator {
 		const T *
 		operator * (void) const
 		{
-			return const_container_of (SList::const_iterator::operator * ());
+			return const_container_of (HList::const_iterator::operator * ());
 		}
 
 		const T *
 		operator-> (void) const
 		{
-			return const_container_of (SList::const_iterator::operator * ());
+			return const_container_of (HList::const_iterator::operator * ());
 		}
 	};
 
