@@ -166,6 +166,14 @@ public:
 		m_list.push (&(entry->*F));
 	}
 
+	T *
+	pop (void)
+	{
+		T *entry = *begin ();
+		(entry->*F).remove ();
+		return entry;
+	}
+
 	constexpr bool
 	empty (void) const
 	{
