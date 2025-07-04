@@ -11,6 +11,7 @@ kobjs += mutex.o
 kobjs += panic.o
 kobjs += printk.o
 kobjs += rcu.o
+kobjs += refstr.o
 kobjs += rwmutex.o
 kobjs += smp.o
 kobjs += version.o
@@ -19,3 +20,4 @@ CXXFLAGS-version.o :=				\
 	-DCOMPILE_USER="$(COMPILE_USER)"	\
 	-DCOMPILE_HOST="$(COMPILE_HOST)"	\
 	-DCC_VERSION="$(CC_VERSION)"		\
+
