@@ -8,7 +8,9 @@
 #include <davix/early_alloc.h>
 #include <davix/kmalloc.h>
 #include <davix/ktest.h>
+#include <davix/kthread.h>
 #include <davix/page.h>
+#include <davix/panic.h>
 #include <davix/printk.h>
 #include <davix/rcu.h>
 #include <davix/sched.h>
@@ -168,6 +170,9 @@ hello_rcu (RCUHead *rh)
 	printk (PR_INFO "Hello, RCU!\n");
 }
 
+static void
+setup_and_exec_init (void *arg);
+
 void
 start_kernel (void)
 {
@@ -191,6 +196,27 @@ start_kernel (void)
 
 	rcu_call (&hello_rcu_head, hello_rcu);
 
-	run_ktests ();
+	Task *init_task = kthread_create ("init", setup_and_exec_init, nullptr);
+	if (!init_task)
+		panic ("Failed to create init_task!");
+
+	kthread_start (init_task);
 	sched_idle ();
 }
+
+/**
+ * setup_and_exec_init - Mount the root filesystem and pass control to init.
+ */
+static void
+setup_and_exec_init (void *arg)
+{
+	(void) arg;
+
+	printk (PR_INFO "Hello from init!\n");
+
+	run_ktests ();
+
+	printk (PR_WARN "TODO: execve(/sbin/init)\n");
+	kthread_exit();
+}
+
