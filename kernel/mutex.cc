@@ -11,8 +11,6 @@
 #include <davix/task.h>
 #include <uapi/davix/errno.h>
 
-static constexpr nsecs_t NO_TIMEOUT = -1ULL;
-
 static constexpr uintptr_t MUTEX_WAITER		= uintptr_t(1) << 0;
 static constexpr uintptr_t MUTEX_LOCK		= uintptr_t(1) << 1;
 static constexpr uintptr_t MUTEX_PTR		= ~(MUTEX_WAITER | MUTEX_LOCK);

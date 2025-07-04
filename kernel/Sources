@@ -2,6 +2,7 @@
 # Copyright (C) 2025-present  dbstream
 
 kobjs += sched/
+kobjs += condwait.o
 kobjs += cpuset.o
 kobjs += dpc.o
 kobjs += kthread.o

@@ -11,6 +11,12 @@ typedef unsigned long long nsecs_t;
 typedef unsigned long long usecs_t;
 typedef unsigned long long msecs_t;
 
+/*
+ * NO_TIMEOUT: highest possible value for nsecs_t, usually taken by functions
+ * with a timeout to indicate that no timeout should be used.
+ */
+constexpr static nsecs_t NO_TIMEOUT = -1ULL;
+
 /**
  * ns_since_boot - query the number of nanoseconds that have passed since boot.
  */
