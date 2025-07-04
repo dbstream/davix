@@ -86,7 +86,7 @@ COMMONFLAGS :=				\
 	-Wextra				\
 	-Werror				\
 	-O2				\
-	-flto				\
+	-flto=auto			\
 	-g				\
 	-ffreestanding			\
 	-fvisibility=hidden		\
@@ -114,7 +114,7 @@ LDFLAGS :=				\
 	-ffreestanding			\
 	-nostdlib			\
 	-O2				\
-	-flto				\
+	-flto=auto			\
 	-Wl,--whole-archive		\
 	$(ARCH_LDFLAGS)			\
 
