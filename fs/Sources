@@ -1,0 +1,8 @@
+# Filesystem sources.
+# Copyright (C) 2025-present  dbstream
+
+kobjs += dentry.o
+kobjs += init.o
+kobjs += mount.o
+kobjs += tmpfs.o
+

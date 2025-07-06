@@ -17,6 +17,7 @@ struct kstat;
 
 #include <davix/rwmutex.h>
 #include <davix/path.h>
+#include <davix/rcu.h>
 #include <davix/refcount.h>
 #include <davix/refstr.h>
 #include <davix/spinlock.h>
@@ -56,6 +57,24 @@ enum : unsigned int {
 	 * it up.
 	 */
 	D_LOOKUP_IN_PROGRESS		= 1U << 3,
+	/*
+	 * D_ON_LRU: set on a dentry when it is on the LRU.
+	 */
+	D_ON_LRU			= 1U << 4,
+	/*
+	 * D_WAS_REFERENCED: set on a dentry by dput before dropping the
+	 * reference count.  Used by LRU.
+	 */
+	D_WAS_REFERENCED		= 1U << 5,
+	/*
+	 * D_FREED: set on a dentry when it has been freed.
+	 */
+	D_FREED				= 1U << 6,
+	/*
+	 * D_DONT_KEEP: set on a dentry when it should be freed immediately
+	 * instead of being placed on the LRU.
+	 */
+	D_DONT_KEEP			= 1U << 7,
 };
 
 enum : unsigned long {
@@ -74,7 +93,7 @@ struct DName {
 	 */
 	const char *name_ptr;
 	unsigned int name_len;
-	char inline_name[52];
+	char inline_name[36];
 };
 
 /**
@@ -150,20 +169,56 @@ struct DEntry {
 	spinlock_t lock;
 
 	refcount_t refcount;
+	union {
+		/*
+		 * DEntry hash map linkage.
+		 */
+		dsl::HListHead dentry_hash_linkage;
+		/*
+		 * RCU head for freeing.
+		 */
+		RCUHead rcu;
+	};
 	/*
-	 * DEntry hash map linkage.
+	 * DEntry hash, a function of the parent DEntry pointer and our name.
 	 */
-	dsl::HListHead dentry_hash_linkage;
+	uintptr_t d_hash;
 	/*
-	 * DEntry name and hash.
+	 * DEntry name.
 	 */
-	uintptr_t d_name_hash;
 	DName name;
+	/*
+	 * LRU linkage.
+	 */
+	dsl::ListHead dentry_lru_head;
 };
 
 static_assert (sizeof(void *) != 8 || sizeof (DEntry) == 128);
 
 typedef dsl::TypedHList<DEntry, &DEntry::dentry_hash_linkage> DEntryHashList;
+typedef dsl::TypedList<DEntry, &DEntry::dentry_lru_head> DEntryLRU;
+
+static inline void
+d_lock (DEntry *de)
+{
+	de->lock.lock_dpc ();
+}
+
+static inline void
+d_unlock (DEntry *de)
+{
+	de->lock.unlock_dpc ();
+}
+
+static inline bool
+d_trylock (DEntry *de)
+{
+	disable_dpc ();
+	if (de->lock.raw_trylock ())
+		return true;
+	enable_dpc ();
+	return false;
+}
 
 /**
  * INode - an inode.
@@ -428,7 +483,7 @@ struct FilesystemType {
 	 * Returns an errno, or zero indicating success.
 	 */
 	int (*mount_fs) (const char *source, unsigned long mount_flags,
-			const void *data, Filesystem **fs);
+			const void *data, Filesystem **fs, DEntry **root);
 
 	/**
 	 * unmount_fs - unmount a filesystem.

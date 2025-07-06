@@ -63,6 +63,13 @@ enum {
 #define atomic_and_fetch(p, val, mo) __atomic_and_fetch((p), (val), (mo))
 #define atomic_or_fetch(p, val, mo) __atomic_or_fetch((p), (val), (mo))
 
+#define atomic_set_bits(p, bits, mo) do {				\
+		atomic_fetch_or((p), (bits), (mo)); }			\
+	while (0)
+#define atomic_clr_bits(p, bits, mo) do {				\
+		atomic_fetch_and((p), ~(decltype(0+*(p)))(bits), (mo));	\
+	} while (0)
+
 #ifdef smp_mb
 #ifndef __arch_provides_smp_mb
 #define __arch_provides_smp_mb

@@ -5,6 +5,7 @@ kobjs += acpi/
 kobjs += arch/$(ARCH)/
 kobjs += drivers/
 kobjs += dsl/
+kobjs += fs/
 kobjs += kernel/
 kobjs-$(CONFIG_KTEST) += ktest/
 kobjs += mm/

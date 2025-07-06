@@ -6,6 +6,7 @@
 #include <davix/cmdline.h>
 #include <davix/cpuset.h>
 #include <davix/early_alloc.h>
+#include <davix/fs.h>
 #include <davix/kmalloc.h>
 #include <davix/ktest.h>
 #include <davix/kthread.h>
@@ -213,6 +214,8 @@ setup_and_exec_init (void *arg)
 	(void) arg;
 
 	printk (PR_INFO "Hello from init!\n");
+
+	init_fs_caches ();
 
 	run_ktests ();
 
