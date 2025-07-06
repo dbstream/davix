@@ -64,3 +64,32 @@ init_mount_table (void)
 	}
 }
 
+Mount *
+do_mount_root (const char *fstype, const char *source,
+		unsigned long mount_flags, const void *data)
+{
+	FilesystemType *typ = get_filesystem_type (fstype);
+	if (!typ)
+		panic ("Failed to mount root: No such filesystem type: %s", fstype);
+
+	Mount *mount = (Mount *) slab_alloc (mount_slab_cache, ALLOC_KERNEL);
+	if (!mount)
+		panic ("Failed to mount root: Cannot allocate memory!");
+
+	mount->root = nullptr;
+	mount->fs = nullptr;
+	mount->mountpoint.mount = nullptr;
+	mount->mountpoint.dentry = nullptr;
+	mount->flags = mount_flags | MNT_DETACHED;
+	mount->lock.init ();
+	mount->refcount = 1;
+	mount->child_mounts.init ();
+
+	int errno = typ->mount_fs (source, mount_flags, typ, data,
+			&mount->fs, &mount->root);
+	if (errno != 0)
+		panic ("Failed to mount root: errno %d\n", errno);
+
+	return mount;
+}
+

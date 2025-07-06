@@ -9,7 +9,10 @@ void
 init_fs_caches (void)
 {
 	init_dentry_cache ();
+	init_vfs_inodes ();
 	init_mount_table ();
 	register_tmpfs ();
+
+	// do_mount_root ("tmpfs", "", 0, nullptr);
 }
 

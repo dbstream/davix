@@ -105,6 +105,10 @@ struct Mount {
 	 */
 	DEntry *root;
 	/*
+	 * fs: The filesystem that this mount belongs to.
+	 */
+	Filesystem *fs;
+	/*
 	 * mountpoint: Mountpoint location.
 	 */
 	Path mountpoint;

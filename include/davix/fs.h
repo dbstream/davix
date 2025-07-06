@@ -107,3 +107,7 @@ i_incr_nlink (INode *inode, nlink_t count);
 void
 i_decr_nlink (INode *inode, nlink_t count);
 
+Mount *
+do_mount_root (const char *fstype, const char *source,
+		unsigned long mount_flags, const void *data);
+
