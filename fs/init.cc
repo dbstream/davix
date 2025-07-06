@@ -10,5 +10,6 @@ init_fs_caches (void)
 {
 	init_dentry_cache ();
 	init_mount_table ();
+	register_tmpfs ();
 }
 

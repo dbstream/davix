@@ -43,6 +43,17 @@ refcount_dec (refcount_t *ref)
 }
 
 /**
+ * refcount_inc_old_value - increment a reference count.
+ * @ref: pointer to reference count
+ * Returns the old value of the reference count.
+ */
+static inline refcount_t
+refcount_inc_old_value (refcount_t *ref)
+{
+	return atomic_fetch_inc (ref, mo_relaxed);
+}
+
+/**
  * refcount_inc_unless_zero - increment a reference count unless it is zero.
  * @ref: pointer to reference count
  * Returns true if we successfully incremented the reference count, false if we

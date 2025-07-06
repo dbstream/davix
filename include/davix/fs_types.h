@@ -220,6 +220,12 @@ d_trylock (DEntry *de)
 	return false;
 }
 
+static inline INode *
+d_inode (DEntry *de)
+{
+	return de->inode;
+}
+
 /**
  * INode - an inode.
  */
@@ -251,6 +257,17 @@ struct INode {
 	 * INode spinlock.  This protects metadata.
 	 */
 	spinlock_t i_lock;
+	/*
+	 * INode metadata needed by stat().
+	 */
+	nlink_t nlink;
+	dev_t rdev;
+	ino_t ino;
+	off_t size;
+	/*
+	 * Filesystem private data.
+	 */
+	void *i_private;
 };
 
 static inline int
@@ -298,8 +315,10 @@ struct INodeOps {
 	/**
 	 * i_close - close an inode.
 	 * @inode: inode that we are closing
+	 * Returns true if the inode was successfully dropped from the inode
+	 * cache.  If this returns false, iput should be retried.
 	 */
-	int (*i_close) (INode *inode);
+	bool (*i_close) (INode *inode);
 
 	/**
 	 * i_unlink - unlink a directory entry.
@@ -318,36 +337,45 @@ struct INodeOps {
 	 * i_mknod - create a special filesystem node.
 	 * @dir: parent directory
 	 * @entry: directory entry to create the node at
+	 * @uid: inode owner
+	 * @gid: inode group
 	 * @mode: file mode and type
 	 * @device: device identifier
 	 * Returns an errno, or zero for success.
 	 *
 	 * The inode mutex on @dir is held for writing.
 	 */
-	int (*i_mknod) (INode *dir, DEntry *entry, mode_t mode, dev_t device);
+	int (*i_mknod) (INode *dir, DEntry *entry,
+			uid_t uid, gid_t gid, mode_t mode, dev_t device);
 
 	/**
 	 * i_mkdir - create a directory.
 	 * @dir: parent directory
 	 * @entry: directory entry to create the directory at
+	 * @uid: inode owner
+	 * @gid: inode group
 	 * @mode: the mode with which to create the directory
 	 * Returns an errno, or zero for success.
 	 *
 	 * The inode mutex on @dir is held for writing.
 	 */
-	int (*i_mkdir) (INode *dir, DEntry *entry, mode_t mode);
+	int (*i_mkdir) (INode *dir, DEntry *entry,
+			uid_t uid, gid_t gid, mode_t mode);
 
 	/**
 	 * i_symlink - create a symbolic link.
 	 * @dir: parent directory
 	 * @entry: directory entry to create the symlink at
+	 * @uid: inode owner
+	 * @gid: inode group
 	 * @mode: the mode with which to create the symlink
 	 * @path: symbolic link target
 	 * Returns an errno, or zero for success.
 	 *
 	 * The inode mutex on @dir is held for writing.
 	 */
-	int (*i_symlink) (INode *dir, DEntry *entry, mode_t mode,
+	int (*i_symlink) (INode *dir, DEntry *entry,
+			uid_t uid, gid_t gid, mode_t mode,
 			const char *path);
 
 	/**
@@ -422,13 +450,17 @@ struct INodeOps {
 	 * i_tmpfile - create a tmpfile.
 	 * @dir: parent directory inode
 	 * @inode: pointer to INode pointer where the new inode is returned.
+	 * @uid: inode owner
+	 * @gid: inode group
+	 * @mode: inode mode
 	 * Returns an errno, or zero for success.  On error, @inode isn't
 	 * written to.
 	 *
 	 * The inode mutex on @dir is not held but may be taken for reading or
 	 * writing.
 	 */
-	int (*i_tmpfile) (INode *dir, INode **inode);
+	int (*i_tmpfile) (INode *dir, INode **inode,
+			uid_t uid, gid_t gid, mode_t mode);
 
 	/**
 	 * i_open - open a file.
@@ -464,6 +496,17 @@ struct Filesystem {
 	 * Per-filesystem MNT_* flags.
 	 */
 	unsigned long fs_flags;
+	/*
+	 * Number of mounts for this filesystem.
+	 */
+	unsigned long num_mounts;
+	/*
+	 * Filesystem private data.
+	 */
+	union {
+		void *ptr;
+		ino_t ino;
+	} fs_private;
 };
 
 /**
@@ -479,11 +522,13 @@ struct FilesystemType {
 	 * mount_fs - mount a filesystem.
 	 * @source: source string
 	 * @mount_flags: MOUNT_* flags
+	 * @fstype: pointer to the FilesystemType
 	 * @data: filesystem-specific data
 	 * Returns an errno, or zero indicating success.
 	 */
 	int (*mount_fs) (const char *source, unsigned long mount_flags,
-			const void *data, Filesystem **fs, DEntry **root);
+			FilesystemType *fstype, const void *data,
+			Filesystem **fs, DEntry **root);
 
 	/**
 	 * unmount_fs - unmount a filesystem.
@@ -493,5 +538,16 @@ struct FilesystemType {
 	 * reaching zero.
 	 */
 	void (*unmount_fs) (Filesystem *fs);
+
+	/**
+	 * trim_fs - hook for when num_mounts of a filesystem reaches zero.
+	 * @fs: filesystem
+	 *
+	 * This is needed by tmpfs, which biases DEntry reference counts so that
+	 * they would never reach zero unless this is invoked.
+	 */
+	void (*trim_fs) (Filesystem *fs);
+
+	dsl::ListHead fs_type_list;
 };
 

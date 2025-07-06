@@ -10,3 +10,9 @@ init_dentry_cache (void);
 void
 init_mount_table (void);
 
+void
+init_vfs_inodes (void);
+
+void
+register_tmpfs (void);
+
