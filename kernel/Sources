@@ -5,6 +5,7 @@ kobjs += sched/
 kobjs += condwait.o
 kobjs += cpuset.o
 kobjs += dpc.o
+kobjs += event.o
 kobjs += kthread.o
 kobjs += ktimer.o
 kobjs += main.o
