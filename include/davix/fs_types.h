@@ -79,9 +79,14 @@ enum : unsigned int {
 
 enum : unsigned long {
 	/*
-	 * MNT_DETACHED: set on a mount when it has no parent mount.
+	 * VFSMNT_ORPHAN: set on a mount when it has no parent mount.
 	 */
-	MNT_DETACHED			= 1UL << 0,
+	VFSMNT_ORPHAN			= 1UL << 0,
+	/*
+	 * VFSMNT_DETACHED: set on a mount when it does not exist in the mount
+	 * table.
+	 */
+	VFSMNT_DETACHED			= 1UL << 1,
 };
 
 /**

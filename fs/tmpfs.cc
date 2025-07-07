@@ -417,7 +417,28 @@ mount_tmpfs (const char *source, unsigned long mount_flags, FilesystemType *typ,
 static void
 trim_tmpfs (Filesystem *fs)
 {
-	(void) fs;
+	fs->dentry_list_lock.lock_dpc ();
+	while (!fs->fs_dentries.empty ()) {
+		DEntry *de = fs->fs_dentries.pop_front ();
+		/*
+		 * HACK: reinitialize DEntry::dentry_fs_list so that
+		 * ListHead::remove works.
+		 */
+		de->dentry_fs_list.init ();
+		rcu_read_lock ();
+		fs->dentry_list_lock.unlock_dpc ();
+
+		if (d_inode (de) != nullptr && d_cond_unlink (de))
+			/*
+			 * If a DEntry was attached to the tree and it has an
+			 * INode, we have biased its refcount.
+			 */
+			dput (de);
+
+		rcu_read_unlock ();
+		fs->dentry_list_lock.lock_dpc ();
+	}
+	fs->dentry_list_lock.unlock_dpc ();
 }
 
 static FilesystemType tmpfs_type = {

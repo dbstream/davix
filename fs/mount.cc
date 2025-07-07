@@ -65,6 +65,15 @@ init_mount_table (void)
 }
 
 Mount *
+mnt_get (Mount *mnt)
+{
+	refcount_inc (&mnt->refcount);
+	return mnt;
+}
+
+static spinlock_t mount_lock;
+
+Mount *
 do_mount_root (const char *fstype, const char *source,
 		unsigned long mount_flags, const void *data)
 {
@@ -80,7 +89,7 @@ do_mount_root (const char *fstype, const char *source,
 	mount->fs = nullptr;
 	mount->mountpoint.mount = nullptr;
 	mount->mountpoint.dentry = nullptr;
-	mount->flags = mount_flags | MNT_DETACHED;
+	mount->flags = mount_flags | VFSMNT_ORPHAN | VFSMNT_DETACHED;
 	mount->lock.init ();
 	mount->refcount = 1;
 	mount->child_mounts.init ();
@@ -90,6 +99,34 @@ do_mount_root (const char *fstype, const char *source,
 	if (errno != 0)
 		panic ("Failed to mount root: errno %d\n", errno);
 
+	mount_lock.lock_dpc ();
+	mount->fs->num_mounts++;
+	mount_lock.unlock_dpc ();
+
 	return mount;
+}
+
+void
+mnt_put (Mount *mnt)
+{
+	do {
+		if (!refcount_dec (&mnt->refcount))
+			return;
+		dput (mnt->root);
+		mount_lock.lock_dpc ();
+		if (!--mnt->fs->num_mounts) {
+			if (mnt->fs->ops->trim_fs)
+				mnt->fs->ops->trim_fs (mnt->fs);
+		}
+		mount_lock.unlock_dpc ();
+		fs_put (mnt->fs);
+		Mount *next = nullptr;
+		if (!(mnt->flags & VFSMNT_ORPHAN)) {
+			dput (mnt->mountpoint.dentry);
+			next = mnt->mountpoint.mount;
+		}
+		slab_free (mnt);
+		mnt = next;
+	} while (mnt);
 }
 
