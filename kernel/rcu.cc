@@ -116,6 +116,7 @@ rcu_call (RCUHead *head, RCUCallback function)
 	uint64_t gen = atomic_load_relaxed (&global_current_generation) + 1;
 	RCUHead *next = atomic_load_relaxed (&callback_list[gen & 3]);
 	for (;;) {
+		head->next = next;
 		bool ret = atomic_cmpxchg_weak (&callback_list[gen & 3],
 				&next, head, mo_release, mo_relaxed);
 
