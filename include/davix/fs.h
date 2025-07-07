@@ -44,6 +44,9 @@ allocate_root_dentry (Filesystem *fs);
  * DEntry operations:
  */
 
+bool
+d_cond_unlink (DEntry *dentry);
+
 DEntry *
 d_lookup (DEntry *parent, const char *name, size_t name_len);
 

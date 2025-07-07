@@ -217,6 +217,28 @@ allocate_root_dentry (Filesystem *fs)
 }
 
 /**
+ * d_cond_unlink - detach a DEntry from the DEntry tree if it is attached.
+ * @de: dentry
+ * Returns true if the DEntry was detached by us.  If this function returns
+ * false, the dentry was already detached.
+ */
+bool
+d_cond_unlink (DEntry *de)
+{
+	d_lock (de);
+	unsigned int flags = atomic_load_relaxed (&de->d_flags);
+	if (flags & D_DETACHED) {
+		d_unlock (de);
+		return false;
+	}
+
+	flags |= D_DETACHED;
+	atomic_store_relaxed (&de->d_flags, flags);
+	d_unlock (de);
+	return true;
+}
+
+/**
  * compute_dentry_hash - calculate the hashed value of the parent and the name.
  * @parent: parent pointer
  * @name: dentry name
@@ -627,6 +649,7 @@ dput_noinline [[gnu::noinline]] (DEntry *dentry, unsigned int flags)
 			return nullptr;
 		}
 
+		flags |= D_DETACHED;
 		/*
 		 * Remove it from the LRU if needed:
 		 */
@@ -772,18 +795,22 @@ __d_trim_lru (size_t target, size_t floor)
 		dcache_lru_list_size--;
 		dcache_lru_list_lock.unlock_dpc ();
 		/*
-		 * FIXME: do we need to check D_DETACHED here?  Probably not,
-		 * since a detached DEntry is never put on the LRU.
+		 * FIXME: do we need to check D_DETACHED here?  A detached
+		 * DEntry is never put on the LRU, but a DEntry can be detached
+		 * while it is on the LRU.
 		 */
-		if (!__detach_dentry_unless_referenced (de)) {
-			/*
-			 * The DEntry refcount is again nonzero.
-			 */
-			flags &= ~D_ON_LRU;
-			atomic_store_relaxed (&de->d_flags, flags);
-			d_unlock (de);
-			rcu_read_unlock ();
-			continue;
+		if (!(flags & D_DETACHED)) {
+			if (!__detach_dentry_unless_referenced (de)) {
+				/*
+				 * The DEntry refcount is again nonzero.
+				 */
+				flags &= ~D_ON_LRU;
+				atomic_store_relaxed (&de->d_flags, flags);
+				d_unlock (de);
+				rcu_read_unlock ();
+				continue;
+			}
+			flags |= D_DETACHED;
 		}
 		/*
 		 * Now we are committed to freeing this DEntry.
