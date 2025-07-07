@@ -24,6 +24,8 @@ new_filesystem (FilesystemType *fstype, void *fs_private,
 	fs->fs_flags = 0;
 	fs->num_mounts = 0;
 	fs->fs_private.ptr = fs_private;
+	fs->fs_dentries.init ();
+	fs->dentry_list_lock.init ();
 	return fs;
 }
 

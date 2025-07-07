@@ -207,6 +207,12 @@ allocate_root_dentry (Filesystem *fs)
 	 * Root never needs lookup.
 	 */
 	de->d_flags &= ~D_NEED_LOOKUP;
+	/*
+	 * Add the root DEntry to the filesystem DEntry list.
+	 */
+	fs->dentry_list_lock.lock_dpc ();
+	fs->fs_dentries.push_front (de);
+	fs->dentry_list_lock.unlock_dpc ();
 	return de;
 }
 
@@ -371,6 +377,13 @@ d_lookup (DEntry *parent, const char *name, size_t name_len)
 		free_dentry (de);
 
 		de = in_cache;
+	} else {
+		/*
+		 * Add this fresh DEntry into the filesystem DEntry list.
+		 */
+		de->fs->dentry_list_lock.lock_dpc ();
+		de->fs->fs_dentries.push_front (de);
+		de->fs->dentry_list_lock.unlock_dpc ();
 	}
 
 	return de;
@@ -528,12 +541,17 @@ d_free_rcu_callback (RCUHead *rcu)
 static DEntry *
 d_free_rcu (DEntry *dentry, unsigned int flags)
 {
-	if (flags & D_FREED)
+	if (flags & D_FREED) {
+		d_unlock (dentry);
 		return nullptr;
+	}
 
 	DEntry *parent = dentry->parent;
 	atomic_store_relaxed (&dentry->d_flags, flags | D_FREED);
 	d_unlock (dentry);
+	dentry->fs->dentry_list_lock.lock_dpc ();
+	dentry->dentry_fs_list.remove ();
+	dentry->fs->dentry_list_lock.unlock_dpc ();
 	rcu_call (&dentry->rcu, d_free_rcu_callback);
 	return parent;
 }

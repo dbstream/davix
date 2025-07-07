@@ -93,7 +93,7 @@ struct DName {
 	 */
 	const char *name_ptr;
 	unsigned int name_len;
-	char inline_name[36];
+	char inline_name[20];
 };
 
 /**
@@ -195,12 +195,14 @@ struct DEntry {
 	 * LRU linkage.
 	 */
 	dsl::ListHead dentry_lru_head;
+	dsl::ListHead dentry_fs_list;
 };
 
 static_assert (sizeof(void *) != 8 || sizeof (DEntry) == 128);
 
 typedef dsl::TypedHList<DEntry, &DEntry::dentry_hash_linkage> DEntryHashList;
 typedef dsl::TypedList<DEntry, &DEntry::dentry_lru_head> DEntryLRU;
+typedef dsl::TypedList<DEntry, &DEntry::dentry_fs_list> DEntryList;
 
 static inline void
 d_lock (DEntry *de)
@@ -511,6 +513,11 @@ struct Filesystem {
 		void *ptr;
 		ino_t ino;
 	} fs_private;
+	/*
+	 * Filesystem DEntry list.
+	 */
+	DEntryList fs_dentries;
+	spinlock_t dentry_list_lock;
 };
 
 /**
