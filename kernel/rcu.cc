@@ -43,6 +43,7 @@
 #include <asm/percpu.h>
 #include <asm/smp.h>
 #include <davix/dpc.h>
+#include <davix/event.h>
 #include <davix/panic.h>
 #include <davix/rcu.h>
 #include <davix/spinlock.h>
@@ -64,6 +65,29 @@ void
 rcu_read_unlock (void)
 {
 	enable_dpc ();
+}
+
+struct rcu_barrier_event {
+	RCUHead rcu;
+	KEvent event;
+};
+
+static void
+set_rcu_barrier_event (RCUHead *rcu)
+{
+	rcu_barrier_event *e = container_of (&rcu_barrier_event::rcu, rcu);
+	e->event.set ();
+}
+
+/**
+ * rcu_barrier - wait for an RCU grace period and for callbacks to be invoked.
+ */
+void
+rcu_barrier (void)
+{
+	rcu_barrier_event e;
+	rcu_call (&e.rcu, set_rcu_barrier_event);
+	e.event.wait ();
 }
 
 struct alignas(CACHELINE_SIZE) rcu_st_node {

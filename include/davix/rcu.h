@@ -31,3 +31,6 @@ struct RCUHead {
 void
 rcu_call (RCUHead *head, RCUCallback function);
 
+void
+rcu_barrier (void);
+
