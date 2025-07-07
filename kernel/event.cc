@@ -29,11 +29,6 @@ retry:
 	lock.raw_unlock ();
 	schedule ();
 
-	if (!atomic_load_acquire (&waiter.on_list)) {
-		enable_dpc ();
-		return;
-	}
-
 	lock.raw_lock ();
 	if (waiter.on_list)
 		waiter.list.remove ();
@@ -54,9 +49,7 @@ KEvent::set (void)
 		Task *task = waiter->task;
 		sched_ticket_t ticket = waiter->ticket;
 		atomic_store_relaxed (&waiter->on_list, false);
-		lock.unlock_dpc ();
 		sched_wake (task, ticket);
-		lock.lock_dpc ();
 	}
 	lock.unlock_dpc ();
 }
