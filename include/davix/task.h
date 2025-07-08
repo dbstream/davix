@@ -5,6 +5,7 @@
 #pragma once
 
 #include <asm/task.h>
+#include <davix/path.h>
 #include <davix/time.h>
 #include <dsl/list.h>
 #include <stdint.h>
@@ -35,6 +36,8 @@ struct Task {
 	unsigned int on_cpu;
 
 	unsigned int last_cpu;
+
+	FSContext *ctx_fs;
 
 	char comm[16];
 };

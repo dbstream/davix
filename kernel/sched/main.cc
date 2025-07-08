@@ -611,6 +611,7 @@ init_task_struct_fields (Task *tsk)
 	tsk->pending_wakeup = 0;
 	tsk->on_cpu = -1U;
 	tsk->last_cpu = this_cpu_id ();
+	tsk->ctx_fs = nullptr;
 	tsk->comm[0] = '\0';
 }
 

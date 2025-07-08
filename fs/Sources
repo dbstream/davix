@@ -2,11 +2,13 @@
 # Copyright (C) 2025-present  dbstream
 
 CXXFLAGS-tmpfs.o := -Wno-missing-field-initializers
+CXXFLAGS-lookup.o := -Wno-missing-field-initializers
 
 kobjs += dentry.o
 kobjs += fs_type.o
 kobjs += init.o
 kobjs += inode.o
+kobjs += lookup.o
 kobjs += mount.o
 kobjs += tmpfs.o
 

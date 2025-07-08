@@ -28,6 +28,7 @@ kthread_create (const char *name, void (*function)(void *), void *arg)
 		return nullptr;
 	}
 
+	task->ctx_fs = fsctx_get (&init_fs_context);
 	return task;
 }
 
@@ -50,6 +51,7 @@ void
 reap_task (Task *tsk)
 {
 	/* TODO: properly handle non-kthread tasks  */
+	fsctx_put (tsk->ctx_fs);
 	arch_free_task (tsk);
 	free_task_struct (tsk);
 }
