@@ -130,3 +130,28 @@ mnt_put (Mount *mnt)
 	} while (mnt);
 }
 
+/*
+ * TODO: support child mounts
+ */
+
+Mount *
+mnt_get_at (Mount *mnt, DEntry *de)
+{
+	(void) mnt;
+	(void) de;
+	return nullptr;
+}
+
+void *
+mnt_path_seqbegin (void)
+{
+	return nullptr;
+}
+
+bool
+mnt_path_seqretry (void **pcookie)
+{
+	(void) pcookie;
+	return false;
+}
+

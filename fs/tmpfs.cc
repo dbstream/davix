@@ -219,7 +219,14 @@ tmpfs_rename (INode *fromdir, DEntry *from, INode *todir, DEntry *to,
 	if (to_inode) {
 		to_inode->i_lock.lock_dpc ();
 		to_mode = to_inode->mode;
+		nlink_t nlink = to_inode->nlink;
 		to_inode->i_lock.unlock_dpc ();
+
+		if (!exchange && __S_ISDIR(to_mode) && nlink != 2)
+			/*
+			 * Forbid replacing a non-empty directory.
+			 */
+			return ENOTEMPTY;
 	}
 
 	if (__S_ISDIR(from_mode) && !__S_ISDIR(to_mode))
@@ -251,7 +258,10 @@ tmpfs_rename (INode *fromdir, DEntry *from, INode *todir, DEntry *to,
 		i_decr_nlink (todir, 1);
 
 	if (!exchange && to_inode) {
-		i_decr_nlink (to_inode, 1);
+		if (__S_ISDIR(to_mode))
+			i_set_nlink (to_inode, 0);
+		else
+			i_decr_nlink (to_inode, 1);
 		/*
 		 * We effectively unlinked the target path, whose refcount was
 		 * biased.

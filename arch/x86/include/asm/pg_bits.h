@@ -24,3 +24,4 @@
 #define __PG_NX		__PG_BIT(63)
 
 #define __PG_ADDR_MASK UINT64_C(0x000ffffffffff000)
+

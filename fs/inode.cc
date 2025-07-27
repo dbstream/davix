@@ -34,6 +34,7 @@ new_inode (Filesystem *fs, void *i_private)
 	inode->gid = 0;
 	inode->mode = 0;
 	inode->i_lock.init ();
+	inode->i_state = 0;
 	inode->nlink = 0;
 	inode->rdev = 0;
 	inode->ino = 0;
@@ -94,5 +95,28 @@ i_decr_nlink (INode *inode, nlink_t count)
 	inode->i_lock.lock_dpc ();
 	inode->nlink -= count;
 	inode->i_lock.unlock_dpc ();
+}
+
+void
+i_set_rmdired (INode *inode)
+{
+	inode->i_lock.lock_dpc ();
+	inode->i_state |= I_DIR_DELETED;
+	inode->i_lock.unlock_dpc ();
+}
+
+static inline unsigned int
+read_i_state (INode *inode)
+{
+	inode->i_lock.lock_dpc ();
+	unsigned int state = inode->i_state;
+	inode->i_lock.unlock_dpc ();
+	return state;
+}
+
+bool
+i_was_rmdired (INode *inode)
+{
+	return (read_i_state (inode) & I_DIR_DELETED) ? true : false;
 }
 

@@ -22,6 +22,12 @@ path_get (Path path);
 void
 path_put (Path path);
 
+static inline bool
+path_equals(Path a, Path b)
+{
+	return a.mount == b.mount && a.dentry == b.dentry;
+}
+
 struct FSContext {
 	refcount_t refcount;
 	spinlock_t lock;
@@ -29,6 +35,7 @@ struct FSContext {
 	gid_t fs_gid;
 	Path root;
 	Path cwd;
+	mode_t umask;
 };
 
 FSContext *

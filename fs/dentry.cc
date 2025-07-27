@@ -863,7 +863,7 @@ void
 d_set_inode (DEntry *dentry, INode *inode)
 {
 	d_lock (dentry);
-	dentry->inode = iget (inode);
+	atomic_store_release (&dentry->inode, iget (inode));
 	d_unlock (dentry);
 }
 
@@ -886,7 +886,7 @@ void
 d_set_inode_nocache (DEntry *dentry, INode *inode)
 {
 	d_lock (dentry);
-	dentry->inode = iget (inode);
+	atomic_store_release (&dentry->inode, iget (inode));
 	__d_set_flag (dentry, D_DONT_KEEP);
 	d_unlock (dentry);
 }
@@ -925,6 +925,39 @@ d_unlink (DEntry *dentry)
 	d_unlock (dentry);
 }
 
+static uintptr_t rename_cookie = 0;
+
+/**
+ * d_path_seqbegin - enter a lookup-critical section.
+ * Returns a 'cookie' which must be passed to d_path_seqretry.
+ */
+void *
+d_path_seqbegin (void)
+{
+	return (void *) atomic_load_acquire (&rename_cookie);
+}
+
+/**
+ * d_path_seqretry - leave a lookup-critical section.
+ * @pcookie: pointer to the cookie returned by d_path_seqbegin.
+ * Returns true if a concurrent d_rename can have impacted the lookup operation
+ * and the lookup must be retried.
+ */
+bool
+d_path_seqretry (void **pcookie)
+{
+	smp_rmb ();
+	uintptr_t value = atomic_load_relaxed (&rename_cookie);
+	void *cookie = (void *) value;
+	if (cookie == *pcookie && ((value & 1UL) == 0UL))
+		return false;
+	*pcookie = cookie;
+	smp_rmb ();
+	return true;
+}
+
+static spinlock_t rename_lock;
+
 /**
  * d_rename - rename a DEntry.
  * @from: source DEntry
@@ -937,13 +970,12 @@ d_unlink (DEntry *dentry)
 void
 d_rename (DEntry *from, DEntry *to, unsigned int rename_flags)
 {
-	/*
-	 * (from,to)->parent is protected by the parent inode locks that are
-	 * held during rename.  They also prevent the DEntry locking below
-	 * from deadlocking.
-	 */
+	rename_lock.lock_dpc ();
+	atomic_fetch_inc (&rename_cookie, mo_acquire);
+
 	DEntry *from_parent = from->parent;
 	DEntry *to_parent = to->parent;
+
 	d_lock (from_parent);
 	if (from_parent != to_parent)
 		d_lock (to_parent);
@@ -972,6 +1004,9 @@ d_rename (DEntry *from, DEntry *to, unsigned int rename_flags)
 	if (from_parent != to_parent)
 		d_unlock (to_parent);
 	d_unlock (from_parent);
+
+	atomic_fetch_inc (&rename_cookie, mo_release);
+	rename_lock.unlock_dpc ();
 
 	if (!(rename_flags & RENAME_EXCHANGE))
 		dput (from_parent);
@@ -1031,5 +1066,31 @@ d_trim_lru_partial (void)
 		__d_trim_lru (size, 2 * size);
 	}
 	dcache_lru_trim_mutex.unlock ();
+}
+
+INode *
+d_inode (DEntry *de)
+{
+	return atomic_load_acquire (&de->inode);
+}
+
+bool
+d_detached (DEntry *de)
+{
+	unsigned int flags = atomic_load_relaxed (&de->d_flags);
+	if (flags & D_DETACHED)
+		return true;
+	return false;
+}
+
+DEntry *
+dget_parent (DEntry *de)
+{
+	d_lock (de);
+	DEntry *parent = de->parent;
+	if (parent)
+		dget (parent);
+	d_unlock (de);
+	return parent;
 }
 

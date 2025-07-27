@@ -89,6 +89,13 @@ enum : unsigned long {
 	VFSMNT_DETACHED			= 1UL << 1,
 };
 
+enum : unsigned int {
+	/*
+	 * I_DIR_DELETED: set on a directory inode when it has been rmdir'ed.
+	 */
+	I_DIR_DELETED			= 1U << 0,
+};
+
 /**
  * DName - DEntry name.
  */
@@ -231,12 +238,6 @@ d_trylock (DEntry *de)
 	return false;
 }
 
-static inline INode *
-d_inode (DEntry *de)
-{
-	return de->inode;
-}
-
 /**
  * INode - an inode.
  */
@@ -268,6 +269,10 @@ struct INode {
 	 * INode spinlock.  This protects metadata.
 	 */
 	spinlock_t i_lock;
+	/*
+	 * INode state.
+	 */
+	unsigned int i_state;
 	/*
 	 * INode metadata needed by stat().
 	 */
