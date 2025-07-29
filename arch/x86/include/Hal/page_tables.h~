@@ -1,0 +1,835 @@
+// SPDX-License-Identifier: GPL-3.0
+/*
+ * File: include/Hal/page_tables.h
+ * HAL functions for page table access and manipulation.
+ *
+ * Copyright (C) 2025  dbstream
+ */
+#pragma once
+
+#include <Hal/mm.h>
+#include <Hal/pteflags.h>
+#include <asm/cpufeature.h>
+#include <asm/pg_bits.h>
+#include <davix/atomic.h>
+#include <davix/bug.h>
+
+typedef struct { unsigned long value; } L1PTE, *L1PTEP;
+typedef struct { unsigned long value; } L2PTE, *L2PTEP;
+typedef struct { unsigned long value; } L3PTE, *L3PTEP;
+typedef struct { unsigned long value; } L4PTE, *L4PTEP;
+typedef struct { unsigned long value; } L5PTE, *L5PTEP;
+
+extern const L5PTEP kernel_page_tables;
+
+/**
+ * HalL2PTEFolded - check if the level 2 page tables are folded (no-op on x86).
+ */
+constexpr static inline bool HalL2PTEFolded(void)
+{
+	return false;
+}
+
+/**
+ * HalL3PTEFolded - check if the level 3 page tables are folded (no-op on x86).
+ */
+constexpr static inline bool HalL3PTEFolded(void)
+{
+	return false;
+}
+
+/**
+ * HalL4PTEFolded - check if the level 4 page tables are folded (no-op on x86).
+ */
+constexpr static inline bool HalL4PTEFolded(void)
+{
+	return false;
+}
+
+/**
+ * HalL5PTEFolded - check if the level 5 page tables are folded.
+ */
+static inline bool HalL5PTEFolded(void)
+{
+	return !CPUFeature(LA57);
+}
+
+/**
+ * HalL1TableSize - get the number of entries in a level 1 page table.
+ */
+constexpr static inline int HalL1TableSize(void)
+{
+	return 512;
+}
+
+/**
+ * HalL2TableSize - get the number of entries in a level 2 page table.
+ */
+constexpr static inline int HalL2TableSize(void)
+{
+	return 512;
+}
+
+/**
+ * HalL3TableSize - get the number of entries in a level 3 page table.
+ */
+constexpr static inline int HalL3TableSize(void)
+{
+	return 512;
+}
+
+/**
+ * HalL4TableSize - get the number of entries in a level 4 page table.
+ */
+constexpr static inline int HalL4TableSize(void)
+{
+	return 512;
+}
+
+/**
+ * HalL5TableSize - get the number of entries in a level 5 page table.
+ */
+static inline int HalL5TableSize(void)
+{
+	if (HalL5PTEFolded())
+		return 1;
+	else
+		return 512;
+}
+
+/**
+ * HalL1EntrySize - get the number of bytes covered by a single level 1 PTE.
+ */
+constexpr static inline unsigned long HalL1EntrySize(void)
+{
+	return 1UL << 12;
+}
+
+/**
+ * HalL2EntrySize - get the number of bytes covered by a single level 2 PTE.
+ */
+constexpr static inline unsigned long HalL2EntrySize(void)
+{
+	return 1UL << 21;
+}
+
+/**
+ * HalL3EntrySize - get the number of bytes covered by a single level 3 PTE.
+ */
+constexpr static inline unsigned long HalL3EntrySize(void)
+{
+	return 1UL << 30;
+}
+
+/**
+ * HalL4EntrySize - get the number of bytes covered by a single level 4 PTE.
+ */
+constexpr static inline unsigned long HalL4EntrySize(void)
+{
+	return 1UL << 39;
+}
+
+/**
+ * HalL5EntrySize - get the number of bytes covered by a single level 5 PTE.
+ */
+constexpr static inline unsigned long HalL5EntrySize(void)
+{
+	return 1UL << 48;
+}
+
+/**
+ * HalL1PTEShift - get the address shift of a level 1 page table.
+ */
+constexpr static inline int HalL1PTEShift(void)
+{
+	return 12;
+}
+
+/**
+ * HalL2PTEShift - get the address shift of a level 2 page table.
+ */
+constexpr static inline int HalL2PTEShift(void)
+{
+	return 21;
+}
+
+/**
+ * HalL3PTEShift - get the address shift of a level 3 page table.
+ */
+constexpr static inline int HalL3PTEShift(void)
+{
+	return 30;
+}
+
+/**
+ * HalL4PTEShift - get the address shift of a level 4 page table.
+ */
+constexpr static inline int HalL4PTEShift(void)
+{
+	return 39;
+}
+
+/**
+ * HalL5PTEShift - get the address shift of a level 5 page table.
+ */
+constexpr static inline int HalL5PTEShift(void)
+{
+	return 48;
+}
+
+/**
+ * HalL1PTEMask - get the entry bitmask of a level 1 page table.
+ */
+constexpr static inline int HalL1PTEMask(void)
+{
+	return 511;
+}
+
+/**
+ * HalL2PTEMask - get the entry bitmask of a level 2 page table.
+ */
+constexpr static inline int HalL2PTEMask(void)
+{
+	return 511;
+}
+
+/**
+ * HalL3PTEMask - get the entry bitmask of a level 3 page table.
+ */
+constexpr static inline int HalL3PTEMask(void)
+{
+	return 511;
+}
+
+/**
+ * HalL4PTEMask - get the entry bitmask of a level 4 page table.
+ */
+constexpr static inline int HalL4PTEMask(void)
+{
+	return 511;
+}
+
+/**
+ * HalL5PTEMask - get the entry bitmask of a level 5 page table.
+ */
+static inline int HalL5PTEMask(void)
+{
+	if (HalL5PTEFolded())
+		return 0;
+	else
+		return 511;
+}
+
+/**
+ * HalL1PTEOffset - get the level 1 page table offset of an address.
+ * @addr: virtual address
+ */
+static inline int HalL1PTEOffset(unsigned long addr)
+{
+	return (addr >> HalL1PTEShift()) & HalL1PTEMask();
+}
+
+/**
+ * HalL2PTEOffset - get the level 2 page table offset of an address.
+ * @addr: virtual address
+ */
+static inline int HalL2PTEOffset(unsigned long addr)
+{
+	return (addr >> HalL2PTEShift()) & HalL2PTEMask();
+}
+
+/**
+ * HalL3PTEOffset - get the level 3 page table offset of an address.
+ * @addr: virtual address
+ */
+static inline int HalL3PTEOffset(unsigned long addr)
+{
+	return (addr >> HalL3PTEShift()) & HalL3PTEMask();
+}
+
+/**
+ * HalL4PTEOffset - get the level 4 page table offset of an address.
+ * @addr: virtual address
+ */
+static inline int HalL4PTEOffset(unsigned long addr)
+{
+	return (addr >> HalL4PTEShift()) & HalL4PTEMask();
+}
+
+/**
+ * HalL5PTEOffset - get the level 5 page table offset of an address.
+ * @addr: virtual address
+ */
+static inline int HalL5PTEOffset(unsigned long addr)
+{
+	/* NB: in the folded case, mask is zero. */
+	return (addr >> HalL5PTEShift()) & HalL5PTEMask();
+}
+
+/**
+ * HalL1PTEAddrEnd - get the next level 1 PTE address boundary or end address.
+ * @addr: virtual address
+ * @end: end virtual address
+ */
+static inline unsigned long HalL1PTEAddrEnd(unsigned long addr, unsigned long end)
+{
+	unsigned long entry_size = 1UL << HalL1PTEShift();
+	unsigned long next = (addr + entry_size) & ~(entry_size - 1);
+	if (end < next || next < addr)
+		return end;
+	else
+		return next;
+}
+
+/**
+ * HalL2PTEAddrEnd - get the next level 2 PTE address boundary or end address.
+ * @addr: virtual address
+ * @end: end virtual address
+ */
+static inline unsigned long HalL2PTEAddrEnd(unsigned long addr, unsigned long end)
+{
+	unsigned long entry_size = 1UL << HalL2PTEShift();
+	unsigned long next = (addr + entry_size) & ~(entry_size - 1);
+	if (end < next || next < addr)
+		return end;
+	else
+		return next;
+}
+
+/**
+ * HalL3PTEAddrEnd - get the next level 3 PTE address boundary or end address.
+ * @addr: virtual address
+ * @end: end virtual address
+ */
+static inline unsigned long HalL3PTEAddrEnd(unsigned long addr, unsigned long end)
+{
+	unsigned long entry_size = 1UL << HalL3PTEShift();
+	unsigned long next = (addr + entry_size) & ~(entry_size - 1);
+	if (end < next || next < addr)
+		return end;
+	else
+		return next;
+}
+
+/**
+ * HalL4PTEAddrEnd - get the next level 4 PTE address boundary or end address.
+ * @addr: virtual address
+ * @end: end virtual address
+ */
+static inline unsigned long HalL4PTEAddrEnd(unsigned long addr, unsigned long end)
+{
+	unsigned long entry_size = 1UL << HalL4PTEShift();
+	unsigned long next = (addr + entry_size) & ~(entry_size - 1);
+	if (end < next || next < addr)
+		return end;
+	else
+		return next;
+}
+
+/**
+ * HalL5PTEAddrEnd - get the next level 5 PTE address boundary or end address.
+ * @addr: virtual address
+ * @end: end virtual address
+ */
+static inline unsigned long HalL5PTEAddrEnd(unsigned long addr, unsigned long end)
+{
+	unsigned long entry_size = 1UL << HalL5PTEShift();
+	unsigned long next = (addr + entry_size) & ~(entry_size - 1);
+	if (end < next || next < addr)
+		return end;
+	else
+		return next;
+}
+
+/**
+ * HalReadL1PTE - read a L1 PTE.
+ * @ptep: L1PTE to read
+ */
+static inline L1PTE HalReadL1PTE(L1PTEP ptep)
+{
+	return { atomic_load_acquire(&ptep->value) };
+}
+
+/**
+ * HalReadL2PTE - read a L2 PTE.
+ * @ptep: L2PTE to read
+ */
+static inline L2PTE HalReadL2PTE(L2PTEP ptep)
+{
+	return { atomic_load_acquire(&ptep->value) };
+}
+
+/**
+ * HalReadL3PTE - read a L3 PTE.
+ * @ptep: L3PTE to read
+ */
+static inline L3PTE HalReadL3PTE(L3PTEP ptep)
+{
+	return { atomic_load_acquire(&ptep->value) };
+}
+
+/**
+ * HalReadL4PTE - read a L4 PTE.
+ * @ptep: L4PTE to read
+ */
+static inline L4PTE HalReadL4PTE(L4PTEP ptep)
+{
+	return { atomic_load_acquire(&ptep->value) };
+}
+
+/**
+ * HalReadL5PTE - read a L5 PTE.
+ * @ptep: L5PTE to read
+ */
+static inline L5PTE HalReadL5PTE(L5PTEP ptep)
+{
+	if (HalL5PTEFolded())
+		return { (unsigned long) ptep };
+	else
+		return { atomic_load_acquire(&ptep->value) };
+}
+
+/**
+ * HalWriteL1PTE - write a L1 PTE.
+ * @ptep: L1PTE to write to
+ * @value: value to write into @ptep
+ */
+static inline void HalWriteL1PTE(L1PTEP ptep, L1PTE value)
+{
+	atomic_store_release(&ptep->value, value.value);
+}
+
+/**
+ * HalWriteL2PTE - write a L2 PTE.
+ * @ptep: L2PTE to write to
+ * @value: value to write into @ptep
+ */
+static inline void HalWriteL2PTE(L2PTEP ptep, L2PTE value)
+{
+	atomic_store_release(&ptep->value, value.value);
+}
+
+/**
+ * HalWriteL3PTE - write a L3 PTE.
+ * @ptep: L3PTE to write to
+ * @value: value to write into @ptep
+ */
+static inline void HalWriteL3PTE(L3PTEP ptep, L3PTE value)
+{
+	atomic_store_release(&ptep->value, value.value);
+}
+
+/**
+ * HalWriteL4PTE - write a L4 PTE.
+ * @ptep: L4PTE to write to
+ * @value: value to write into @ptep
+ */
+static inline void HalWriteL4PTE(L4PTEP ptep, L4PTE value)
+{
+	atomic_store_release(&ptep->value, value.value);
+}
+
+/**
+ * HalWriteL5PTE - write a L5 PTE.
+ * @ptep: L5PTE to write to
+ * @value: value to write into @ptep
+ */
+static inline void HalWriteL5PTE(L5PTEP ptep, L5PTE value)
+{
+	if (HalL5PTEFolded())
+		/* explicit no-op */;
+	else
+		atomic_store_release(&ptep->value, value.value);
+}
+
+/**
+ * HalClearL1PTE - clear a L1 PTE.
+ * @ptep: L1PTE to clear
+ */
+static inline void HalClearL1PTE(L1PTEP ptep)
+{
+	atomic_store_relaxed(&ptep->value, 0);
+}
+
+/**
+ * HalClearL2PTE - clear a L2 PTE.
+ * @ptep: L2PTE to clear
+ */
+static inline void HalClearL2PTE(L2PTEP ptep)
+{
+	atomic_store_relaxed(&ptep->value, 0);
+}
+
+/**
+ * HalClearL3PTE - clear a L3 PTE.
+ * @ptep: L3PTE to clear
+ */
+static inline void HalClearL3PTE(L3PTEP ptep)
+{
+	atomic_store_relaxed(&ptep->value, 0);
+}
+
+/**
+ * HalClearL4PTE - clear a L4 PTE.
+ * @ptep: L4PTE to clear
+ */
+static inline void HalClearL4PTE(L4PTEP ptep)
+{
+	atomic_store_relaxed(&ptep->value, 0);
+}
+
+/**
+ * HalClearL5PTE - clear a L5 PTE.
+ * @ptep: L5PTE to clear
+ */
+static inline void HalClearL5PTE(L5PTEP ptep)
+{
+	atomic_store_relaxed(&ptep->value, 0);
+}
+
+/**
+ * HalSupportsL2HugePTE - check for huge level 2 PTE support.
+ */
+static inline bool HalSupportsL2HugePTE(void)
+{
+	return true;
+}
+
+/**
+ * HalSupportsL3HugePTE - check for huge level 3 PTE support.
+ */
+static inline bool HalSupportsL3HugePTE(void)
+{
+	if (CPUFeature(PDPE1GB))
+		return true;
+	else
+		return false;
+}
+
+/**
+ * HalSupportsL4HugePTE - check for huge level 4 PTE support.
+ */
+static inline bool HalSupportsL4HugePTE(void)
+{
+	return false;
+}
+
+/**
+ * HalSupportsL5HugePTE - check for huge level 5 PTE support.
+ */
+static inline bool HalSupportsL5HugePTE(void)
+{
+	return false;
+}
+
+/**
+ * HalMakeL1PTE - make a L1 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ */
+static inline L1PTE HalMakeL1PTE(unsigned long addr, PTEFLAGS flags)
+{
+	return { addr | flags | __PG_GLOBAL };
+}
+
+/**
+ * HalMakeL2PTE - make a L2 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ */
+static inline L2PTE HalMakeL2PTE(unsigned long addr, PTEFLAGS flags)
+{
+	if (flags & __PG_PAT)
+		flags |= __PG_PAT_HUGE;
+	else
+		flags |= __PG_HUGE;
+	return { addr | flags | __PG_GLOBAL };
+}
+
+/**
+ * HalMakeL3PTE - make a L3 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ *
+ * NOTE: You must first check if huge L3 PTE is supported by the architecture
+ * before using this.
+ */
+static inline L3PTE HalMakeL3PTE(unsigned long addr, PTEFLAGS flags)
+{
+	if (flags & __PG_PAT)
+		flags |= __PG_PAT_HUGE;
+	else
+		flags |= __PG_HUGE;
+	return { addr | flags | __PG_GLOBAL };
+}
+
+/**
+ * HalMakeL4PTE - make a L4 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ *
+ * NOTE: You must first check if huge L4 PTE is supported by the architecture
+ * before using this.  x86 never supports huge L4 PTE.
+ */
+static inline L4PTE HalMakeL4PTE(unsigned long addr, PTEFLAGS flags)
+{
+	(void) addr;
+	(void) flags;
+
+	BUG();
+}
+
+/**
+ * HalMakeL5PTE - make a L5 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ *
+ * NOTE: You must first check if huge L5 PTE is supported by the architecture
+ * before using this.  x86 never supports huge L5 PTE.
+ */
+static inline L5PTE HalMakeL5PTE(unsigned long addr, PTEFLAGS flags)
+{
+	(void) addr;
+	(void) flags;
+
+	BUG();
+}
+
+/**
+ * HalMakeL1PTE - make a userspace L1 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ */
+static inline L1PTE HalMakeL1PTEUser(unsigned long addr, PTEFLAGS flags)
+{
+	return { addr | flags | __PG_USER };
+}
+
+/**
+ * HalMakeL2PTE - make a userspace L2 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ */
+static inline L2PTE HalMakeL2PTEUser(unsigned long addr, PTEFLAGS flags)
+{
+	if (flags & __PG_PAT)
+		flags |= __PG_PAT_HUGE;
+	else
+		flags |= __PG_HUGE;
+	return { addr | flags | __PG_USER};
+}
+
+/**
+ * HalMakeL3PTE - make a userspace L3 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ *
+ * NOTE: You must first check if huge L3 PTE is supported by the architecture
+ * before using this.
+ */
+static inline L3PTE HalMakeL3PTEUser(unsigned long addr, PTEFLAGS flags)
+{
+	if (flags & __PG_PAT)
+		flags |= __PG_PAT_HUGE;
+	else
+		flags |= __PG_HUGE;
+	return { addr | flags | __PG_USER };
+}
+
+/**
+ * HalMakeL4PTE - make a userspace L4 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ *
+ * NOTE: You must first check if huge L4 PTE is supported by the architecture
+ * before using this.  x86 never supports huge L4 PTE.
+ */
+static inline L4PTE HalMakeL4PTEUser(unsigned long addr, PTEFLAGS flags)
+{
+	(void) addr;
+	(void) flags;
+
+	BUG();
+}
+
+/**
+ * HalMakeL5PTE - make a userspace L5 PTE.
+ * @addr: physical address of memory
+ * @flags: PTE flags
+ *
+ * NOTE: You must first check if huge L5 PTE is supported by the architecture
+ * before using this.  x86 never supports huge L5 PTE.
+ */
+static inline L5PTE HalMakeL5PTEUser(unsigned long addr, PTEFLAGS flags)
+{
+	(void) addr;
+	(void) flags;
+
+	BUG();
+}
+
+/**
+ * HalMakeL2TablePTE - make a kernel L2 PTE that points to a level 1 page table.
+ * @table: pointer to level 1 page table
+ */
+static inline L2PTE HalMakeL2TablePTE(L1PTEP table)
+{
+	return { MiVirtToPhys((unsigned long) table) | __KERNEL_PAGE_TABLE };
+}
+
+/**
+ * HalMakeL3TablePTE - make a kernel L3 PTE that points to a level 2 page table.
+ * @table: pointer to level 2 page table
+ */
+static inline L3PTE HalMakeL3TablePTE(L2PTEP table)
+{
+	return { MiVirtToPhys((unsigned long) table) | __KERNEL_PAGE_TABLE };
+}
+
+/**
+ * HalMakeL4TablePTE - make a kernel L4 PTE that points to a level 3 page table.
+ * @table: pointer to level 3 page table
+ */
+static inline L4PTE HalMakeL4TablePTE(L3PTEP table)
+{
+	return { MiVirtToPhys((unsigned long) table) | __KERNEL_PAGE_TABLE };
+}
+
+/**
+ * HalMakeL5TablePTE - make a kernel L5 PTE that points to a level 4 page table.
+ * @table: pointer to level 4 page table
+ */
+static inline L5PTE HalMakeL5TablePTE(L4PTEP table)
+{
+	if (HalL5PTEFolded())
+		return { (unsigned long) table };
+	else
+		return { MiVirtToPhys((unsigned long) table) | __KERNEL_PAGE_TABLE };
+}
+
+/**
+ * HalMakeL2TablePTE - make a userspace L2 PTE that points to a level 1 page table.
+ * @table: pointer to level 1 page table
+ */
+static inline L2PTE HalMakeL2TablePTEUser(L1PTEP table)
+{
+	return { MiVirtToPhys((unsigned long) table) | __USER_PAGE_TABLE };
+}
+
+/**
+ * HalMakeL3TablePTE - make a userspace L3 PTE that points to a level 2 page table.
+ * @table: pointer to level 2 page table
+ */
+static inline L3PTE HalMakeL3TablePTEUser(L2PTEP table)
+{
+	return { MiVirtToPhys((unsigned long) table) | __USER_PAGE_TABLE };
+}
+
+/**
+ * HalMakeL4TablePTE - make a userspace L4 PTE that points to a level 3 page table.
+ * @table: pointer to level 3 page table
+ */
+static inline L4PTE HalMakeL4TablePTEUser(L3PTEP table)
+{
+	return { MiVirtToPhys((unsigned long) table) | __USER_PAGE_TABLE };
+}
+
+/**
+ * HalMakeL5TablePTE - make a userspace L5 PTE that points to a level 4 page table.
+ * @table: pointer to level 4 page table
+ */
+static inline L5PTE HalMakeL5TablePTEUser(L4PTEP table)
+{
+	if (HalL5PTEFolded())
+		return { (unsigned long) table };
+	else
+		return { MiVirtToPhys((unsigned long) table) | __USER_PAGE_TABLE };
+}
+
+/**
+ * HalL1PTEEmpty - check if a L1 PTE is empty.
+ * @pte: L1PTE
+ */
+static inline bool HalL1PTEEmpty(L1PTE pte)
+{
+	return pte.value == 0;
+}
+
+/**
+ * HalL2PTEEmpty - check if a L2 PTE is empty.
+ * @pte: L2PTE
+ */
+static inline bool HalL2PTEEmpty(L2PTE pte)
+{
+	return pte.value == 0;
+}
+
+/**
+ * HalL3PTEEmpty - check if a L3 PTE is empty.
+ * @pte: L3PTE
+ */
+static inline bool HalL3PTEEmpty(L3PTE pte)
+{
+	return pte.value == 0;
+}
+
+/**
+ * HalL4PTEEmpty - check if a L4 PTE is empty.
+ * @pte: L4PTE
+ */
+static inline bool HalL4PTEEmpty(L4PTE pte)
+{
+	return pte.value == 0;
+}
+
+/**
+ * HalL5PTEEmpty - check if a L5 PTE is empty.
+ * @pte: L5PTE
+ */
+static inline bool HalL5PTEEmpty(L5PTE pte)
+{
+	if (HalL5PTEFolded())
+		return false;
+	else
+		return pte.value == 0;
+}
+
+/**
+ * HalGetL1PTEP - get pointer to the L1 table for a L2 PTE.
+ * @pte: L2PTE
+ */
+static inline L1PTEP HalGetL1PTEP(L2PTE pte)
+{
+	return (L1PTEP) MiPhysToVirt(pte.value & __PG_ADDR_MASK);
+}
+
+/**
+ * HalGetL2PTEP - get pointer to the L2 table for a L3 PTE.
+ * @pte: L3PTE
+ */
+static inline L2PTEP HalGetL2PTEP(L3PTE pte)
+{
+	return (L2PTEP) MiPhysToVirt(pte.value & __PG_ADDR_MASK);
+}
+
+/**
+ * HalGetL3PTEP - get pointer to the L3 table for a L4 PTE.
+ * @pte: L4PTE
+ */
+static inline L3PTEP HalGetL3PTEP(L4PTE pte)
+{
+	return (L3PTEP) MiPhysToVirt(pte.value & __PG_ADDR_MASK);
+}
+
+/**
+ * HalGetL4PTEP - get pointer to the L4 table for a L5 PTE.
+ * @pte: L5PTE
+ */
+static inline L4PTEP HalGetL4PTEP(L5PTE pte)
+{
+	if (HalL5PTEFolded())
+		return (L4PTEP) pte.value;
+	else
+		return (L4PTEP) MiPhysToVirt(pte.value & __PG_ADDR_MASK);
+}
+

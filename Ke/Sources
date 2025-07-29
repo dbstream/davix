@@ -1,0 +1,14 @@
+# Sources for Ke
+# Copyright (C) 2025  dbstream
+
+CXXFLAGS-init.o :=					\
+	-DCOMPILE_USER="$(COMPILE_USER)"		\
+	-DCOMPILE_HOST="$(COMPILE_HOST)"		\
+	-DCC_VERSION="$(CC_VERSION)"			\
+
+
+kobjs += context.o
+kobjs += init.o
+kobjs += log.o
+kobjs += panic.o
+

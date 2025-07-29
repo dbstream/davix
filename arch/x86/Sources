@@ -1,0 +1,7 @@
+# Sources for the Davix operating system kernel.
+# Copyright (C) 2025  dbstream
+
+kobjs += boot/
+kobjs += Hal/
+kobjs += lib/
+

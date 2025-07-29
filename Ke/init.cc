@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: GPL-3.0
+/*
+ * File: Ke/init.cc
+ * Kernel initialization.
+ */
+#include <Hal/percpu.h>
+#include <Ke/context.h>
+#include <Ke/log.h>
+#include <Ki/start_kernel.h>
+
+#define stringize(macro) stringize_(macro)
+#define stringize_(macro) #macro
+
+static const char davix_banner[] = "rtdavix"
+	" (" stringize(COMPILE_USER) "@" stringize(COMPILE_HOST) ")"
+	" (" stringize(CC_VERSION) ")\n";
+
+#undef stringize
+#undef stringize_
+
+/**
+ * KiInitializeEarlySubsystems - perform very early subsystem initialization.
+ *
+ * This runs before KiStartKernel and shall only perform static initialization.
+ */
+void KiInitializeEarlySubsystems(void)
+{
+	KiProcessorContext *ctx = HalPtrThisCpu(kiProcessorContext);
+	ctx->noio_counter = 0;
+	ctx->preemption_counter = KI_CONTEXT_COUNTER_EVENT_NOT_PENDING;
+	ctx->dpc_counter = KI_CONTEXT_COUNTER_EVENT_NOT_PENDING;
+	ctx->irq_counter = KI_CONTEXT_COUNTER_EVENT_NOT_PENDING;
+
+	HalInitializePerCPUVariables(0);
+}
+
+/**
+ * KiStartKernel - start the kernel.
+ */
+void KiStartKernel(void)
+{
+	KePuts(davix_banner);
+}
+

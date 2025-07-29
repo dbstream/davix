@@ -1,0 +1,298 @@
+// SPDX-License-Identifier: GPL-3.0
+/*
+ * File: Hal/mminit.cc
+ * Kernel memory initialization.
+ *
+ * Copyright (C) 2025  dbstream
+ */
+#include <Hal/fixed_mapping.h>
+#include <Hal/page_tables.h>
+#include <Ke/log.h>
+#include <asm/clear_page.h>
+#include <asm/invlpg.h>
+#include <davix/export.h>
+
+extern "C" { L1PTE fixed_mapping_page alignas(0x1000) [512]; };
+
+/**
+ * MiUserAddressBegin: marks the first byte of the virtual address space that
+ * can be allocated to userspace.
+ */
+unsigned long MiUserAddressBegin;
+EXPORT_SYMBOL(MiUserAddressBegin)
+
+/**
+ * MiUserAddressEnd: marks the first byte after the end of the virtual address
+ * space that can be allocated to userspace.
+ */
+unsigned long MiUserAddressEnd;
+EXPORT_SYMBOL(MiUserAddressEnd)
+
+/**
+ * MiHHDMBase: offset from physical addresses to virtual mappings of those
+ * physical addresses.
+ */
+unsigned long MiHHDMBase;
+EXPORT_SYMBOL(MiHHDMBase)
+
+/**
+ * MiPFNBaseAddress: marks the base address of the MMPFN array.
+ */
+unsigned long MiPFNBaseAddress;
+
+/**
+ * MiVmapSpaceBegin: marks the first byte of vmap space.
+ */
+unsigned long MiVmapSpaceBegin;
+EXPORT_SYMBOL(MiVmapSpaceBegin)
+
+/**
+ * MiVmapSpaceEnd: marks the first byte after the end of vmap space.
+ */
+unsigned long MiVmapSpaceEnd;
+EXPORT_SYMBOL(MiVmapSpaceEnd)
+
+/**
+ * MiPFNBase: the global MMPFN array pointer.
+ */
+MMPFN *MiPFNBase;
+EXPORT_SYMBOL(MiPFNBase)
+
+void HalInitializeVirtualAddressSpace(void)
+{
+	if (CPUFeature(LA57)) {
+		MiUserAddressBegin		= 0x0000000000010000UL;
+		MiUserAddressEnd		= 0x00ffffffffb00000UL;
+		MiHHDMBase			= 0xff10000000000000UL;
+		MiPFNBaseAddress		= 0xff90000000000000UL;
+		MiVmapSpaceBegin		= 0xffa0000000000000UL;
+		MiVmapSpaceEnd			= 0xffd0000000000000UL;
+	} else {
+		MiUserAddressBegin		= 0x0000000000010000UL;
+		MiUserAddressEnd		= 0x00007fffffb00000UL;
+		MiHHDMBase			= 0xffff880000000000UL;
+		MiPFNBaseAddress		= 0xffffc80000000000UL;
+		MiVmapSpaceBegin		= 0xffffd00000000000UL;
+		MiVmapSpaceEnd			= 0xffffe80000000000UL;
+	}
+
+	MiPFNBase = (MMPFN *) MiPFNBaseAddress;
+}
+
+void HalSetFixedMapping(int idx, unsigned long addr, PTEFLAGS flags)
+{
+	L1PTEP ptep = fixed_mapping_page + idx;
+	L1PTE oldpte = HalReadL1PTE(ptep);
+	L1PTE newpte = HalMakeL1PTE(addr, flags);
+
+	if (oldpte.value == newpte.value)
+		return;
+
+	if (!HalL1PTEEmpty(oldpte)) {
+		HalClearL1PTE(ptep);
+		__invlpg(HalFixedMappingAddress(idx));
+	}
+
+	HalWriteL1PTE(ptep, newpte);
+}
+
+void HalClearFixedMapping(int idx)
+{
+	L1PTEP ptep = fixed_mapping_page + idx;
+	L1PTE oldpte = HalReadL1PTE(ptep);
+
+	if (!HalL1PTEEmpty(oldpte)) {
+		HalClearL1PTE(ptep);
+		__invlpg(HalFixedMappingAddress(idx));
+	}
+}
+
+static L5PTE kernel_page_table_memory alignas(0x1000) [512];
+
+/*
+ * Note. We don't special case on folded L5 here. If L5 is folded kernel page
+ * table memory is automatically repurposed as L4PTEs.
+ */
+const L5PTEP kernel_page_tables = kernel_page_table_memory;
+
+static unsigned long (*page_alloc_function)(void) = nullptr;
+
+static unsigned long alloc_early_pgtable(void)
+{
+	if (!page_alloc_function)
+		KePanic("alloc_early_pgtable: page_alloc_function is NULL!");
+
+	unsigned long phys = page_alloc_function();
+	if (!phys)
+		KePanic("alloc_early_pgtable: couldn't allocate memory!");
+	/*
+	 * Repurpose the L1PTEP fixed mapping slot for page zeroing.  In most
+	 * cases this comes at little cost, because this page will be used as a
+	 * level 1 or level 2 page table anyways, meaning that the old value is
+	 * unused.
+	 */
+	HalSetFixedMapping(HAL_FIXED_MAP_BOOT_L1PTEP, phys, PTEFLAGS_READWRITE);
+	clear_page((void *) HalFixedMappingAddress(HAL_FIXED_MAP_BOOT_L1PTEP));
+	return phys | __KERNEL_PAGE_TABLE;
+}
+
+static L1PTEP access_ptep_L1(L1PTEP ptep)
+{
+	unsigned long phys = MiVirtToPhys((unsigned long) ptep);
+	HalSetFixedMapping(HAL_FIXED_MAP_BOOT_L1PTEP, phys, PTEFLAGS_READWRITE);
+	return (L1PTEP) HalFixedMappingAddress(HAL_FIXED_MAP_BOOT_L1PTEP);
+}
+
+static L2PTEP access_ptep_L2(L2PTEP ptep)
+{
+	unsigned long phys = MiVirtToPhys((unsigned long) ptep);
+	HalSetFixedMapping(HAL_FIXED_MAP_BOOT_L2PTEP, phys, PTEFLAGS_READWRITE);
+	return (L2PTEP) HalFixedMappingAddress(HAL_FIXED_MAP_BOOT_L2PTEP);
+}
+
+static L3PTEP access_ptep_L3(L3PTEP ptep)
+{
+	unsigned long phys = MiVirtToPhys((unsigned long) ptep);
+	HalSetFixedMapping(HAL_FIXED_MAP_BOOT_L3PTEP, phys, PTEFLAGS_READWRITE);
+	return (L3PTEP) HalFixedMappingAddress(HAL_FIXED_MAP_BOOT_L3PTEP);
+}
+
+static L4PTEP access_ptep_L4(L4PTEP ptep)
+{
+	unsigned long phys = MiVirtToPhys((unsigned long) ptep);
+	HalSetFixedMapping(HAL_FIXED_MAP_BOOT_L4PTEP, phys, PTEFLAGS_READWRITE);
+	return (L4PTEP) HalFixedMappingAddress(HAL_FIXED_MAP_BOOT_L4PTEP);
+}
+
+static void MapHHDMPage(L1PTEP entry, unsigned long addr)
+{
+	HalWriteL1PTE(entry, HalMakeL1PTE(addr, PTEFLAGS_READWRITE));
+}
+
+static void MapL1RangeHHDM(L2PTEP table, unsigned long addr, unsigned long end)
+{
+	if (HalSupportsL2HugePTE() && addr + HalL2EntrySize() == end) {
+		unsigned long phys = MiVirtToPhys(addr);
+		L2PTE value = HalMakeL2PTE(phys, PTEFLAGS_READWRITE);
+		HalWriteL2PTE(table, value);
+		return;
+	}
+
+	L2PTE value = HalReadL2PTE(table);
+	if (HalL2PTEEmpty(value)) {
+		value.value = alloc_early_pgtable();
+		HalWriteL2PTE(table, value);
+	}
+
+	L1PTEP ptep = access_ptep_L1(HalGetL1PTEP(value));
+
+	ptep += HalL1PTEOffset(addr);
+	do {
+		unsigned long next = HalL1PTEAddrEnd(addr, end);
+
+		MapHHDMPage(ptep, MiVirtToPhys(addr));
+
+		ptep++;
+		addr = next;
+	} while (addr != end);
+}
+
+static void MapL2RangeHHDM(L3PTEP table, unsigned long addr, unsigned long end)
+{
+	if (HalSupportsL3HugePTE() && addr + HalL3EntrySize() == end) {
+		unsigned long phys = MiVirtToPhys(addr);
+		L3PTE value = HalMakeL3PTE(phys, PTEFLAGS_READWRITE);
+		HalWriteL3PTE(table, value);
+		return;
+	}
+
+	L3PTE value = HalReadL3PTE(table);
+	if (HalL3PTEEmpty(value)) {
+		value.value = alloc_early_pgtable();
+		HalWriteL3PTE(table, value);
+	}
+
+	L2PTEP ptep = access_ptep_L2(HalGetL2PTEP(value));
+
+	ptep += HalL2PTEOffset(addr);
+	do {
+		unsigned long next = HalL2PTEAddrEnd(addr, end);
+
+		MapL1RangeHHDM(ptep, addr, next);
+
+		ptep++;
+		addr = next;
+	} while (addr != end);
+}
+
+static void MapL3RangeHHDM(L4PTEP table, unsigned long addr, unsigned long end)
+{
+	if (HalSupportsL4HugePTE() && addr + HalL4EntrySize() == end) {
+		unsigned long phys = MiVirtToPhys(addr);
+		L4PTE value = HalMakeL4PTE(phys, PTEFLAGS_READWRITE);
+		HalWriteL4PTE(table, value);
+		return;
+	}
+
+	L4PTE value = HalReadL4PTE(table);
+	if (HalL4PTEEmpty(value)) {
+		value.value = alloc_early_pgtable();
+		HalWriteL4PTE(table, value);
+	}
+
+	L3PTEP ptep = access_ptep_L3(HalGetL3PTEP(value));
+
+	ptep += HalL3PTEOffset(addr);
+	do {
+		unsigned long next = HalL3PTEAddrEnd(addr, end);
+
+		MapL2RangeHHDM(ptep, addr, next);
+
+		ptep++;
+		addr = next;
+	} while (addr != end);
+}
+
+static void MapL4RangeHHDM(L5PTEP table, unsigned long addr, unsigned long end)
+{
+	if (HalSupportsL5HugePTE() && addr + HalL5EntrySize() == end) {
+		unsigned long phys = MiVirtToPhys(addr);
+		L5PTE value = HalMakeL5PTE(phys, PTEFLAGS_READWRITE);
+		HalWriteL5PTE(table, value);
+		return;
+	}
+
+	L5PTE value = HalReadL5PTE(table);
+	if (HalL5PTEEmpty(value)) {
+		value.value = alloc_early_pgtable();
+		HalWriteL5PTE(table, value);
+	}
+
+	L4PTEP ptep = HalGetL4PTEP(value);
+	if (!HalL5PTEFolded())
+		ptep = access_ptep_L4(ptep);
+
+	ptep += HalL4PTEOffset(addr);
+	do {
+		unsigned long next = HalL4PTEAddrEnd(addr, end);
+
+		MapL3RangeHHDM(ptep, addr, next);
+
+		ptep++;
+		addr = next;
+	} while (addr != end);
+}
+
+void HalMapRangeHHDM(unsigned long addr, unsigned long end)
+{
+	L5PTEP ptep = kernel_page_tables + HalL5PTEOffset(addr);
+	do {
+		unsigned long next = HalL5PTEAddrEnd(addr, end);
+
+		MapL4RangeHHDM(ptep, addr, next);
+
+		ptep++;
+		addr = next;
+	} while (addr != end);
+}
+

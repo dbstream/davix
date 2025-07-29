@@ -1,0 +1,8 @@
+# Kernel utility library sources.
+# Copyright (C) 2025  dbstream
+
+CXXFLAGS-string.o := -fno-tree-loop-distribute-patterns
+
+kobjs += string.o
+kobjs += vsnprintf.o
+

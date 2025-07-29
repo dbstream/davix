@@ -1,0 +1,8 @@
+# x86 boot sources.
+# Copyright (C) 2025  dbstream
+
+kobjs += cpu_feat.o
+kobjs += head.o
+kobjs += setup.o
+kobjs += startup.o
+

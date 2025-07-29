@@ -1,0 +1,5 @@
+# lib/ sources
+# Copyright (C) 2025  dbstream
+
+kobjs += clear_page.o
+

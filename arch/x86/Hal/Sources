@@ -1,0 +1,8 @@
+# Sources for Hal/
+# Copyright (C) 2025  dbstream
+
+kobjs += entry.o
+kobjs += idt.o
+kobjs += mminit.o
+kobjs += percpu.o
+
