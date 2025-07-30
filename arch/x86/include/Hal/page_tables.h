@@ -44,6 +44,19 @@ static inline int HalNumPageTableLevels(void)
 		return 4;
 }
 
+static inline MMPTEP MmGetPteForAddressLevel(unsigned long address, int level)
+{
+#if DEBUG_PAGETABLES
+	BUG_ON(level < 1);
+	BUG_ON(level > HalNumPageTableLevels());
+#endif
+
+	address &= MiPTEAddressMask;
+	address >>= (3 + 9 * level);
+
+	return &MiPTEBaseForLevelIndex[level - 1][address];
+}
+
 static inline int HalMaxHugePTELevel(void)
 {
 	if (CPUFeature(PDPE1GB))

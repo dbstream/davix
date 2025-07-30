@@ -75,6 +75,17 @@ EXPORT_SYMBOL(MiPFNBase)
 _MMPTE_TAG *MiPTEBase;
 EXPORT_SYMBOL(MiPTEBase);
 
+/*
+ * MiPTEBaseForLevelIndex: global MMPTE array bases for each page table level.
+ *
+ * Indices into this array are zero-indexed page table levels (offset by -1 to
+ * the normal, one-indexed page table levels).
+ *
+ * (MiPTEBaseForLevelIndex[0] == MiPTEBase)
+ */
+_MMPTE_TAG *MiPTEBaseForLevelIndex[5];
+EXPORT_SYMBOL(MiPTEBaseForLevelIndex);
+
 /**
  * MiPTEAddressMask: the not-sign-extended part of a linear address.
  */
@@ -105,6 +116,18 @@ void HalInitializeVirtualAddressSpace(void)
 
 	MiPFNBase = (MMPFN *) MiPFNBaseAddress;
 	MiPTEBase = (MMPTE *) MiPTEBaseAddress;
+
+	MiPTEBaseForLevelIndex[0] = MiPTEBase;
+	for (int i = 1; i < 5; i++) {
+		/*
+		 * NB: this loop deliberately assigns an extraneous value
+		 * corresponding to the PML5 in the !LA57 case.  This doesn't
+		 * matter as it is a bug to access MiPTEBaseForLevelIndex[4] in
+		 * that case.
+		 */
+		MMPTEP ptep = MmGetPteForPtr(MiPTEBaseForLevelIndex[i - 1]);
+		MiPTEBaseForLevelIndex[i] = ptep;
+	}
 }
 
 void HalSetFixedMapping(int idx, unsigned long addr, PTEFLAGS flags)
@@ -160,44 +183,21 @@ static unsigned long alloc_early_pgtable(void)
 
 static MMPTEP get_pte_early(unsigned long addr, int level, int maxpgtlevel)
 {
-	MMPTEP p1e = MmGetPteForAddress(addr);
-	MMPTEP p2e = MmGetPteForPtr(p1e);
-	MMPTEP p3e = MmGetPteForPtr(p2e);
-	MMPTEP p4e = MmGetPteForPtr(p3e);
-
 #if DEBUG_PAGETABLES
 	BUG_ON(level < 1);
 	BUG_ON(level > maxpgtlevel);
 #endif
 
-	if (maxpgtlevel == 5) {
-		MMPTEP p5e = MmGetPteForPtr(p4e);
-		if (HalPTEEmpty(HalReadPTE(p5e)))
-			HalWritePTE(p5e, HalMakeTableKPTE(5, alloc_early_pgtable()));
-
-		if (level == 5)
-			return p5e;
+	for (int current = maxpgtlevel;; --current) {
+		MMPTEP ptep = MmGetPteForAddressLevel(addr, current);
+		if (current == level)
+			return ptep;
+		MMPTE pte = HalReadPTE(ptep);
+		if (HalPTEEmpty(pte)) {
+			pte = HalMakeTableKPTE(current, alloc_early_pgtable());
+			HalWritePTE(ptep, pte);
+		}
 	}
-
-	if (level == 4)
-		return p4e;
-
-	if (HalPTEEmpty(HalReadPTE(p4e)))
-		HalWritePTE(p4e, HalMakeTableKPTE(4, alloc_early_pgtable()));
-
-	if (level == 3)
-		return p3e;
-
-	if (HalPTEEmpty(HalReadPTE(p3e)))
-		HalWritePTE(p3e, HalMakeTableKPTE(3, alloc_early_pgtable()));
-
-	if (level == 2)
-		return p2e;
-
-	if (HalPTEEmpty(HalReadPTE(p2e)))
-		HalWritePTE(p2e, HalMakeTableKPTE(2, alloc_early_pgtable()));
-
-	return p1e;
 }
 
 void HalMapRangeHHDM(unsigned long addr, unsigned long end)

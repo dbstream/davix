@@ -83,6 +83,8 @@ static constexpr int MiSelfMappingPTEIndex = 464;
 extern MMPFN *MiPFNBase;
 extern _MMPTE_TAG *MiPTEBase;
 
+extern _MMPTE_TAG *MiPTEBaseForLevelIndex[];
+
 /**
  * MiPhysToVirt - get the direct-map virtual address of a physical address.
  * @phys_addr: physical address
