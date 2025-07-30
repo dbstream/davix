@@ -10,6 +10,7 @@
 #include <Ke/console.h>
 #include <Ke/log.h>
 #include <Ki/start_kernel.h>
+#include <Mm/page_alloc.h>
 #include <Mm/pfn.h>
 #include <asm/cpufeature.h>
 #include <asm/creg_access.h>
@@ -109,6 +110,62 @@ static void block_memory(unsigned long start, unsigned long end)
 
 static int alloc_index;
 static unsigned long alloc_wmark;
+
+/**
+ * free_memory_to_page_allocator - free physical pages to the page allocator
+ * @start: start of physical memory region to free
+ * @end: end of physical memory region to free
+ */
+static void free_memory_to_page_allocator(unsigned long start, unsigned long end)
+{
+	start = PGALIGN_UP(start);
+	end = PGALIGN_DOWN(end);
+	KePrintf("Freeing memory range [0x%tx - 0x%tx]\n", start, end);
+	while (start < end) {
+		MMPFN *pfn = MmGetPFNForPhys(start);
+		MmFreePage(pfn);
+		start += PAGE_SIZE;
+	}
+}
+
+/**
+ * init_free_memory - free all unallocated usable RAM to the page allocator.
+ */
+static void init_free_memory(void)
+{
+	for (int i = 0; i < memmap_len; i++) {
+		multiboot_memmap_entry entry = memmap_entry(i);
+		if (entry.type != MB2_MEMMAP_USABLE)
+			continue;
+
+		unsigned long start = entry.start;
+		unsigned long end = start + entry.size;
+		if (alloc_wmark < end)
+			end = alloc_wmark;
+
+		bool was_blocked;
+		do {
+			if (end <= start)
+				break;
+			was_blocked = false;
+			unsigned long bs = end, be = end;
+			for (int j = 0; j < num_blockers; j++) {
+				if (block_end[j] <= start)
+					continue;
+				if (block_start[j] >= end)
+					continue;
+				if (block_start[j] < bs) {
+					bs = block_start[j];
+					be = block_end[j];
+					was_blocked = true;
+				}
+			}
+			if (start < bs)
+				free_memory_to_page_allocator(start, bs);
+			start = be;
+		} while (was_blocked);
+	}
+}
 
 static unsigned long alloc_from_memmap(unsigned long size, unsigned long align)
 {
@@ -445,6 +502,10 @@ void HalStartKernel(void *multiboot_info, unsigned long kernel_load_offset)
 	HalWritePTE(ptep + MiSelfMappingPTEIndex, pte);
 
 	init_memory();
+	boot_params = (multiboot_params *) MiPhysToVirt((unsigned long) boot_params);
+	mb2_memmap = (multiboot_memmap *) MiPhysToVirt((unsigned long) mb2_memmap);
+
+	init_free_memory();
 
 	KiStartKernel();
 

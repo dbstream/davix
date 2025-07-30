@@ -5,6 +5,7 @@ kobjs += lib/
 
 kobjs += arch/$(ARCH)/
 kobjs += Ke/
+kobjs += Mm/
 
 include $(src)arch/$(ARCH)/Sources_root.include
 
