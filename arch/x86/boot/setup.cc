@@ -294,11 +294,11 @@ static void init_memory(void)
 			continue;
 		}
 
-		if (map_start != map_end) {
+		if (map_start != map_end)
 			map_hhdm_range_pa(map_start, map_end);
-			map_start = start;
-			map_end = end;
-		}
+
+		map_start = start;
+		map_end = end;
 	}
 	if (map_start != map_end)
 		map_hhdm_range_pa(map_start, map_end);
