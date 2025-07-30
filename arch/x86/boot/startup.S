@@ -93,7 +93,23 @@ _start:
 	.globl __pcpu_fixed
 	.type __pcpu_fixed, @object
 __pcpu_fixed:
-	.fill 64, 1, 0
+/* %gs:0  */
+	.fill 8, 1, 0	/* reserve space for the percpu pointer at %gs:0 */
+/* %gs:8  */
+	.globl __hal_current_processor
+	.type __hal_current_processor, @object
+	.size __hal_current_processor, 4
+__hal_current_processor:	.long 0
+/* %gs:12 */
+	.fill 28, 1, 0	/* reserve space until the stack guard value */
+/* %gs:40 */
+	.globl __stack_guard_val
+	.type __stack_guard_val, @object
+	.size __stack_guard_val, 8
+__stack_guard_val:		.quad 0
+/* %gs:48 */
+	.fill 16, 1, 0	/* fill up the first cacheline */
+/* %gs:64 */
 	.size __pcpu_fixed, . - __pcpu_fixed
 
 	.section ".percpu", "aw", @progbits

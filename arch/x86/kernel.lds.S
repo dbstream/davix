@@ -71,6 +71,8 @@ SECTIONS
 	__multiboot_bss_end = __kernel_end - KERNEL_START;
 
 	. = ASSERT(__pcpu_fixed == 0, "__pcpu_fixed is not at address zero.");
+	. = ASSERT(__hal_current_processor == 8, "__hal_current_processor != 8");
+	. = ASSERT(__stack_guard_val == 40, "__stack_guard_val != 40");
 
 	/DISCARD/ : {
 		*(.comment)
