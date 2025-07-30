@@ -48,7 +48,7 @@
  *   0xffffffffff200000 - 0xffffffffffffffff    14 MiB  Guard hole.
  */
 
-struct MMPFN;
+struct _MMPFN_TAG;
 struct _MMPTE_TAG;
 
 static constexpr unsigned long PAGE_SIZE = 4096UL;
@@ -80,7 +80,7 @@ extern unsigned long MiPTEBaseAddress;
 
 static constexpr int MiSelfMappingPTEIndex = 464;
 
-extern MMPFN *MiPFNBase;
+extern _MMPFN_TAG *MiPFNBase;
 extern _MMPTE_TAG *MiPTEBase;
 
 extern _MMPTE_TAG *MiPTEBaseForLevelIndex[];

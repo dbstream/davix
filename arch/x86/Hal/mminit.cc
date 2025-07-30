@@ -66,7 +66,7 @@ EXPORT_SYMBOL(MiPTEBaseAddress);
 /**
  * MiPFNBase: the global MMPFN array pointer.
  */
-MMPFN *MiPFNBase;
+_MMPFN_TAG *MiPFNBase;
 EXPORT_SYMBOL(MiPFNBase)
 
 /**
@@ -114,7 +114,7 @@ void HalInitializeVirtualAddressSpace(void)
 		MiPTEAddressMask		= 0x0000ffffffffffffUL;
 	}
 
-	MiPFNBase = (MMPFN *) MiPFNBaseAddress;
+	MiPFNBase = (_MMPFN_TAG *) MiPFNBaseAddress;
 	MiPTEBase = (MMPTE *) MiPTEBaseAddress;
 
 	MiPTEBaseForLevelIndex[0] = MiPTEBase;
@@ -242,6 +242,33 @@ void HalMapRangeHHDM(unsigned long addr, unsigned long end)
 			HalWritePTE(ptep, pte);
 			addr += pte_size;
 		}
+	}
+}
+
+void HalMapRangePFN(unsigned long addr, unsigned long end)
+{
+	int maxpgtlevel = HalNumPageTableLevels();
+
+	addr = PGALIGN_DOWN(addr);
+	end = PGALIGN_UP(end);
+
+	while (addr < end) {
+		MMPTEP ptep = get_pte_early(addr, 1, maxpgtlevel);
+		MMPTE pte = HalReadPTE(ptep);
+
+		if (HalPTEEmpty(pte)) {
+			/*
+			 * Zero fill MMPFN pages.
+			 *
+			 * (alloc_early_pgtable returns zeroed physical pages.)
+			 */
+			unsigned long phy = alloc_early_pgtable();
+			pte = HalMakeKPTE(1, phy, PTEFLAGS_READWRITE);
+
+			HalWritePTE(ptep, pte);
+		}
+
+		addr += PAGE_SIZE;
 	}
 }
 

@@ -10,6 +10,7 @@
 #include <Ke/console.h>
 #include <Ke/log.h>
 #include <Ki/start_kernel.h>
+#include <Mm/pfn.h>
 #include <asm/cpufeature.h>
 #include <asm/creg_access.h>
 #include <asm/idt.h>
@@ -194,6 +195,12 @@ static void map_hhdm_range_pa(unsigned long start_pa, unsigned long end_pa)
 	HalMapRangeHHDM(start_va, end_va);
 }
 
+static void map_pfn_range(unsigned long start, unsigned long end)
+{
+	KePrintf("Mapping MMPFN range [0x%tx - 0x%tx]\n", start, end);
+	HalMapRangePFN(start, end);
+}
+
 static void map_kernel(MMPTEP ptes, char *pstart , char *pend, PTEFLAGS flags)
 {
 	unsigned long phy = ktext_pa(pstart);
@@ -339,6 +346,37 @@ static void init_memory(void)
 		HalClearPTE(p2d);
 		p2d++;
 	}
+
+	map_start = 0;
+	map_end = 0;
+	for (int i = 0; i < memmap_len; i++) {
+		multiboot_memmap_entry entry = memmap_entry(i);
+		unsigned long start = entry.start;
+		unsigned long end = start + entry.size;
+		unsigned int type = entry.type;
+
+		if (type != MB2_MEMMAP_USABLE && type != MB2_MEMMAP_ACPI_RECLAIM)
+			continue;
+
+		start = (unsigned long) MmGetPFNForPhys(start);
+		end = (unsigned long) MmGetPFNForPhys(PGALIGN_UP(end));
+
+		start = PGALIGN_DOWN(start);
+		end = PGALIGN_UP(end);
+
+		if (map_end == start) {
+			map_end = end;
+			continue;
+		}
+
+		if (map_start != map_end)
+			map_pfn_range(map_start, map_end);
+
+		map_start = start;
+		map_end = end;
+	}
+	if (map_start != map_end)
+		map_pfn_range(map_start, map_end);
 }
 
 static void debugcon_putstring(CONSOLE *console, const char *message)

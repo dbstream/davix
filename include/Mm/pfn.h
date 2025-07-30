@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: GPL-3.0
+/*
+ * File: include/Mm/pfn.h
+ * MMPFN structure.
+ *
+ * Copyright (C) 2025  dbstream
+ */
+#pragma once
+
+#include <Hal/mm.h>
+
+typedef struct _MMPFN_TAG {
+	long pad[8];
+} MMPFN;
+
+#ifdef __x86_64__
+static_assert(sizeof(MMPFN) == 64, "MMPFN has the wrong size!");
+#endif
+
+/**
+ * MmGetPFNForPhys - get the MMPFN that corresponds to a physical address.
+ * @phys: physical address
+ */
+static inline MMPFN *MmGetPFNForPhys(unsigned long phys)
+{
+	return &MiPFNBase[phys / PAGE_SIZE];
+}
+
+/**
+ * MmGetPhysForPFN - get the physical address of a MMPFN-managed page.
+ * @pfn: pointer to MMPFN structure
+ */
+static inline unsigned long MmGetPhysForPFN(MMPFN *pfn)
+{
+	return PAGE_SIZE * (pfn - MiPFNBase);
+}
+
+/**
+ * MiGetPFNForVirt - get the MMPFN that corresponds to a direct-mapped address.
+ * @virt: virtual address
+ */
+static inline MMPFN *MiGetPFNForVirt(unsigned long virt)
+{
+	return MmGetPFNForPhys(MiVirtToPhys(virt));
+}
+
+/**
+ * MiGetVirtForPFN - get the direct-mapped address of a MMPFN-managed page.
+ */
+static inline unsigned long MiGetVirtForPFN(MMPFN *pfn)
+{
+	return MiPhysToVirt(MmGetPhysForPFN(pfn));
+}
+
