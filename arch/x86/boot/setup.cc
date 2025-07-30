@@ -13,6 +13,7 @@
 #include <Mm/pfn.h>
 #include <asm/cpufeature.h>
 #include <asm/creg_access.h>
+#include <asm/creg_bits.h>
 #include <asm/idt.h>
 #include <asm/io.h>
 #include <string.h>
@@ -377,6 +378,19 @@ static void init_memory(void)
 	}
 	if (map_start != map_end)
 		map_pfn_range(map_start, map_end);
+
+	/*
+	 * Zero the bottom-half top level PTEs, which correspond to user space.
+	 */
+	MMPTEP pgd = MmGetPteForAddressLevel(0, HalNumPageTableLevels());
+	for (int i = 0; i < 256; i++) {
+		HalClearPTE(pgd++);
+	}
+	/*
+	 * Flush page translations globally by writing to CR4.
+	 */
+	write_cr4(__cr4_state ^ __CR4_PGE);
+	write_cr4(__cr4_state);
 }
 
 static void debugcon_putstring(CONSOLE *console, const char *message)
