@@ -97,7 +97,10 @@ enum {
         __atomic_compare_exchange_n((p), (exp), (des), 0, (success_mo), (fail_mo))
 
 #define atomic_cmpxchg_for_lock(p, exp, des)                            \
-        atomic_cmpxchg((p), (exp), (des), mo_acquire, mo_relaxed)
+        atomic_cmpxchg((p), (exp), (des), _MO_Acquire, _MO_Relaxed)
+
+#define atomic_cmpxchg_weak_for_lock(p, exp, des)			\
+	atomic_cmpxchg_weak((p), (exp), (des), _MO_Acquire, _MO_Relaxed)
 
 #define atomic_fetch_add(p, val, mo) __atomic_fetch_add((p), (val), (mo))
 #define atomic_fetch_sub(p, val, mo) __atomic_fetch_sub((p), (val), (mo))
