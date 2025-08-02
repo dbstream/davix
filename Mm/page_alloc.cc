@@ -8,6 +8,7 @@
 #include <Ke/spinlock.h>
 #include <Mm/page_alloc.h>
 #include <Mm/pfn.h>
+#include <davix/export.h>
 #include <dsl/list.h>
 
 /**
@@ -27,6 +28,7 @@ void MmFreePage(MMPFN *pfn)
 	page_free_list.push_front(pfn);
 	pgalloc_lock.unlock();
 }
+EXPORT_SYMBOL(MmFreePage)
 
 /**
  * MmAllocatePage - allocate a page from the global page free list.
@@ -38,4 +40,5 @@ MMPFN *MmAllocatePage(void)
 	pgalloc_lock.unlock();
 	return pfn;
 }
+EXPORT_SYMBOL(MmAllocatePage)
 

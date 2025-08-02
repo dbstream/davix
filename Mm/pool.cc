@@ -13,6 +13,7 @@
 #include <Mm/pfn.h>
 #include <Mm/pool.h>
 #include <davix/bug.h>
+#include <davix/export.h>
 #include <lock_guard.h>
 
 struct MIOBJECTPOOL {
@@ -196,6 +197,7 @@ void *MmAllocateObject(unsigned long size, unsigned long align)
 
 	return MiPoolAllocate(pool);
 }
+EXPORT_SYMBOL(MmAllocateObject)
 
 /**
  * MmFreeObject - free an object to its MIOBJECTPOOL.
@@ -213,4 +215,5 @@ void MmFreeObject(void *mem)
 
 	MiPoolFree(mem, pool, pfn);
 }
+EXPORT_SYMBOL(MmFreeObject)
 

@@ -13,6 +13,7 @@
 
 #include <Ke/raw_spinlock.h>
 #include <davix/atomic.h>
+#include <davix/export.h>
 
 #if SPINLOCK_DEBUG
 #include <Ke/context.h>
@@ -52,4 +53,5 @@ void KeRawSpinlock::lock_slowpath(unsigned int lockval)
 		} while (lockval == 0U);
 	}
 }
+EXPORT_SYMBOL(KeRawSpinlock::lock_slowpath)
 

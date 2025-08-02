@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include <davix/export.h>
 #include <davix/vsnprintf.h>
 #include <string.h>
 
@@ -382,6 +383,7 @@ void vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
 
 	*o.pos = 0;
 }
+EXPORT_SYMBOL(vsnprintf)
 
 extern "C"
 void snprintf(char *buf, size_t size, const char *fmt, ...)
@@ -391,4 +393,5 @@ void snprintf(char *buf, size_t size, const char *fmt, ...)
 	vsnprintf(buf, size, fmt, args);
 	va_end(args);
 }
+EXPORT_SYMBOL(snprintf)
 
