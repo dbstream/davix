@@ -7,6 +7,7 @@
 #include <Ke/context.h>
 #include <Ke/log.h>
 #include <Ki/start_kernel.h>
+#include <Mm/pool.h>
 
 #define stringize(macro) stringize_(macro)
 #define stringize_(macro) #macro
@@ -40,5 +41,7 @@ void KiInitializeEarlySubsystems(void)
 void KiStartKernel(void)
 {
 	KePuts(davix_banner);
+
+	MmInitializeObjectAllocator();
 }
 

@@ -11,8 +11,32 @@
 #include <dsl/list.h>
 
 typedef struct _MMPFN_TAG {
+	/*
+	 * pg_list: MMPFN_List linkage.
+	 */
 	dsl::ListHead pg_list;
-	long pad[6];
+	/*
+	 * pg_ptr: depends on page usage.
+	 *
+	 * MIOBJECTPOOL page: pointer to MIOBJECTPOOL.
+	 */
+	void *pg_ptr;
+	/*
+	 * u: MMPFN union (two words).
+	 */
+	union {
+		struct {
+			/*
+			 * u.pool.count: free object count
+			 */
+			unsigned int count;
+			/*
+			 * u.pool.obj_head: pointer to first free object
+			 */
+			void *obj_head;
+		} pool;
+	} u;
+	long pad[3];
 } MMPFN;
 
 #ifdef __x86_64__

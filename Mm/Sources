@@ -2,4 +2,5 @@
 # Copyright (C) 2025  dbstream
 
 kobjs += page_alloc.o
+kobjs += pool.o
 
