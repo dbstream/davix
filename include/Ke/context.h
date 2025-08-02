@@ -153,6 +153,17 @@ static inline void KeSetPendingDPC(void)
 }
 
 /**
+ * KeClearPendingDPC - clear the flag indicating pending deferred procedure
+ * calls on this CPU.
+ */
+static inline void KeClearPendingDPC(void)
+{
+	unsigned int cnt = HalReadPerCPU(kiProcessorContext.dpc_counter);
+	cnt |= KI_CONTEXT_COUNTER_EVENT_NOT_PENDING;
+	HalWritePerCPU(kiProcessorContext.dpc_counter, cnt);
+}
+
+/**
  * KeDisableIRQs - disable IRQ dispatching on the current CPU.
  */
 static inline void KeDisableIRQs(void)
