@@ -11,3 +11,5 @@
 
 void MmFreePage(MMPFN *pfn);
 
+MMPFN *MmAllocatePage(void);
+

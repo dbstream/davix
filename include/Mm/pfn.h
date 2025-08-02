@@ -8,9 +8,11 @@
 #pragma once
 
 #include <Hal/mm.h>
+#include <dsl/list.h>
 
 typedef struct _MMPFN_TAG {
-	long pad[8];
+	dsl::ListHead pg_list;
+	long pad[6];
 } MMPFN;
 
 #ifdef __x86_64__
@@ -51,4 +53,6 @@ static inline unsigned long MiGetVirtForPFN(MMPFN *pfn)
 {
 	return MiPhysToVirt(MmGetPhysForPFN(pfn));
 }
+
+typedef dsl::TypedList<_MMPFN_TAG, &_MMPFN_TAG::pg_list> MMPFN_List;
 
