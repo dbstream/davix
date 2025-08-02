@@ -34,6 +34,11 @@ __startup_bsp:
 	shrq $32, %rdx
 	wrmsr
 	movq %rax, %gs:0
+	/*
+	 * Stash the percpu offset in %rdx as a third argument to
+	 * HalStartKernel, which uses this to setup the percpu_offsets array.
+	 */
+	movq %rax, %rdx
 
 	/*
 	 * Load the permanent GDT.

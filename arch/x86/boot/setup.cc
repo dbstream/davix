@@ -7,6 +7,7 @@
  */
 #include <Hal/mm.h>
 #include <Hal/page_tables.h>
+#include <Hal/percpu.h>
 #include <Ke/console.h>
 #include <Ke/log.h>
 #include <Ki/start_kernel.h>
@@ -462,10 +463,12 @@ static CONSOLE debugcon = {
 };
 
 extern "C"
-void HalStartKernel(void *multiboot_info, unsigned long kernel_load_offset)
+void HalStartKernel(void *multiboot_info, unsigned long kernel_load_offset,
+		unsigned long percpu_offset)
 {
 	boot_params = (multiboot_params *) multiboot_info;
 	load_offset = kernel_load_offset;
+	Hal::percpu_offsets[0] = percpu_offset;
 
 	cpufeature_init();
 	if (CPUFeature(LA57))
