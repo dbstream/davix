@@ -4,5 +4,7 @@
 CXXFLAGS-string.o := -fno-tree-loop-distribute-patterns
 
 kobjs += string.o
+kobjs += vmafind.o
+kobjs += vmamodify.o
 kobjs += vsnprintf.o
 
