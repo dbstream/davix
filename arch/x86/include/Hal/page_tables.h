@@ -69,7 +69,7 @@ constexpr static inline unsigned long HalPTESize(int level)
 {
 #if DEBUG_PAGETABLES
 	BUG_ON(level < 1);
-	BUG_ON(level > HalMaxHugePTELevel());
+	BUG_ON(level > HalNumPageTableLevels());
 #endif
 
 	return 1UL << (3 + 9 * level);
