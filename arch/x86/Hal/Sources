@@ -5,4 +5,5 @@ kobjs += entry.o
 kobjs += idt.o
 kobjs += mminit.o
 kobjs += percpu.o
+kobjs += tlb.o
 
