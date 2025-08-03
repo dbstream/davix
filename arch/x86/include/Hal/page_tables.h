@@ -204,3 +204,59 @@ static inline bool HalPTEEmpty(MMPTE pte)
 	return pte.value == 0;
 }
 
+/**
+ * HalPTEHuge - check if a PTE is a huge page.
+ * @pte: PTE value
+ * @level: the page table level of this PTE
+ *
+ * If level is 1, this function always returns true.
+ */
+static inline bool HalPTEHuge(MMPTE pte, int level)
+{
+	if (level == 1)
+		return true;
+
+#if DEBUG_PAGETABLES
+	BUG_ON(level < 1);
+	BUG_ON(level > HalNumPageTableLevels());
+#endif
+
+	return pte.value & __PG_HUGE;
+}
+
+/**
+ * HalPTEAddress - get the address pointed to by a non-huge-page PTE.
+ * @pte: PTE value
+ * @level: the page table level of this PTE
+ *
+ * If @level is greater than 1, @pte is a table PTE and the physical address of
+ * the pointed-to page table is returned.
+ */
+static inline unsigned long HalPTEAddress(MMPTE pte, int level)
+{
+#if DEBUG_PAGETABLES
+	BUG_ON(level < 1);
+	BUG_ON(level > HalNumPageTableLevels());
+	BUG_ON(level > 1 && (pte.value & __PG_HUGE));
+#endif
+
+	return pte.value & __PG_ADDR_MASK;
+}
+
+/**
+ * HalPTEHugeAddress - get the address pointed to by a huge PTE.
+ * @pte: PTE value
+ * @level: the page table level of this PTE
+ */
+static inline unsigned long HalPTEHugeAddress(MMPTE pte, int level)
+{
+#if DEBUG_PAGETABLES
+	BUG_ON(level < 1);
+	BUG_ON(level > HalMaxHugePTELevel());
+	BUG_ON(level > 1 && !(pte.value & __PG_HUGE));
+#endif
+
+	unsigned long entry_size = HalPTESize(level);
+	return pte.value & __PG_ADDR_MASK & ~(entry_size - 1);
+}
+
