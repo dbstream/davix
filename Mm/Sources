@@ -3,4 +3,5 @@
 
 kobjs += page_alloc.o
 kobjs += pool.o
+kobjs += vmap.o
 
