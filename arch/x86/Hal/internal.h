@@ -15,3 +15,5 @@ void HalMapRangeHHDM(unsigned long addr, unsigned long end);
 
 void HalMapRangePFN(unsigned long addr, unsigned long end);
 
+void HalInitializeVmapPageTables(void);
+

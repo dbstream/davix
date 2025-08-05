@@ -510,6 +510,8 @@ void HalStartKernel(void *multiboot_info, unsigned long kernel_load_offset,
 
 	init_free_memory();
 
+	HalInitializeVmapPageTables();
+
 	KiStartKernel();
 
 	KePanic("KiStartKernel returned");

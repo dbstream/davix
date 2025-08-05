@@ -8,6 +8,7 @@
 #include <Hal/fixed_mapping.h>
 #include <Hal/page_tables.h>
 #include <Ke/log.h>
+#include <Mm/page_alloc.h>
 #include <asm/clear_page.h>
 #include <asm/invlpg.h>
 #include <davix/export.h>
@@ -270,5 +271,34 @@ void HalMapRangePFN(unsigned long addr, unsigned long end)
 
 		addr += PAGE_SIZE;
 	}
+}
+
+/**
+ * HalInitializeVmapPageTables - preallocate toplevel Vmap space PTEs.
+ */
+void HalInitializeVmapPageTables(void)
+{
+	unsigned long start = MiVmapSpaceBegin;
+	unsigned long end = MiVmapSpaceEnd;
+	int level = HalNumPageTableLevels();
+	unsigned long entry_size = HalPTESize(level);
+
+	MMPTEP ptep = MmGetPteForAddressLevel(start, level);
+	do {
+		MMPTE pte = HalReadPTE(ptep);
+		if (HalPTEEmpty(pte)) {
+			MMPFN *pfn = MmAllocatePage();
+			if (!pfn)
+				KePanic("Out of memory!");
+			clear_page((void *) MiGetVirtForPFN(pfn));
+			unsigned long phy = MmGetPhysForPFN(pfn);
+			pte = HalMakeTableKPTE(level, phy);
+
+			HalWritePTE(ptep, pte);
+		}
+
+		ptep++;
+		start += entry_size;
+	} while (start < end);
 }
 
