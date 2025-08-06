@@ -636,8 +636,7 @@ uacpi_handle uacpi_kernel_create_spinlock(void)
 void uacpi_kernel_free_spinlock(uacpi_handle handle)
 {
 	KeIRQSpinlock *lock = (KeIRQSpinlock *) handle;
-	BUG_ON(!lock->trylock()); // It is a bug to not unlock a spinlock.
-	lock->unlock();
+	BUG_ON(lock->locked()); // It is a bug to not unlock a spinlock.
 	MmDelete(lock);
 }
 
