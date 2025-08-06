@@ -103,3 +103,9 @@ static inline unsigned long MiVirtToPhys(unsigned long virt_addr)
 	return virt_addr - MiHHDMBase;
 }
 
+static inline bool MmIsVmapPointer(void *ptr)
+{
+	unsigned long addr = (unsigned long) ptr;
+	return addr >= MiVmapSpaceBegin && addr < MiVmapSpaceEnd;
+}
+
