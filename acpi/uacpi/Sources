@@ -1,0 +1,5 @@
+# Sources file copied to uacpi/.
+# Copyright (C) 2025  dbstream.
+
+kobjs += source/
+
