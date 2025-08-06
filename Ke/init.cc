@@ -3,6 +3,7 @@
  * File: Ke/init.cc
  * Kernel initialization.
  */
+#include <Acpi/setup.h>
 #include <Hal/percpu.h>
 #include <Ke/context.h>
 #include <Ke/log.h>
@@ -43,5 +44,7 @@ void KiStartKernel(void)
 	KePuts(davix_banner);
 
 	MmInitializeObjectAllocator();
+
+	AcpiInitializeTables();
 }
 

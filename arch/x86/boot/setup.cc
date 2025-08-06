@@ -5,6 +5,7 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include <Acpi/setup.h>
 #include <Hal/mm.h>
 #include <Hal/page_tables.h>
 #include <Hal/percpu.h>
@@ -451,6 +452,26 @@ static void init_memory(void)
 	write_cr4(__cr4_state);
 }
 
+static void init_acpi_rsdp(void)
+{
+	multiboot_tag *rsdp_v1 = nullptr, *rsdp_v2 = nullptr;
+	for (multiboot_tag *tag : mb2_tags) {
+		switch(tag->type) {
+		case MB2_TAG_RSDPv1:
+			rsdp_v1 = tag;
+			break;
+		case MB2_TAG_RSDPv2:
+			rsdp_v2 = tag;
+			break;
+		}
+	}
+
+	if (rsdp_v2)
+		rsdp_v1 = rsdp_v2;
+	if (rsdp_v1)
+		AcpiSetRSDPAddress((unsigned long) rsdp_v1 + 8UL);
+}
+
 static void debugcon_putstring(CONSOLE *console, const char *message)
 {
 	(void) console;
@@ -504,6 +525,7 @@ void HalStartKernel(void *multiboot_info, unsigned long kernel_load_offset,
 		pte.value |= __PG_NX;
 	HalWritePTE(ptep + MiSelfMappingPTEIndex, pte);
 
+	init_acpi_rsdp();
 	init_memory();
 	boot_params = (multiboot_params *) MiPhysToVirt((unsigned long) boot_params);
 	mb2_memmap = (multiboot_memmap *) MiPhysToVirt((unsigned long) mb2_memmap);

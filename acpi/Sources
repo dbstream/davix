@@ -1,0 +1,7 @@
+# ACPI support.
+# Copyright (C) 2025  dbstream
+
+kobjs += uacpi/
+kobjs += osl.o
+kobjs += tables.o
+

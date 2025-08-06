@@ -75,6 +75,7 @@ export CC_VERSION
 
 # C preprocessor flags.
 CPPFLAGS :=					\
+	-include include/davix-predef.h		\
 	-Iinclude				\
 	-Iarch/$(ARCH)/include			\
 	$(ARCH_CPPFLAGS)			\
