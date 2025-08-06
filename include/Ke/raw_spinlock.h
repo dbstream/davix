@@ -51,5 +51,17 @@ struct KeRawSpinlock {
 	{
 		atomic_store_release(&m_value, 1);
 	}
+
+	/**
+	 * KeRawSpinlock::locked - test if the spinlock is held by anyone.
+	 *
+	 * NOTE: this function does not provide any stricter memory ordering
+	 * than relaxed. Callers can use trylock() or smp_mb() before and/or
+	 * after invoking this function if they demand strong memory ordering.
+	 */
+	inline bool locked(void)
+	{
+		return atomic_load_relaxed(&m_value) != 1;
+	}
 };
 

@@ -38,6 +38,11 @@ public:
 		m_lock.unlock();
 		KeEnablePreemption();
 	}
+
+	inline bool locked(void)
+	{
+		return m_lock.locked();
+	}
 };
 
 class KeDPCSpinlock {
@@ -68,6 +73,11 @@ public:
 		m_lock.unlock();
 		KeEnableDPCs();
 	}
+
+	inline bool locked(void)
+	{
+		return m_lock.locked();
+	}
 };
 
 class KeIRQSpinlock {
@@ -97,6 +107,11 @@ public:
 	{
 		m_lock.unlock();
 		KeEnableIRQs();
+	}
+
+	inline bool locked(void)
+	{
+		return m_lock.locked();
 	}
 };
 
