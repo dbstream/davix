@@ -11,3 +11,5 @@ void KiInitializeEarlySubsystems(void);
 
 void KiStartKernel(void);
 
+void HalInitialize(void);
+

@@ -1,0 +1,6 @@
+# Sources for Hal/time/
+# Copyright (C) 2025  dbstream
+
+kobjs += hpet.o
+kobjs += tsc.o
+

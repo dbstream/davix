@@ -11,6 +11,7 @@
 
 enum : int {
 	HAL_FIXED_MAP_LOCAL_APIC		= 0,
+	HAL_FIXED_MAP_HPET			= 1,
 };
 
 void HalSetFixedMapping(int idx, unsigned long address, PTEFLAGS flags);

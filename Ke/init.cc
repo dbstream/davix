@@ -46,5 +46,7 @@ void KiStartKernel(void)
 	MmInitializeObjectAllocator();
 
 	AcpiInitializeTables();
+
+	HalInitialize();
 }
 
