@@ -5,6 +5,7 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include <Hal/time.h>
 #include <Ke/console.h>
 #include <Ke/log.h>
 #include <Ke/rcu.h>
@@ -34,11 +35,13 @@ void KeRegisterConsole(CONSOLE *console)
  */
 void KePuts(const char *str)
 {
+	unsigned long long usec = HalMicrosSinceBoot();
+
 	KeRcuLock();
 	CONSOLE *con = atomic_load_acquire(&console_list);
 
 	while(con) {
-		con->putString(con, str);
+		con->putString(con, str, usec);
 		con = con->pNext;
 	}
 

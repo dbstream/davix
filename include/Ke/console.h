@@ -18,8 +18,10 @@ struct CONSOLE {
 	 * CONSOLE::putString - display a string on the console.
 	 * @console: pointer to the CONSOLE itself
 	 * @str: string to display
+	 * @usec: microsecond message timestamp
 	 */
-	void (*putString)(CONSOLE *console, const char *str);
+	void (*putString)(CONSOLE *console, const char *str,
+			unsigned long long usec);
 	/**
 	 * CONSOLE::beginPanicLogging - prepare for putString in panic context.
 	 * @console: pointer to the CONSOLE itself

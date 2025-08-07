@@ -19,6 +19,7 @@
 #include <asm/creg_bits.h>
 #include <asm/idt.h>
 #include <asm/io.h>
+#include <davix/vsnprintf.h>
 #include <string.h>
 #include "multiboot.h"
 #include "../Hal/internal.h"
@@ -472,9 +473,14 @@ static void init_acpi_rsdp(void)
 		AcpiSetRSDPAddress((unsigned long) rsdp_v1 + 8UL);
 }
 
-static void debugcon_putstring(CONSOLE *console, const char *message)
+static void debugcon_putstring(CONSOLE *console, const char *message,
+		unsigned long long usec)
 {
 	(void) console;
+	char buf[16];
+	snprintf(buf, sizeof(buf), "[%5llu.%06llu] ",
+			usec / 1000000, usec % 1000000);
+	io_outsb(0xe9, (const uint8_t *) buf, 15);
 	io_outsb(0xe9, (const uint8_t *) message, strlen(message));
 }
 
