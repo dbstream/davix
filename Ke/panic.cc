@@ -11,6 +11,7 @@
 #include <davix/atomic.h>
 #include <davix/export.h>
 #include <davix/vsnprintf.h>
+#include <string.h>
 
 static void panic_stop_self [[noreturn]] (void)
 {
@@ -36,15 +37,17 @@ void KePanic(const char *fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	vsnprintf(panic_msg_buffer, sizeof(panic_msg_buffer), fmt, args);
+	vsnprintf(panic_msg_buffer, sizeof(panic_msg_buffer) - 1, fmt, args);
 	va_end(args);
-	panic_msg_buffer[sizeof(panic_msg_buffer) - 1] = 0;
+	size_t n = strlen(panic_msg_buffer);
+	panic_msg_buffer[n] = '\n';
+	panic_msg_buffer[n + 1] = '\0';
 
 	KiBeginPanicLogging();
 	KePuts("KERNEL PANIC!\n");
-	KePuts("What: ");
+	KePuts("What:\n");
 	KePuts(panic_msg_buffer);
-	KePuts("\nHalting...\n");
+	KePuts("Halting...\n");
 	KiEndPanicLogging();
 
 	panic_stop_self();
