@@ -1,6 +1,7 @@
 # Sources for Hal/
 # Copyright (C) 2025  dbstream
 
+kobjs += irq/
 kobjs += time/
 kobjs += entry.o
 kobjs += idt.o

@@ -6,10 +6,12 @@
  */
 #include <Ki/start_kernel.h>
 #include "time/internal.h"
+#include "irq/internal.h"
 
 void HalInitialize(void)
 {
 	HalInitializeHPET();
 	HalInitializeTSC();
+	HalInitializeIRQSubsystem();
 }
 

@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: GPL-3.0
+/*
+ * File: include/Hal/irq_vectors.h
+ * IRQ vector numbers and reserved vectors.
+ *
+ * Copyright (C) 2025  dbstream
+ */
+#pragma once
+
+/*
+ * Vectors 0x00 ... 0x1f (0 ... 31) are architecturally reserved and have
+ * special uses such as CPU exceptions.
+ *
+ * Vectors 0x20 ... 0x2f (32 ... 47) are reserved for the 8259 PIC interrupts.
+ *
+ * Vector 0x80 is reserved as a compat syscall vector.
+ *
+ * Vectors IRQ_VECTOR_SYSTEM_FIRST ... 0xff (... 255) are reserved for system
+ * use.
+ *
+ * The rest of the vectors are managed dynamically.
+ *
+ * System vectors:
+ *	0xfe	254	Local APIC Timer
+ *	0xff	255	Spurious APIC Interrupt
+ */
+
+#define IRQ_VECTOR_8259_OFFSET		0x20
+
+#define IRQ_VECTOR_INT80h		0x80
+
+#define IRQ_VECTOR_SYSTEM_FIRST 	0xfe
+#define IRQ_VECTOR_APIC_TIMER		0xfe
+#define IRQ_VECTOR_APIC_SPURIOUS	0xff
+
+#define IRQ_VECTOR_DYNAMIC_FIRST	0x30
+#define IRQ_VECTOR_DYNAMIC_LAST		(IRQ_VECTOR_SYSTEM_FIRST - 1)
+
