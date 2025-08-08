@@ -50,3 +50,23 @@ static inline void AcpiPutTable(void *ptr, size_t id)
 	uacpi_table_unref(&table);
 }
 
+extern acpi_fadt *AcpiFADT;
+
+typedef void (*ACPI_SUBTABLE_CALLBACK)(acpi_entry_hdr *, void *);
+
+void AcpiParseSubtables(
+		acpi_sdt_hdr *header,
+		size_t header_len,
+		ACPI_SUBTABLE_CALLBACK callback,
+		void *arg
+);
+
+static inline void AcpiParseMADT(
+		acpi_madt *madt,
+		ACPI_SUBTABLE_CALLBACK callback,
+		void *arg
+)
+{
+	AcpiParseSubtables(&madt->hdr, sizeof(*madt), callback, arg);
+}
+
