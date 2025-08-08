@@ -1,5 +1,6 @@
 # Sources for Hal/irq/
 # Copyright (C) 2025  dbstream
 
+kobjs += apic.o
 kobjs += init.o
 

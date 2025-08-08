@@ -8,3 +8,5 @@
 
 void HalInitializeIRQSubsystem(void);
 
+void HalInitializeLocalAPIC(void);
+

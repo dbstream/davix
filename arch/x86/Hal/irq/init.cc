@@ -69,5 +69,7 @@ void HalInitializeIRQSubsystem(void)
 		KePrintf("Hal: ACPI MADT does not have PCAT_COMPAT set; disabling the PIC anyways.\n");
 
 	disable_8259_pic();
+
+	HalInitializeLocalAPIC();
 }
 

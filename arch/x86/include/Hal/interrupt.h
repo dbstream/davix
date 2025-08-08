@@ -27,3 +27,10 @@ static inline void HalEnableRawIRQsAndWaitForInterrupt(void)
 	asm volatile("sti; hlt" ::: "memory");
 }
 
+void HalAcknowledgeInterrupt(void);
+
+static inline void HalAcknowledgeLocalTimerInterrupt(void)
+{
+	/* already done */
+}
+
