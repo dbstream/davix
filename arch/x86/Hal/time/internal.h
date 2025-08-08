@@ -7,8 +7,17 @@
 #pragma once
 
 extern bool HalUseHPETTimer;
+extern bool HalUseTSC;
 
 void HalInitializeHPET(void);
 
+void HalInitializeTSC(void);
+
 unsigned long long HalHPETNanosSinceBoot(void);
+
+unsigned long long HalHPETReadCounter(void);
+
+unsigned long long HalHPETNanosToCounter(unsigned long long nsecs);
+
+unsigned long long HalHPETCounterToNanos(unsigned long long counter);
 

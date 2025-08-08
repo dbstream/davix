@@ -10,5 +10,6 @@
 void HalInitialize(void)
 {
 	HalInitializeHPET();
+	HalInitializeTSC();
 }
 

@@ -223,3 +223,18 @@ unsigned long long HalHPETNanosSinceBoot(void)
 	return hpet2nsec(hpet_read_counter());
 }
 
+unsigned long long HalHPETReadCounter(void)
+{
+	return hpet_read_counter();
+}
+
+unsigned long long HalHPETNanosToCounter(unsigned long long nsecs)
+{
+	return (nsecs * 1000UL * 1000UL) / hpet_period;
+}
+
+unsigned long long HalHPETCounterToNanos(unsigned long long counter)
+{
+	return hpet2nsec(counter);
+}
+
