@@ -5,6 +5,7 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include <Hal/irq_vectors.h>
 #include <Ke/log.h>
 #include <asm/creg_access.h>
 #include <asm/entry.h>
@@ -52,10 +53,20 @@ static void load_idt_table(void)
 extern "C" char asm_handle_GP[];
 extern "C" char asm_handle_PF[];
 
+extern "C" void *asm_idtentry_vector_array[];
+
 void init_idt(void)
 {
 	set_idt_entry(X86_TRAP_GP, asm_handle_GP, 0, 0);
 	set_idt_entry(X86_TRAP_PF, asm_handle_PF, 0, 0);
+	for (int i = IRQ_VECTOR_DYNAMIC_FIRST; i < 256; i++) {
+		set_idt_entry(
+				i,
+				asm_idtentry_vector_array[i - IRQ_VECTOR_DYNAMIC_FIRST],
+				0,
+				(i == IRQ_VECTOR_INT80h) ? 3 : 0
+		);
+	}
 	load_idt_table();
 
 	KePrintf("Init IDT... OK!\n");
@@ -127,5 +138,10 @@ extern "C" void handle_PF_exception_k(entry_regs *regs)
 {
 	uintptr_t fault_addr = read_cr2();
 	panic_on_page_fault(fault_addr, regs);
+}
+
+extern "C" void HalHandleInt80h(entry_regs *regs)
+{
+	panic_with_regs("int 0x80 is not yet handled", regs);
 }
 

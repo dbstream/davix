@@ -6,8 +6,10 @@
  * Copyright (C) 2025  dbstream
  */
 	.file "entry.S"
+	.altmacro
 	.code64
 
+#include <Hal/irq_vectors.h>
 #include <asm/entry.h>
 #include <asm/gdt.h>
 
@@ -107,8 +109,94 @@
 	.size \name, . - \name
 .endm
 
+.macro idtentry_vector nr
+	.type asm_irq_\nr, @function
+asm_irq_\nr:
+	.cfi_startproc
+	CFI_IRET_FRAME 0
+	PUSHQ($\nr)
+	jmp asm_irq_common
+	.cfi_endproc
+	.size asm_irq_\nr, . - asm_irq_\nr
+.endm
+
 	.text
 
 idtentry_exception asm_handle_GP 1 handle_GP_exception handle_GP_exception_k
 idtentry_exception asm_handle_PF 1 handle_PF_exception handle_PF_exception_k
+
+	.type asm_handle_int80h, @function
+asm_handle_int80h:
+	.cfi_startproc
+	CFI_IRET_FRAME 0
+	swapgs
+	PUSHQ($0)
+	PUSH_ENTRY_REGS
+	call HalHandleInt80h
+	POP_ENTRY_REGS
+	addq $8, %rsp
+	.cfi_adjust_cfa_offset -8
+	swapgs
+	iretq
+	.cfi_endproc
+	.size asm_handle_int80h, . - asm_handle_int80h
+
+.macro emit_idtentry_vector_unless_int80h i
+	.if \i != IRQ_VECTOR_INT80h
+		idtentry_vector \i
+	.endif
+.endm
+
+.set i, IRQ_VECTOR_DYNAMIC_FIRST
+.rept 0x100 - IRQ_VECTOR_DYNAMIC_FIRST
+	emit_idtentry_vector_unless_int80h %i
+	.set i, i + 1
+.endr
+
+	.balign 64
+	.type asm_irq_common, @function
+asm_irq_common:
+	.cfi_startproc
+	CFI_IRET_FRAME 8
+	PUSH_ENTRY_REGS
+	movq IRET_CS(%rdi), %rax
+	cmpq $__KERNEL_CS, %rax
+	je .Lirq_entry_from_kernel
+
+	swapgs
+	call HalHandleIRQVectorFromUserspace
+	swapgs
+	jmp .Lirq_exit_common
+
+.Lirq_entry_from_kernel:
+	call HalHandleIRQVectorFromKernel
+
+.Lirq_exit_common:
+	POP_ENTRY_REGS
+	addq $8, %rsp
+	.cfi_adjust_cfa_offset -8
+	iretq
+	.cfi_endproc
+	.size asm_irq_common, . - asm_irq_common
+
+	.section ".rodata", "a", @progbits
+
+.macro emit_idtentry_vector_array_entry i
+	.if  \i == IRQ_VECTOR_INT80h
+		.quad asm_handle_int80h
+	.else
+		.quad asm_irq_\i
+	.endif
+.endm
+
+	.balign 8
+	.globl asm_idtentry_vector_array
+	.type asm_idtentry_vector_array, @object
+asm_idtentry_vector_array:
+.set i, IRQ_VECTOR_DYNAMIC_FIRST
+.rept 0x100 - IRQ_VECTOR_DYNAMIC_FIRST
+	emit_idtentry_vector_array_entry %i
+	.set i, i + 1
+.endr
+	.size asm_idtentry_vector_array, . - asm_idtentry_vector_array
 

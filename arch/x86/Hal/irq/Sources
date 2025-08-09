@@ -2,5 +2,6 @@
 # Copyright (C) 2025  dbstream
 
 kobjs += apic.o
+kobjs += entry.o
 kobjs += init.o
 
