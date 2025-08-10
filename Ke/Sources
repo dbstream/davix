@@ -7,9 +7,11 @@ CXXFLAGS-init.o :=					\
 	-DCC_VERSION="$(CC_VERSION)"			\
 
 
+kobjs += irq/
 kobjs += context.o
 kobjs += init.o
 kobjs += log.o
 kobjs += panic.o
 kobjs += spinlock.o
+kobjs += timer.o
 

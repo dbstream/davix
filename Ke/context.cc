@@ -5,9 +5,11 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include <Hal/interrupt.h>
 #include <Hal/percpu.h>
 #include <Ke/context.h>
 #include <Ke/dpc.h>
+#include <Ke/irq.h>
 #include <davix/atomic.h>
 #include <davix/bug.h>
 #include <davix/export.h>
@@ -134,9 +136,129 @@ bool KeEnqueueDPC(DPC *dpc, void *context)
 }
 EXPORT_SYMBOL(KeEnqueueDPC)
 
+static DEFINE_PERCPU(unsigned int, kiPendingVector);
+
 void KeDispatchPendingIRQs(void)
 {
-	BUG(); // Not yet implemented.
+	do {
+		KeDisableIRQs();
+		KeClearPendingIRQ();
+		KeHandleInterruptVector(HalReadPerCPU(kiPendingVector));
+	} while (KiEnableIRQsAndTest());
+	HalEnableRawIRQs();
 }
 EXPORT_SYMBOL(KeDispatchPendingIRQs)
+
+/**
+ * KeEnterIRQContextFromUserspace - enter IRQ handler context from user mode.
+ *
+ * This routine is called by the architecture's low-level interrupt vector entry
+ * point(s) before calling KeHandleInterruptVector if the interrupt struck while
+ * we were executing in user mode.
+ */
+void KeEnterIRQContextFromUserspace(void)
+{
+	KeDisablePreemption();
+	KeDisableDPCs();
+}
+
+/**
+ * KeExitIRQContextToUserspace - leave IRQ handler context to user mode.
+ *
+ * This routine is called by the architecture's low-level interrupt vector entry
+ * point(s) after KeHandleInterruptVector returns if the interrupt struck while
+ * we were executing in user mode.
+ */
+void KeExitIRQContextToUserspace(void)
+{
+	/*
+	 * Interrupts need to be enabled when dispatching DPCs or when entering
+	 * the scheduler.  But we must disable them before leaving kernel-mode.
+	 */
+
+	if (KiEnableDPCsAndTest()) {
+		HalEnableRawIRQs();
+		KeDispatchPendingDPCs();
+		KeEnablePreemption();
+		HalDisableRawIRQs();
+	} else if (KiEnablePreemptionAndTest()) {
+		HalEnableRawIRQs();
+		KeDispatchPendingPreemption();
+		HalDisableRawIRQs();
+	}
+}
+
+static DEFINE_PERCPU(unsigned int, kiIRQEntryFromKernelFlags);
+
+/**
+ * KeEnterIRQContextFromKernel - enter IRQ context from kernel mode.
+ * @vector: interrupt vector number
+ * Returns false if IRQs were lazy-disabled and interrupt handling is deferred.
+ *
+ * This routine is called by the architecture's low-level interrupt vector entry
+ * point(s) before calling KeHandleInterruptVector if the interrupt struck while
+ * we were executing in kernel mode.
+ */
+bool KeEnterIRQContextFromKernel(unsigned int vector)
+{
+	if (!KeIRQsEnabled()) {
+		/*
+		 * IRQs are lazy disabled; store the pending interrupt and exit
+		 * with interrupts disabled.
+		 */
+		KeSetPendingIRQ();
+		HalWritePerCPU(kiPendingVector, vector);
+		return false;
+	}
+
+	unsigned int preempt_cnt = HalReadPerCPU(kiProcessorContext.preemption_counter);
+	unsigned int dpc_cnt = HalReadPerCPU(kiProcessorContext.dpc_counter);
+
+	KeDisablePreemption();
+	KeDisableDPCs();
+
+	unsigned int flags = 0U;
+	if (preempt_cnt != 0)
+		flags |= 1U;
+	if (dpc_cnt != 0)
+		flags |= 2U;
+
+	HalWritePerCPU(kiIRQEntryFromKernelFlags, flags);
+	return true;
+}
+
+/**
+ * KeExitIRQContextToKernel - leave IRQ handler context to kernel mode.
+ *
+ * This routine is called by the architecture's low-level interrupt vector entry
+ * point(s) after KeHandleInterruptVector returns if the interrupt struck while
+ * we were executing in kernel mode.  If KeEnterIRQContextFromKernel returns
+ * false, this function is not called.
+ */
+void KeExitIRQContextToKernel(void)
+{
+	/*
+	 * Interrupts need to be enabled when dispatching DPCs or when entering
+	 * the scheduler.  But we must disable them before returning from IRQ
+	 * context.
+	 *
+	 * If the preempt counter or the DPC counter were already zero, as
+	 * indicated by corresponding bits in kiIRQEntryFromKernelFlags, they
+	 * will be dispatched by the calling code and we should do nothing.
+	 */
+
+	unsigned int flags = HalReadPerCPU(kiIRQEntryFromKernelFlags);
+
+	if (KiEnableDPCsAndTest() && (flags & 2U)) {
+		HalEnableRawIRQs();
+		KeDispatchPendingDPCs();
+		if (KiEnablePreemptionAndTest() && (flags & 1U))
+			KeDispatchPendingPreemption();
+		HalDisableRawIRQs();
+	} else if (KiEnablePreemptionAndTest() && (flags & 1U)) {
+		HalEnableRawIRQs();
+		KeDispatchPendingPreemption();
+		HalDisableRawIRQs();
+	}
+}
 

@@ -29,8 +29,5 @@ static inline void HalEnableRawIRQsAndWaitForInterrupt(void)
 
 void HalAcknowledgeInterrupt(void);
 
-static inline void HalAcknowledgeLocalTimerInterrupt(void)
-{
-	/* already done */
-}
+void HalHandleSysvec(unsigned int vector);
 

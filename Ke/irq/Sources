@@ -1,0 +1,5 @@
+# Sources for Ke/irq/
+# Copyright (C) 2025  dbstream
+
+kobjs += handle.o
+

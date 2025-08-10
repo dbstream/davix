@@ -191,6 +191,14 @@ static void calibrate_apic(void)
 			apic_khz / 1000, apic_khz % 1000);
 }
 
+static void setup_timer_periodic(void)
+{
+	apic_write(APIC_TMR_ICR, 0);
+	apic_write(APIC_TMR_DIV, 3);
+	apic_write(APIC_LVTTMR, IRQ_VECTOR_APIC_TIMER | APIC_TMR_PERIODIC);
+	apic_write(APIC_TMR_ICR, apic_khz / 16);
+}
+
 void HalInitializeLocalAPIC(void)
 {
 	/*
@@ -213,5 +221,7 @@ void HalInitializeLocalAPIC(void)
 	setup_apic_base();
 	reset_apic();
 	calibrate_apic();
+
+	setup_timer_periodic();
 }
 

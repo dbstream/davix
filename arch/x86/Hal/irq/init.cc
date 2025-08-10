@@ -6,6 +6,7 @@
  * Copyright (C) 2025  dbstream
  */
 #include <Acpi/tables.h>
+#include <Hal/interrupt.h>
 #include <Hal/irq_vectors.h>
 #include <Ke/log.h>
 #include <asm/io.h>
@@ -71,5 +72,7 @@ void HalInitializeIRQSubsystem(void)
 	disable_8259_pic();
 
 	HalInitializeLocalAPIC();
+
+	HalEnableRawIRQs();
 }
 

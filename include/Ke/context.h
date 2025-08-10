@@ -213,6 +213,13 @@ static inline void KeSetPendingIRQ(void)
 	HalWritePerCPU(kiProcessorContext.irq_counter, cnt);
 }
 
+static inline void KeClearPendingIRQ(void)
+{
+	unsigned int cnt = HalReadPerCPU(kiProcessorContext.irq_counter);
+	cnt |= KI_CONTEXT_COUNTER_EVENT_NOT_PENDING;
+	HalWritePerCPU(kiProcessorContext.irq_counter, cnt);
+}
+
 /**
  * KeEnterNoIOContext - enter the "No IO" context.
  */
@@ -237,4 +244,12 @@ static inline bool KeInNoIOContext(void)
 {
 	return HalReadPerCPU(kiProcessorContext.noio_counter) != 0;
 }
+
+void KeEnterIRQContextFromUserspace(void);
+
+void KeExitIRQContextToUserspace(void);
+
+bool KeEnterIRQContextFromKernel(unsigned int vector);
+
+void KeExitIRQContextToKernel(void);
 
