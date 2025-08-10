@@ -9,6 +9,7 @@ CXXFLAGS-init.o :=					\
 
 kobjs += irq/
 kobjs += context.o
+kobjs += idle.o
 kobjs += init.o
 kobjs += log.o
 kobjs += panic.o

@@ -6,7 +6,9 @@
 #include <Acpi/setup.h>
 #include <Hal/percpu.h>
 #include <Ke/context.h>
+#include <Ke/idle.h>
 #include <Ke/log.h>
+#include <Ke/timer.h>
 #include <Ki/start_kernel.h>
 #include <Mm/pool.h>
 
@@ -36,6 +38,21 @@ void KiInitializeEarlySubsystems(void)
 	HalInitializePerCPUVariables(0);
 }
 
+static void timer_a_func(KTIMER *timer)
+{
+	KePrintf("KTIMER1 hello!\n");
+	KeSetTimer(timer, HalReadSchedClock() + 1000000000ULL);
+}
+
+static void timer_b_func(KTIMER *timer)
+{
+	KePrintf("KTIMER2 hello!\n");
+	KeSetTimer(timer, HalReadSchedClock() + 5000000000);
+}
+
+static KTIMER timer_a;
+static KTIMER timer_b;
+
 /**
  * KiStartKernel - start the kernel.
  */
@@ -48,5 +65,13 @@ void KiStartKernel(void)
 	AcpiInitializeTables();
 
 	HalInitialize();
+
+	timer_a.init(timer_a_func);
+	timer_b.init(timer_b_func);
+
+	KeSetTimer(&timer_a, HalReadSchedClock() + 1000000000ULL);
+	KeSetTimer(&timer_b, HalReadSchedClock() + 1000000000ULL);
+
+	KeCPUIdleLoop();
 }
 

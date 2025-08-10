@@ -13,7 +13,5 @@ void HalInitialize(void)
 	HalInitializeHPET();
 	HalInitializeTSC();
 	HalInitializeIRQSubsystem();
-
-	for (int i = 0; i < 1000000; i++) __builtin_ia32_pause();
 }
 

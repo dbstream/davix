@@ -10,6 +10,8 @@ typedef unsigned long long nsec_t;
 typedef unsigned long long usec_t;
 typedef unsigned long long msec_t;
 
+static constexpr nsec_t NSEC_MAX = -1ULL;
+
 #include <Hal/time.h>
 
 static inline nsec_t KeNanosSinceBoot(void)
