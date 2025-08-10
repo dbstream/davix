@@ -3,6 +3,7 @@
 
 CXXFLAGS-string.o := -fno-tree-loop-distribute-patterns
 
+kobjs += avlfixup.o
 kobjs += string.o
 kobjs += vmafind.o
 kobjs += vmamodify.o
