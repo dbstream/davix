@@ -35,7 +35,7 @@ void KeRegisterConsole(CONSOLE *console)
  */
 void KePuts(const char *str)
 {
-	unsigned long long usec = HalMicrosSinceBoot();
+	unsigned long long usec = HalReadSchedClock() / 1000;
 
 	KeRcuLock();
 	CONSOLE *con = atomic_load_acquire(&console_list);

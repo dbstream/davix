@@ -5,6 +5,7 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include <Hal/jiffies.h>
 #include <Hal/percpu.h>
 #include <Hal/time.h>
 #include <Ke/context.h>
@@ -203,4 +204,19 @@ unsigned long long HalNanosSinceBoot(void)
 	return 0; // fallback value
 }
 EXPORT_SYMBOL(HalNanosSinceBoot);
+
+/**
+ * HalReadSchedClock - read the scheduler clock.
+ *
+ * HalReadSchedClock is effectively the same as HalNanosSinceBoot, except it is
+ * much faster when the TSC does not exist.
+ */
+unsigned long long HalReadSchedClock(void)
+{
+	if (HalUseTSC) {
+		return tsc_nsecs();
+	}
+
+	return atomic_load_relaxed(&jiffies) * 1000000ULL;
+}
 

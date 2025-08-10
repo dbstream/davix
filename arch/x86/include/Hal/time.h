@@ -18,3 +18,5 @@ static inline unsigned long long HalMillisSinceBoot(void)
 	return HalNanosSinceBoot() / 1000000UL;
 }
 
+unsigned long long HalReadSchedClock(void);
+
