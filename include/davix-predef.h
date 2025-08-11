@@ -14,10 +14,18 @@
 
 #ifdef __DAVIX_KERNEL__
 
+/*
+ * CONFIG_MAX_NR_CPUS: the maximum number of logical CPUs that are supported in
+ * a Shared Memory Processor (SMP) system.
+ */
+#ifndef CONFIG_MAX_NR_CPUS
+#define CONFIG_MAX_NR_CPUS		256
+#endif /* CONFIG_MAX_NR_CPUS */
+
 #define UACPI_OVERRIDE_LIBC 1
 #define UACPI_OVERRIDE_TYPES 1
 
-#endif
+#endif /* __DAVIX_KERNEL__ */
 
 #endif /* __davix_predef_h_included */
 

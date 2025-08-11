@@ -49,7 +49,7 @@ static inline void apic_write(int reg, uint32_t value)
 		HalMMIOWrite32(APIC_REG(reg), value);
 }
 
-static inline uint32_t apic_read_id(void)
+uint32_t apic_read_id(void)
 {
 	if (CPUFeature(X2APIC))
 		return read_msr(APIC_MSR(APIC_ID));
@@ -73,7 +73,7 @@ static inline void apic_write_ICR(uint32_t value, uint32_t apicid)
 	}
 }
 
-void apic_send_IPI(unsigned int value, unsigned int target_apicid)
+void apic_send_IPI(uint32_t value, uint32_t target_apicid)
 {
 	apic_write_ICR(value, target_apicid);
 }

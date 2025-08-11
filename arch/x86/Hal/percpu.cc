@@ -8,7 +8,7 @@
 #include <Hal/percpu.h>
 
 namespace Hal {
-	unsigned long percpu_offsets[1];
+	unsigned long percpu_offsets[CONFIG_MAX_NR_CPUS];
 }
 
 extern "C" char __percpu_callbacks_start[];

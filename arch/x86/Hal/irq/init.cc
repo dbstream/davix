@@ -8,7 +8,10 @@
 #include <Acpi/tables.h>
 #include <Hal/interrupt.h>
 #include <Hal/irq_vectors.h>
+#include <Hal/smp.h>
 #include <Ke/log.h>
+#include <Ke/smp.h>
+#include <asm/apic.h>
 #include <asm/io.h>
 #include "internal.h"
 
@@ -60,6 +63,58 @@ static void disable_8259_pic(void)
 	io_wait();
 }
 
+/*
+ * SMP enumeration: we do it here, because we have AcpiMADT here and it's part
+ * of the HAL anyways.
+ */
+
+unsigned int halCpuToApic[CONFIG_MAX_NR_CPUS];
+
+static void enumerate_smp_callback(acpi_entry_hdr *entry, void *arg)
+{
+	(void) arg;
+
+	uint32_t apicid;
+	uint32_t flags;
+	if (entry->type == ACPI_MADT_ENTRY_TYPE_LAPIC) {
+		acpi_madt_lapic *lapic = (acpi_madt_lapic *) entry;
+		apicid = lapic->id;
+		flags = lapic->flags;
+	} else if (entry->type == ACPI_MADT_ENTRY_TYPE_LOCAL_X2APIC) {
+		acpi_madt_x2apic *x2apic = (acpi_madt_x2apic *) entry;
+		apicid = x2apic->id;
+		flags = x2apic->flags;
+	} else
+		return;
+	/*
+	 * Skip inactive CPUs.
+	 *
+	 * TODO: figure out what that 'online capable' meme is.
+	 */
+	if (!(flags & ACPI_PIC_ENABLED))
+		return;
+	/*
+	 * Skip the BSP.
+	 */
+	if (apicid == halCpuToApic[0])
+		return;
+	/*
+	 * Register a new CPU with Ke.  (Returns zero on CONFIG_MAX_NR_CPUS hit)
+	 */
+	unsigned int cpu = KiSmpAddCpu();
+	if (!cpu)
+		return;
+
+	halCpuToApic[cpu] = apicid;
+}
+
+static void enumerate_smp(void)
+{
+	AcpiParseMADT(AcpiMADT, enumerate_smp_callback, nullptr);
+	KePrintf("SMP: there are %u processor(s) in the system.\n",
+			keProcessorCount);
+}
+
 void HalInitializeIRQSubsystem(void)
 {
 	find_madt();
@@ -72,7 +127,11 @@ void HalInitializeIRQSubsystem(void)
 	disable_8259_pic();
 
 	HalInitializeLocalAPIC();
+	halCpuToApic[0] = apic_read_id();
+	KePrintf("Hal: BSP apicid=%u\n", halCpuToApic[0]);
 
 	HalEnableRawIRQs();
+
+	enumerate_smp();
 }
 

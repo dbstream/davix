@@ -6,5 +6,11 @@
  */
 #pragma once
 
-void apic_send_IPI(unsigned int value, unsigned int target_apicid);
+#include <stdint.h>
+
+void apic_send_IPI(uint32_t value, uint32_t target_apicid);
+
+uint32_t apic_read_id(void);
+
+extern unsigned int halCpuToApic[];
 
