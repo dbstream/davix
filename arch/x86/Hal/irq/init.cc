@@ -106,6 +106,7 @@ static void enumerate_smp_callback(acpi_entry_hdr *entry, void *arg)
 		return;
 
 	halCpuToApic[cpu] = apicid;
+	KeSetCPUPresent(cpu);
 }
 
 static void enumerate_smp(void)
