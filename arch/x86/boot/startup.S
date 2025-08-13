@@ -80,6 +80,50 @@ __startup_bsp:
 	.cfi_endproc
 	.size __startup_bsp, . - __startup_bsp
 
+	.globl __startup_ap
+	.type __startup_ap, @function
+__startup_ap:
+	.cfi_startproc
+	.cfi_undefined rip
+
+	movq __ap_startup_rsp(%rip), %rsp
+
+	call HalSmpBootInitializePerCPU
+
+	/*
+	 * Load the permanent GDT.
+	 */
+	leaq __percpu_GDT(%rip), %rax
+	addq %gs:0, %rax
+	subq $16, %rsp
+	movw $0x3f, (%rsp)
+	movq %rax, 2(%rsp)
+	lgdt (%rsp)
+	addq $16, %rsp
+
+	/*
+	 * Reload the segment registers, preserving MSR_GSBASE.
+	 */
+	swapgs
+	movl $__KERNEL_DS, %eax
+	movl %eax, %ds
+	movl %eax, %es
+	movl %eax, %fs
+	movl %eax, %gs
+	movl %eax, %ss
+	swapgs
+
+	pushq $__KERNEL_CS
+	pushq $.Lstartup_ap_on_kernel_cs
+	lretq
+
+.Lstartup_ap_on_kernel_cs:
+	call HalStartupAdditionalProcessor
+	nop
+
+	.cfi_endproc
+	.size __startup_ap, . - __startup_ap
+
 	.globl _start
 	.type _start, @function
 _start:
@@ -95,6 +139,9 @@ _start:
 
 	.section ".percpu.fixed", "aw", @progbits
 
+/*
+ * NOTE: KEEP IN SYNC WITH VALUES IN percpu.cc!!!
+ */
 	.globl __pcpu_fixed
 	.type __pcpu_fixed, @object
 __pcpu_fixed:

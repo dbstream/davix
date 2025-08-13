@@ -135,6 +135,8 @@ static inline bool HalDecrementAndTestPerCPU(unsigned int &storage)
 
 void HalInitializePerCPUVariables(unsigned int cpu);
 
+void HalAllocateAndInitializePerCPUVariables(unsigned int cpu);
+
 #define __HAL_PERCPU_CALLBACK_NAME()					\
 	__HAL_PERCPU_CALLBACK_CONCAT(__HalPCPUCallback_, __COUNTER__)
 #define __HAL_PERCPU_CALLBACK_CONCAT(a, b) __HAL_PERCPU_CALLBACK_CONCAT2(a, b)

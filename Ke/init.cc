@@ -5,6 +5,7 @@
  */
 #include <Acpi/setup.h>
 #include <Hal/percpu.h>
+#include <Hal/smpboot.h>
 #include <Ke/context.h>
 #include <Ke/idle.h>
 #include <Ke/log.h>
@@ -71,6 +72,8 @@ void KiStartKernel(void)
 
 	KeSetTimer(&timer_a, HalReadSchedClock() + 1000000000ULL);
 	KeSetTimer(&timer_b, HalReadSchedClock() + 1000000000ULL);
+
+	HalSmpStartProcessors();
 
 	KeCPUIdleLoop();
 }

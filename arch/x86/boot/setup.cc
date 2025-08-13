@@ -9,6 +9,7 @@
 #include <Hal/mm.h>
 #include <Hal/page_tables.h>
 #include <Hal/percpu.h>
+#include <Hal/smpboot.h>
 #include <Ke/console.h>
 #include <Ke/log.h>
 #include <Ki/start_kernel.h>
@@ -111,6 +112,10 @@ static void block_memory(unsigned long start, unsigned long end)
 	num_blockers++;
 }
 
+static constexpr unsigned long TRAMPOLINE_MAX_ADDR = 0xff000UL;
+
+unsigned long HalTrampolineAddress = 0;
+
 static int alloc_index;
 static unsigned long alloc_wmark;
 
@@ -123,6 +128,11 @@ static void free_memory_to_page_allocator(unsigned long start, unsigned long end
 {
 	start = PGALIGN_UP(start);
 	end = PGALIGN_DOWN(end);
+	if (!HalTrampolineAddress&& start <= TRAMPOLINE_MAX_ADDR) {
+		HalTrampolineAddress = start;
+		KePrintf("Allocated trampoline page at 0x%tx\n", start);
+		start += PAGE_SIZE;
+	}
 	KePrintf("Freeing memory range [0x%tx - 0x%tx]\n", start, end);
 	while (start < end) {
 		MMPFN *pfn = MmGetPFNForPhys(start);
