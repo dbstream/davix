@@ -220,3 +220,109 @@ unsigned long long HalReadSchedClock(void)
 	return atomic_load_relaxed(&jiffies) * 1000000ULL;
 }
 
+static unsigned int tsc_sync_cpus = 0;
+
+static unsigned int tsc_sync_turn;
+
+static unsigned long long tsc_sync_last_seen;
+static unsigned long long tsc_sync_delta;
+
+static bool tsc_sync_done;
+
+static tsc2ns_data tsc_sync_shared_tsc2ns;
+
+/**
+ * HalSynchronizeTSC - play the TSC synchronization game.
+ * @control: true for control CPU, false for target CPU
+ */
+void HalSynchronizeTSC(bool control)
+{
+	if (!HalUseTSC)
+		return;
+
+	if (control) {
+		tsc_sync_turn = 0;
+		tsc_sync_last_seen = 0;
+		tsc_sync_delta = 0;
+		tsc_sync_done = false;
+		read_tsc_conv(&tsc_sync_shared_tsc2ns);
+	}
+
+	/*
+	 * Add ourselves to the tsc_sync_cpus counter.
+	 */
+	unsigned int index = atomic_fetch_inc(&tsc_sync_cpus, _MO_AcqRel);
+	if (index != 1) {
+		/*
+		 * Wait for the other CPU to join us.
+		 */
+		while (atomic_load_acquire(&tsc_sync_cpus) != 2)
+			barrier();
+	}
+
+	unsigned int other = 1 - index;
+
+	unsigned long long tstart = rdtsc_strong();
+	unsigned long long tend = tstart + 10 * tsc_khz;
+
+	for (;;) {
+		/*
+		 * Wait for it to become my turn.
+		 */
+		while (atomic_load_acquire(&tsc_sync_turn) != index)
+			barrier();
+
+		unsigned long long rawtsc = rdtsc_strong();
+		unsigned long long tsc = rawtsc;
+		if (!control)
+			tsc += tsc_sync_delta;
+		/*
+		 * Test if the other CPU is ahead of us.  Modify tsc_sync_delta
+		 * appropriately if it is.
+		 */
+		if (tsc < tsc_sync_last_seen) {
+			if (control)
+				tsc_sync_delta -= tsc_sync_last_seen - tsc;
+			else
+				tsc_sync_delta = tsc_sync_last_seen - rawtsc;
+		} else {
+			tsc_sync_last_seen = tsc;
+		}
+
+		if (tsc_sync_done)
+			goto other_cpu_exited;
+		if (rawtsc >= tend)
+			break;
+		/*
+		 * Make it the next CPU's turn.
+		 */
+		atomic_store_release(&tsc_sync_turn, other);
+	}
+	/*
+	 * Signal the TSC synch is done and hand over to the other CPU one last
+	 * time.
+	 */
+	tsc_sync_done = true;
+	atomic_store_release(&tsc_sync_turn, other);
+
+other_cpu_exited:
+
+	/*
+	 * Exit TSC synchronization.
+	 */
+	index = atomic_dec_fetch(&tsc_sync_cpus, _MO_AcqRel);
+	/*
+	 * Wait for the other CPU to exit TSC synchronization as well.
+	 */
+	while (index != 0) {
+		barrier();
+		index = atomic_load_relaxed(&tsc_sync_cpus);
+	}
+
+	if (!control) {
+		tsc2ns_data conv = tsc_sync_shared_tsc2ns;
+		conv.offset += tsc_sync_delta;
+		set_local_tsc2ns(conv);
+	}
+}
+

@@ -21,3 +21,5 @@ unsigned long long HalHPETNanosToCounter(unsigned long long nsecs);
 
 unsigned long long HalHPETCounterToNanos(unsigned long long counter);
 
+void HalSynchronizeTSC(bool control);
+

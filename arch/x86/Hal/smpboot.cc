@@ -9,6 +9,7 @@
 #include <Hal/percpu.h>
 #include <Hal/smpboot.h>
 #include <Ke/context.h>
+#include <Ke/idle.h>
 #include <Ke/log.h>
 #include <Ke/smp.h>
 #include <Ke/time.h>
@@ -24,6 +25,7 @@
 #include <asm/pg_bits.h>
 #include <davix/bug.h>
 #include <string.h>
+#include "time/internal.h"
 
 extern "C" char trampoline_page[];
 extern "C" char trampoline_page_end[];
@@ -94,6 +96,7 @@ void HalPrepareSMPBringup(void)
 }
 
 static bool sync_point_0;
+static bool sync_point_1;
 
 static void udelay(usec_t us)
 {
@@ -129,8 +132,24 @@ static bool startup_processor_via_init_sipi(unsigned int cpu, unsigned int vecto
 
 extern "C" void HalStartupAdditionalProcessor(void)
 {
-	asm volatile("mfence");
-	asm volatile("movl $1, (%0); cli; hlt" :: "r"(&sync_point_0));
+	smp_mb();
+	/*
+	 * Signal to startup_processor_via_init_sipi that we are alive.
+	 */
+	atomic_store_relaxed(&sync_point_0, true);
+	do	/*
+		 * Wait for HalTryToStartProcessor to set sync_point_1 to true.
+		 */
+		smp_spinwait_hint();
+	while (!atomic_load_relaxed(&sync_point_1));
+	/*
+	 * Synchronize the TSC.
+	 */
+	HalSynchronizeTSC(false);
+	/*
+	 * Enter the CPU idle loop now.
+	 */
+	KeCPUIdleLoop();
 }
 
 extern "C" { unsigned long __ap_startup_rsp; }
@@ -164,12 +183,28 @@ bool HalTryToStartProcessor(unsigned int cpu)
 
 	currently_booting = cpu;
 	sync_point_0 = false;
+	sync_point_1 = false;
 
+	/*
+	 * Startup the processor via INIT-SIPI.  Returns false if startup fails.
+	 */
 	if (!startup_processor_via_init_sipi(cpu, HalTrampolineAddress >> 12)) {
 		KePrintf("HalTryToStartProcessor: failed to startup CPU%u via INIT-SIPI sequence!\n", cpu);
 		smpboot_killed = true;
 		return false;
 	}
+
+	/*
+	 * If startup_processor_via_init_sipi returns true we have observed
+	 * sync_point_0 being true, which means that the other CPU is waiting
+	 * for us to tell it to continue.
+	 */
+	atomic_store_relaxed(&sync_point_1, true);
+
+	/*
+	 * Synchronize the TSC now.
+	 */
+	HalSynchronizeTSC(true);
 
 	return true;
 }
