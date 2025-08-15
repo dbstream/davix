@@ -96,6 +96,7 @@
 	swapgs
 	call \user_func
 	swapgs
+	jmp 2f
 1:
 	call \kernel_func
 2:
