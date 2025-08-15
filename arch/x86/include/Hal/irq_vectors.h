@@ -21,6 +21,7 @@
  * The rest of the vectors are managed dynamically.
  *
  * System vectors:
+ *	0xfd	253	TLB invalidation
  *	0xfe	254	Local APIC Timer
  *	0xff	255	Spurious APIC Interrupt
  */
@@ -29,7 +30,8 @@
 
 #define IRQ_VECTOR_INT80h		0x80
 
-#define IRQ_VECTOR_SYSTEM_FIRST 	0xfe
+#define IRQ_VECTOR_SYSTEM_FIRST 	0xfd
+#define IRQ_VECTOR_TLBFLUSH		0xfd
 #define IRQ_VECTOR_APIC_TIMER		0xfe
 #define IRQ_VECTOR_APIC_SPURIOUS	0xff
 

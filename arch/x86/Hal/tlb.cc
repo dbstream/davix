@@ -5,9 +5,15 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include <Hal/irq_vectors.h>
+#include <Hal/smp.h>
 #include <Hal/tlb.h>
 #include <Ke/context.h>
+#include <Ke/smp.h>
+#include <Ke/spinlock.h>
 #include <Mm/page_alloc.h>
+#include <asm/apic-def.h>
+#include <asm/apic.h>
 #include <asm/cpufeature.h>
 #include <asm/creg_access.h>
 #include <asm/creg_bits.h>
@@ -66,10 +72,31 @@ static void do_flush_tlb(const TLB_DATA *tlb)
 	}
 }
 
+static KeSpinlock tlb_flush_lock;
+static TLB_DATA *tlb_flush_data;
+static unsigned int tlb_flush_nrcpus;
+
 static void flush_tlb_on_all_cpus(TLB_DATA *tlb)
 {
-	// FIXME: make this SMP
+	tlb_flush_lock.lock();
+	tlb_flush_data = tlb;
+	tlb_flush_nrcpus = 0;
+
+	unsigned int nr_ipi = 0;
+	unsigned int self = HalCurrentProcessor();
+	for (unsigned int cpu = 0; cpu < keProcessorCount; cpu++) {
+		if (cpu == self || !KeCPUOnline(cpu))
+			continue;
+		apic_send_IPI(
+			APIC_DM_FIXED | IRQ_VECTOR_TLBFLUSH,
+			halCpuToApic[cpu]
+		);
+		nr_ipi++;
+	}
 	do_flush_tlb(tlb);
+	while (atomic_load_relaxed(&tlb_flush_nrcpus) != nr_ipi)
+		barrier();
+	tlb_flush_lock.unlock();
 }
 
 void HalEndTLB(TLB_DATA *tlb)
@@ -82,5 +109,11 @@ void HalEndTLB(TLB_DATA *tlb)
 	MMPFN *pfn;
 	while ((pfn = tlb->page_table_pages.pop_front()))
 		MmFreePage(pfn);
+}
+
+void HalHandleTLBFlushIPI(void)
+{
+	do_flush_tlb(tlb_flush_data);
+	atomic_inc_fetch(&tlb_flush_nrcpus, _MO_Release);
 }
 

@@ -9,6 +9,7 @@
 #include <Hal/irq_vectors.h>
 #include <Hal/jiffies.h>
 #include <Hal/smp.h>
+#include <Hal/tlb.h>
 #include <Ke/context.h>
 #include <Ke/irq.h>
 #include <Ke/log.h>
@@ -61,6 +62,13 @@ void HalHandleSysvec(unsigned int vector)
 		HalAcknowledgeInterrupt();
 		KeHandleLocalTimerInterrupt();
 		return;
+	}
+
+	switch(vector) {
+	case IRQ_VECTOR_TLBFLUSH:
+		HalAcknowledgeInterrupt();
+		HalHandleTLBFlushIPI();
+		break;
 	}
 }
 

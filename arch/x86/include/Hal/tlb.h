@@ -63,3 +63,5 @@ static inline void HalFlushAndFreeTableTLB(TLB_DATA *tlb,
 	tlb->page_table_pages.push_back(page);
 }
 
+void HalHandleTLBFlushIPI(void);
+
