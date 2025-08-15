@@ -8,3 +8,5 @@
 
 void init_idt(void);
 
+void load_idt_table(void);
+

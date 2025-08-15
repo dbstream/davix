@@ -44,7 +44,7 @@ static void set_idt_entry(int idx, void *handler, int ist, int dpl)
 	idt_table[idx].reserved = 0;
 }
 
-static void load_idt_table(void)
+void load_idt_table(void)
 {
 	segment_ptr ptr = { 0xfff, (uintptr_t) idt_table };
 	asm volatile("lidt %0" :: "m"(ptr) : "memory");

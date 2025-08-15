@@ -225,3 +225,10 @@ void HalInitializeLocalAPIC(void)
 	setup_timer_periodic();
 }
 
+void HalInitializeLocalAPICNonBSP(void)
+{
+	setup_apic_base();
+	reset_apic();
+	setup_timer_periodic();
+}
+

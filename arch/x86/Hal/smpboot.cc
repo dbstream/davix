@@ -4,9 +4,11 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include <Hal/interrupt.h>
 #include <Hal/mm.h>
 #include <Hal/page_tables.h>
 #include <Hal/percpu.h>
+#include <Hal/smp.h>
 #include <Hal/smpboot.h>
 #include <Ke/context.h>
 #include <Ke/idle.h>
@@ -20,11 +22,13 @@
 #include <asm/clear_page.h>
 #include <asm/cpufeature.h>
 #include <asm/creg_access.h>
+#include <asm/idt.h>
 #include <asm/msraccess.h>
 #include <asm/msr_bits.h>
 #include <asm/pg_bits.h>
 #include <davix/bug.h>
 #include <string.h>
+#include "irq/internal.h"
 #include "time/internal.h"
 
 extern "C" char trampoline_page[];
@@ -97,6 +101,9 @@ void HalPrepareSMPBringup(void)
 
 static bool sync_point_0;
 static bool sync_point_1;
+static bool sync_point_2;
+static bool sync_point_3;
+static bool sync_point_4;
 
 static void udelay(usec_t us)
 {
@@ -146,9 +153,26 @@ extern "C" void HalStartupAdditionalProcessor(void)
 	 * Synchronize the TSC.
 	 */
 	HalSynchronizeTSC(false);
+
+	load_idt_table();
+	HalInitializeLocalAPICNonBSP();
+
+	/*
+	 * Signal to HalTryToStartProcessor that it can proceed to mark us
+	 * online.
+	 */
+	atomic_store_release(&sync_point_2, true);
+	do	/*
+		 * Wait for HalTryToStartProcessor to let us continue.
+		 */
+		smp_spinwait_hint();
+	while (!atomic_load_acquire(&sync_point_3));
+	atomic_store_release(&sync_point_4, true);
 	/*
 	 * Enter the CPU idle loop now.
 	 */
+	HalEnableRawIRQs();
+	KePrintf("Hello from CPU%u!\n", HalCurrentProcessor());
 	KeCPUIdleLoop();
 }
 
@@ -184,6 +208,9 @@ bool HalTryToStartProcessor(unsigned int cpu)
 	currently_booting = cpu;
 	sync_point_0 = false;
 	sync_point_1 = false;
+	sync_point_2 = false;
+	sync_point_3 = false;
+	sync_point_4 = false;
 
 	/*
 	 * Startup the processor via INIT-SIPI.  Returns false if startup fails.
@@ -205,6 +232,24 @@ bool HalTryToStartProcessor(unsigned int cpu)
 	 * Synchronize the TSC now.
 	 */
 	HalSynchronizeTSC(true);
+
+	/*
+	 * Wait for the target CPU to be ready for onlining.
+	 */
+	while (!atomic_load_acquire(&sync_point_2))
+		smp_spinwait_hint();
+
+	/*
+	 * Mark the CPU online.  Processor bringup is now done.
+	 */
+	KeSetCPUOnline(cpu);
+	atomic_store_release(&sync_point_3, true);
+
+	do	/*
+		 * Make sure the target CPU sees sync_point_3 == true.
+		 */
+		smp_spinwait_hint();
+	while (!atomic_load_relaxed(&sync_point_4));
 
 	return true;
 }

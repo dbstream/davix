@@ -10,3 +10,5 @@ void HalInitializeIRQSubsystem(void);
 
 void HalInitializeLocalAPIC(void);
 
+void HalInitializeLocalAPICNonBSP(void);
+
