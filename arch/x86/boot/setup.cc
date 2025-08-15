@@ -516,10 +516,11 @@ void HalStartKernel(void *multiboot_info, unsigned long kernel_load_offset,
 	if (x86_max_phys_addr < max_supported_ram)
 		max_supported_ram = x86_max_phys_addr;
 
+	KiInitializeEarlySubsystems();
+
 	if (io_inb(0xe9) == 0xe9)
 		KeRegisterConsole(&debugcon);
 
-	KiInitializeEarlySubsystems();
 	init_idt();
 
 	KePrintf("HalStartKernel: multiboot_info=%p, load_offset=0x%lx\n",

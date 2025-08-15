@@ -8,11 +8,13 @@
 #include <Hal/time.h>
 #include <Ke/console.h>
 #include <Ke/log.h>
-#include <Ke/rcu.h>
+#include <Ke/spinlock.h>
 #include <Ki/log.h>
 #include <davix/atomic.h>
 #include <davix/export.h>
 #include <davix/vsnprintf.h>
+
+static KeIRQSpinlock console_lock;
 
 static CONSOLE *console_list;
 
@@ -22,11 +24,10 @@ static CONSOLE *console_list;
  */
 void KeRegisterConsole(CONSOLE *console)
 {
-	console->pNext = atomic_load_acquire(&console_list);
-
-	while (!atomic_cmpxchg_weak(&console_list, &console->pNext, console,
-			_MO_AcqRel, _MO_Acquire))
-		;
+	console_lock.lock();
+	console->pNext = console_list;
+	console_list = console;
+	console_lock.unlock();
 }
 
 /**
@@ -37,15 +38,13 @@ void KePuts(const char *str)
 {
 	unsigned long long usec = HalReadSchedClock() / 1000;
 
-	KeRcuLock();
-	CONSOLE *con = atomic_load_acquire(&console_list);
-
+	console_lock.lock();
+	CONSOLE *con = console_list;
 	while(con) {
 		con->putString(con, str, usec);
 		con = con->pNext;
 	}
-
-	KeRcuUnlock();
+	console_lock.unlock();
 }
 EXPORT_SYMBOL(KePuts)
 
@@ -71,6 +70,8 @@ EXPORT_SYMBOL(KePrintf)
  */
 void KiBeginPanicLogging(void)
 {
+	console_lock.init();
+
 	CONSOLE **pThis = &console_list;
 	CONSOLE *con = *pThis;
 	while(con) {
