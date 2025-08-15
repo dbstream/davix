@@ -23,7 +23,6 @@ static DEFINE_PERCPU(DPC_List, kiLocalDPCList);
 HAL_PERCPU_CALLBACK(cpu)
 {
 	DPC_List *dpc_list = HalPtrPerCPU(kiLocalDPCList, cpu);
-	KePrintf("dpc_list=%p\n", dpc_list);
 	dpc_list->init();
 
 	/*
