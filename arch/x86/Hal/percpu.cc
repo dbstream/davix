@@ -10,6 +10,8 @@
 #include <Mm/vmap.h>
 #include <string.h>
 
+struct KTHREAD;
+
 namespace Hal {
 	unsigned long percpu_offsets[CONFIG_MAX_NR_CPUS];
 }
@@ -40,9 +42,11 @@ void HalInitializePerCPUVariables(unsigned int cpu)
 struct percpu_fixed {
 	unsigned long self_ptr;
 	unsigned int cpu;
-	char pad1[28];
-	unsigned long stack_guard_val;
+	char pad1[4];
+	KTHREAD *thread;
 	char pad2[16];
+	unsigned long stack_guard_val;
+	char pad3[16];
 };
 
 /**

@@ -1,0 +1,5 @@
+# Sources for Ex/
+# Copyright (C) 2025  dbstream
+
+kobjs += thread.o
+

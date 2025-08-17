@@ -153,7 +153,14 @@ __pcpu_fixed:
 	.size __hal_current_processor, 4
 __hal_current_processor:	.long 0
 /* %gs:12 */
-	.fill 28, 1, 0	/* reserve space until the stack guard value */
+	.fill 4, 1, 0
+/* %gs:16 */
+	.globl __hal_current_thread
+	.type __hal_current_thread, @object
+	.size __hal_current_thread, 8
+__hal_current_thread:		.quad 0
+/* %gs:24 */
+	.fill 16, 1, 0	/* reserve space until the stack guard value */
 /* %gs:40 */
 	.globl __stack_guard_val
 	.type __stack_guard_val, @object

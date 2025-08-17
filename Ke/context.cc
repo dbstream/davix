@@ -10,6 +10,7 @@
 #include <Ke/context.h>
 #include <Ke/dpc.h>
 #include <Ke/irq.h>
+#include <Ke/sched.h>
 #include <davix/atomic.h>
 #include <davix/bug.h>
 #include <davix/export.h>
@@ -42,7 +43,7 @@ HAL_PERCPU_CALLBACK(cpu)
 
 void KeDispatchPendingPreemption(void)
 {
-	BUG(); // Not yet implemented.
+	KeReschedule();
 }
 EXPORT_SYMBOL(KeDispatchPendingPreemption)
 

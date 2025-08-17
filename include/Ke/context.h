@@ -101,6 +101,17 @@ static inline void KeSetPendingPreemption(void)
 }
 
 /**
+ * KeClearPendingPreemption - clear the flag indicating a pending preemption
+ * event on the current processor.
+ */
+static inline void KeClearPendingPreemption(void)
+{
+	unsigned int cnt = HalReadPerCPU(kiProcessorContext.preemption_counter);
+	cnt |= KI_CONTEXT_COUNTER_EVENT_NOT_PENDING;
+	HalWritePerCPU(kiProcessorContext.preemption_counter, cnt);
+}
+
+/**
  * KeDisableDPCs - disable deferred procedure calls (DPCs) on the current CPU.
  */
 static inline void KeDisableDPCs(void)

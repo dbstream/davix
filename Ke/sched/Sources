@@ -1,0 +1,5 @@
+# Sources for Ke/sched/
+# Copyright (C) 2025  dbstream
+
+kobjs += sched.o
+

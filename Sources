@@ -5,6 +5,7 @@ kobjs += lib/
 
 kobjs += acpi/
 kobjs += arch/$(ARCH)/
+kobjs += Ex/
 kobjs += Ke/
 kobjs += Mm/
 

@@ -9,6 +9,7 @@ kobjs += init.o
 kobjs += mminit.o
 kobjs += percpu.o
 kobjs += smpboot.o
+kobjs += thread.o
 kobjs += tlb.o
 kobjs += trampoline.o
 

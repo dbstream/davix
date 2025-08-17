@@ -15,6 +15,7 @@
 #include <Ke/log.h>
 #include <Ke/smp.h>
 #include <Ke/time.h>
+#include <Ki/sched.h>
 #include <Mm/page_alloc.h>
 #include <Mm/vmap.h>
 #include <asm/apic-def.h>
@@ -168,6 +169,9 @@ extern "C" void HalStartupAdditionalProcessor(void)
 		smp_spinwait_hint();
 	while (!atomic_load_acquire(&sync_point_3));
 	atomic_store_release(&sync_point_4, true);
+
+	KiInitializeSchedulerOnSecondaryProcessor();
+
 	/*
 	 * Enter the CPU idle loop now.
 	 */

@@ -180,6 +180,72 @@ asm_irq_common:
 	.cfi_endproc
 	.size asm_irq_common, . - asm_irq_common
 
+	/**
+	 * asm_switch_thread - switch to another KTHREAD.
+	 * @%rdi: previous KTHREAD
+	 * @%rsi: next KTHREAD
+	 * Returns the previous KTHREAD in %rax.
+	 */
+	.globl asm_switch_thread
+	.type asm_switch_thread, @function
+	.balign 64
+asm_switch_thread:
+	.cfi_startproc
+	/* Push registers. */
+	XPUSHQ(r15)
+	XPUSHQ(r14)
+	XPUSHQ(r13)
+	XPUSHQ(r12)
+	XPUSHQ(rbx)
+	XPUSHQ(rbp)
+
+	/* Store the old stack pointer in the previous KTHREAD. */
+	movq %rsp, (%rdi)
+
+	/* Load the new stack pointer from the next KTHREAD. */
+	movq (%rsi), %rsp
+
+	/* Store the old task in %rax. */
+	movq %rdi, %rax
+
+	/* Pop registers. */
+	XPOPQ(rbp)
+	XPOPQ(rbx)
+	XPOPQ(r12)
+	XPOPQ(r13)
+	XPOPQ(r14)
+	XPOPQ(r15)
+
+	/* Return with the old task in %rax. */
+	ret
+	.cfi_endproc
+	.size asm_switch_thread, . - asm_switch_thread
+
+	/**
+	 * asm_ret_from_new_thread - return from a new KTHREAD.
+	 * @%r12: 'entrypoint' argument to HalInitializeThread
+	 * @%r13: 'arg' argument to HalInitializeThread
+	 * @%rax: previous KTHREAD
+	 */
+	.globl asm_ret_from_new_thread
+	.type asm_ret_from_new_thread, @function
+	.balign 8
+asm_ret_from_new_thread:
+	.cfi_startproc
+	.cfi_undefined rip
+	movq %rax, %rdi
+	movq %r12, %rsi
+	movq %r13, %rdx
+
+	call HalReturnFromNewThread
+
+	POP_ENTRY_REGS
+
+	addq $8, %rsp
+	iretq
+	.cfi_endproc
+	.size asm_ret_from_new_thread, . - asm_ret_from_new_thread
+
 	.section ".rodata", "a", @progbits
 
 .macro emit_idtentry_vector_array_entry i

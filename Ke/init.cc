@@ -4,14 +4,19 @@
  * Kernel initialization.
  */
 #include <Acpi/setup.h>
+#include <Ex/thread.h>
 #include <Hal/percpu.h>
 #include <Hal/smpboot.h>
 #include <Ke/context.h>
 #include <Ke/idle.h>
 #include <Ke/log.h>
+#include <Ke/sched.h>
+#include <Ke/thread.h>
 #include <Ke/timer.h>
+#include <Ki/sched.h>
 #include <Ki/start_kernel.h>
 #include <Mm/pool.h>
+#include <davix/bug.h>
 
 #define stringize(macro) stringize_(macro)
 #define stringize_(macro) #macro
@@ -54,6 +59,8 @@ static void timer_b_func(KTIMER *timer)
 static KTIMER timer_a;
 static KTIMER timer_b;
 
+static void start_init_thread(void *arg);
+
 /**
  * KiStartKernel - start the kernel.
  */
@@ -73,8 +80,33 @@ void KiStartKernel(void)
 	KeSetTimer(&timer_a, HalReadSchedClock() + 1000000000ULL);
 	KeSetTimer(&timer_b, HalReadSchedClock() + 1000000000ULL);
 
+	KiInitializeScheduler();
 	HalSmpStartProcessors();
 
+	ETHREAD *init_thread;
+	OSSTATUS status = ExCreateThread(
+		&init_thread,
+		start_init_thread,
+		nullptr
+	);
+
+	if (!OS_SUCCESS(status))
+		KePanic("Failed to create init thread: %d\n", status);
+
+	BUG_ON(!ExWakeThread(init_thread));
+
 	KeCPUIdleLoop();
+}
+
+static void start_init_thread(void *arg)
+{
+	(void) arg;
+
+	KePrintf("Hello from init thread!\n");
+
+	KeDisablePreemption();
+	KeSetCurrentState(KTHREAD_ZOMBIE);
+	KeReschedule();
+	KePanic("KeReschedule() returned!");
 }
 

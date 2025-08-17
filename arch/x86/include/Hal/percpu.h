@@ -47,6 +47,24 @@ static inline void write__seg_gs [[gnu::always_inline]] (T *ptr, T value)
 	}
 }
 
+template<class T>
+static inline T exchange__seg_gs [[gnu::always_inline]] (T *ptr, T value)
+{
+	if constexpr(sizeof(T) == 1) {
+		asm volatile("xchgb %0, %%gs:%1" : "+r"(value) : "m"(*ptr) : "memory");
+	} else if constexpr(sizeof(T) == 2) {
+		asm volatile("xchgw %0, %%gs:%1" : "+r"(value) : "m"(*ptr) : "memory");
+	} else if constexpr(sizeof(T) == 4) {
+		asm volatile("xchgl %0, %%gs:%1" : "+r"(value) : "m"(*ptr) : "memory");
+	} else if constexpr(sizeof(T) == 8) {
+		asm volatile("xchgq %0, %%gs:%1" : "+r"(value) : "m"(*ptr) : "memory");
+	} else {
+		static_assert(false, "HalExchangePerCPU not supported for this data type!");
+	}
+
+	return value;
+}
+
 template<class T> using PerCPUStorage = T;
 
 #define DEFINE_PERCPU(type, name) \
@@ -74,6 +92,21 @@ template<class T>
 static inline void HalWritePerCPU(T &storage, T value)
 {
 	Hal::write__seg_gs(&storage, value);
+}
+
+/**
+ * HalExchangePerCPU - atomically exchange a per-CPU variable.
+ * @storage: reference to per-CPU variable storage
+ * @value: new value to store in @storage
+ * Returns the previous value in @storage.
+ *
+ * This function has atomic read-modify-write semantics on the per-CPU variable
+ * location with _MO_AcqRel ordering.
+ */
+template<class T>
+static inline T HalExchangePerCPU(T &storage, T value)
+{
+	return Hal::exchange__seg_gs(&storage, value);
 }
 
 /**
