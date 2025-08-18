@@ -69,6 +69,12 @@ void HalHandleSysvec(unsigned int vector)
 		HalAcknowledgeInterrupt();
 		HalHandleTLBFlushIPI();
 		break;
+	case IRQ_VECTOR_KERNEL_PANIC:
+		[[unlikely]];
+		KePanic("IRQ_VECTOR_KERNEL_PANIC was invoked on CPU%u!",
+			HalCurrentProcessor()
+		);
+		break;
 	}
 }
 

@@ -124,6 +124,9 @@ static void loop_forever(void *arg)
 			asm volatile("" ::: "memory");
 		taskHeartbeatDistr[prio]++;
 		KePrintf("%d\n", prio);
+
+		if (taskHeartbeatDistr[prio] > 20)
+			KePanic("panic test");
 	}
 }
 
