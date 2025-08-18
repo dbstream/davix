@@ -43,6 +43,9 @@ HAL_PERCPU_CALLBACK(cpu)
 
 void KeDispatchPendingPreemption(void)
 {
+	/*
+	 * When DPCs are enabled, we expect to not be preempted.
+	 */
 	BUG_ON(!KeDPCsEnabled());
 	KeReschedule();
 }
@@ -122,6 +125,14 @@ EXPORT_SYMBOL(KeDispatchPendingDPCs)
  */
 bool KeEnqueueDPC(DPC *dpc, void *context)
 {
+	/*
+	 * DPCs cannot be enqueued in a context where DPCs are enabled.  If a
+	 * DPC is enqueued when DPCs are disabled, the DPC counter gets "stuck"
+	 * at zero but no DPCs are ever dispatched until someone disables and
+	 * reenables DPCs, noticing the zero counter.
+	 */
+	BUG_ON(KeDPCsEnabled());
+
 	KeDisableIRQs();
 	if (dpc->on_queue) {
 		KeEnableIRQs();
