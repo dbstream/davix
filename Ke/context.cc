@@ -43,6 +43,7 @@ HAL_PERCPU_CALLBACK(cpu)
 
 void KeDispatchPendingPreemption(void)
 {
+	BUG_ON(!KeDPCsEnabled());
 	KeReschedule();
 }
 EXPORT_SYMBOL(KeDispatchPendingPreemption)
@@ -140,12 +141,16 @@ static DEFINE_PERCPU(unsigned int, kiPendingVector);
 
 void KeDispatchPendingIRQs(void)
 {
+	KeDisablePreemption();
+	KeDisableDPCs();
 	do {
 		KeDisableIRQs();
 		KeClearPendingIRQ();
 		KeHandleInterruptVector(HalReadPerCPU(kiPendingVector));
 	} while (KiEnableIRQsAndTest());
 	HalEnableRawIRQs();
+	KeEnableDPCs();
+	KeEnablePreemption();
 }
 EXPORT_SYMBOL(KeDispatchPendingIRQs)
 
