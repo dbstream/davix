@@ -16,3 +16,15 @@ void HalSendPanicIPI(unsigned int cpu)
 	apic_send_IPI(APIC_DM_FIXED | IRQ_VECTOR_KERNEL_PANIC, apicid);
 }
 
+void HalSendRescheduleIPI(unsigned int cpu)
+{
+	unsigned int apicid = halCpuToApic[cpu];
+	apic_send_IPI(APIC_DM_FIXED | IRQ_VECTOR_RESCHEDULE, apicid);
+}
+
+void HalSendSchedTimerRecalcIPI(unsigned int cpu)
+{
+	unsigned int apicid = halCpuToApic[cpu];
+	apic_send_IPI(APIC_DM_FIXED | IRQ_VECTOR_SCHED_TIMER_DIRTY, apicid);
+}
+

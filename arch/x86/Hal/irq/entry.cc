@@ -75,6 +75,14 @@ void HalHandleSysvec(unsigned int vector)
 			HalCurrentProcessor()
 		);
 		break;
+	case IRQ_VECTOR_RESCHEDULE:
+		HalAcknowledgeInterrupt();
+		KeHandleRescheduleIPI();
+		break;
+	case IRQ_VECTOR_SCHED_TIMER_DIRTY:
+		HalAcknowledgeInterrupt();
+		KeHandleSchedTimerRecalcIPI();
+		break;
 	}
 }
 

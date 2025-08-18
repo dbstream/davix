@@ -10,3 +10,7 @@ void KeHandleInterruptVector(unsigned int vector);
 
 void KeHandleLocalTimerInterrupt(void);
 
+void KeHandleRescheduleIPI(void);
+
+void KeHandleSchedTimerRecalcIPI(void);
+

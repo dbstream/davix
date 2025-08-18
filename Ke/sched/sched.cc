@@ -6,8 +6,12 @@
  * Copyright (C) 2025  dbstream
  */
 #include <Ex/thread.h>
+#include <Hal/ipi.h>
 #include <Hal/percpu.h>
+#include <Hal/smp.h>
 #include <Ke/context.h>
+#include <Ke/dpc.h>
+#include <Ke/irq.h>
 #include <Ke/sched.h>
 #include <Ke/smp.h>
 #include <Ke/spinlock.h>
@@ -104,11 +108,32 @@ struct KSCHEDULER {
 
 	nsec_t new_deadline;
 	bool deadline_dirty;
+
+	DPC timer_recalc_dpc;
+	DPC reschedule_dpc;
 };
 
 static DEFINE_PERCPU(KSCHEDULER, kiScheduler);
 
+void KeHandleSchedTimerRecalcIPI(void)
+{
+	KSCHEDULER *scheduler = HalPtrThisCpu(kiScheduler);
+
+	KeEnqueueDPC(&scheduler->timer_recalc_dpc, nullptr);
+}
+
+void KeHandleRescheduleIPI(void)
+{
+	KSCHEDULER *scheduler = HalPtrThisCpu(kiScheduler);
+
+	KeEnqueueDPC(&scheduler->reschedule_dpc, nullptr);
+}
+
 static void handle_preempt_timer(KTIMER *timer);
+
+static void handle_timer_ipi(DPC *dpc, void *context, void *arg1, void *arg2);
+
+static void handle_resched_ipi(DPC *dpc, void *context, void *arg1, void *arg2);
 
 HAL_PERCPU_CALLBACK(cpu)
 {
@@ -126,6 +151,8 @@ HAL_PERCPU_CALLBACK(cpu)
 	sched->current_deadline = NSEC_MAX;
 	sched->new_deadline = 0;
 	sched->deadline_dirty = false;
+	sched->timer_recalc_dpc.init(handle_timer_ipi, nullptr, nullptr);
+	sched->reschedule_dpc.init(handle_resched_ipi, nullptr, nullptr);
 }
 
 static KTHREAD *context_switch(KTHREAD *previous, KTHREAD *next)
@@ -279,13 +306,15 @@ static int do_enqueue_locked(KSCHEDULER *scheduler, KTHREAD *thread)
 	}
 
 	scheduler->cfs_tasks.insert(thread);
-	if (want_preemption)
+	if (want_preemption) {
 		/*
 		 * No further work needed, since we only get here if next_thread
 		 * was set, and, in that case, someone else is setting or has
 		 * set the pending preemption flag already.
 		 */
+		BUG_ON(!scheduler->next_thread);
 		return 0;
+	}
 
 	if (scheduler->next_thread)
 		/*
@@ -338,6 +367,93 @@ static void do_wakeup_local(KTHREAD *thread)
 	}
 
 	scheduler->scheduler_lock.unlock();
+}
+
+static void do_wakeup_remote(KTHREAD *thread, unsigned int cpu)
+{
+	KSCHEDULER *scheduler = HalPtrPerCPU(kiScheduler, cpu);
+	scheduler->scheduler_lock.lock();
+
+	int status = do_enqueue_locked(scheduler, thread);
+	if (status == 1)
+		HalSendSchedTimerRecalcIPI(cpu);
+	else if (status == 2)
+		HalSendRescheduleIPI(cpu);
+
+	scheduler->scheduler_lock.unlock();
+}
+
+static void handle_timer_ipi(DPC *dpc, void *context, void *arg1, void *arg2)
+{
+	(void) dpc;
+	(void) context;
+	(void) arg1;
+	(void) arg2;
+
+	KSCHEDULER *scheduler = HalPtrThisCpu(kiScheduler);
+	scheduler->scheduler_lock.lock();
+
+	if (scheduler->deadline_dirty) {
+		set_sched_timer(scheduler, scheduler->new_deadline);
+		scheduler->deadline_dirty = false;
+	}
+
+	scheduler->scheduler_lock.unlock();
+}
+
+static void handle_resched_ipi(DPC *dpc, void *context, void *arg1, void *arg2)
+{
+	(void) dpc;
+	(void) context;
+	(void) arg1;
+	(void) arg2;
+
+	KeSetPendingPreemption();
+}
+
+/**
+ * select_cpu_for_wakeup - select a CPU for thread wakeup.
+ *
+ * Currently, this selects CPUs one-after-the-other, basically round robining
+ * between CPUs.  This is good because:
+ *
+ * 1. It is very simple to implement.  In the future, it will also be very
+ *    easy to replace with something more competent.
+ *
+ * 2. Since threads are relatively randomly distributed across CPUs,
+ *    concurrency-sensitive codepaths are likely to be exercised by this
+ *    scheduler.
+ */
+static unsigned int select_cpu_for_wakeup(void)
+{
+	static unsigned int counter = 0;
+
+	unsigned int cpu = atomic_load_relaxed(&counter);
+	for (;;) {
+		unsigned int cpu_orig = cpu;
+		while (!KeCPUOnline(cpu)) {
+			cpu++;
+			if (cpu >= keProcessorCount)
+				cpu = 0;
+		}
+
+		unsigned int next = cpu + 1;
+		if (next >= keProcessorCount)
+			next = 0;
+
+		bool status = atomic_cmpxchg(
+			&counter,
+			&cpu_orig,
+			next,
+			_MO_Relaxed,
+			_MO_Relaxed
+		);
+
+		if (status)
+			return cpu;
+
+		cpu = cpu_orig;
+	}
 }
 
 /**
@@ -445,11 +561,12 @@ bool KeWakeThread(KTHREAD *thread)
 	 * Now put it on a runqueue.
 	 */
 
-	/*
-	 * FIXME: we don't migrate threads when waking them up yet.  Instead, we
-	 * always put them on the current processor's runqueue.
-	 */
-	do_wakeup_local(thread);
+	unsigned int target = select_cpu_for_wakeup();
+	if (target == HalCurrentProcessor()) {
+		do_wakeup_local(thread);
+	} else {
+		do_wakeup_remote(thread, target);
+	}
 
 	KeEnablePreemption();
 	return true;
@@ -704,6 +821,7 @@ static void schedule(KSCHEDULER *scheduler)
 		}
 	}
 
+	scheduler->current_thread = next;
 	KTHREAD *previous = context_switch(current, next);
 	KiFinalizeTaskSwitch(previous);
 }

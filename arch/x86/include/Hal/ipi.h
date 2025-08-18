@@ -9,3 +9,7 @@
 
 void HalSendPanicIPI(unsigned int cpu);
 
+void HalSendRescheduleIPI(unsigned int cpu);
+
+void HalSendSchedTimerRecalcIPI(unsigned int cpu);
+

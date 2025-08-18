@@ -21,6 +21,8 @@
  * The rest of the vectors are managed dynamically.
  *
  * System vectors:
+ *	0xfa	250	Reschedule IPI
+ *	0xfb	251	Scheduler timer dirty IPI
  *	0xfc	252	KePanic request vector
  *	0xfd	253	TLB invalidation
  *	0xfe	254	Local APIC Timer
@@ -31,7 +33,9 @@
 
 #define IRQ_VECTOR_INT80h		0x80
 
-#define IRQ_VECTOR_SYSTEM_FIRST		0xfc
+#define IRQ_VECTOR_SYSTEM_FIRST		0xfa
+#define IRQ_VECTOR_RESCHEDULE		0xfa
+#define IRQ_VECTOR_SCHED_TIMER_DIRTY	0xfb
 #define IRQ_VECTOR_KERNEL_PANIC		0xfc
 #define IRQ_VECTOR_TLBFLUSH		0xfd
 #define IRQ_VECTOR_APIC_TIMER		0xfe
