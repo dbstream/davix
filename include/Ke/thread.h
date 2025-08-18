@@ -89,3 +89,5 @@ void KeSetThreadComm(KTHREAD *thread, const char *comm);
 
 void KeSetCurrentState(int state);
 
+void KeSetBasePriority(int prio);
+

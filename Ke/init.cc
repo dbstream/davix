@@ -17,6 +17,7 @@
 #include <Ki/start_kernel.h>
 #include <Mm/pool.h>
 #include <davix/bug.h>
+#include <davix/vsnprintf.h>
 
 #define stringize(macro) stringize_(macro)
 #define stringize_(macro) #macro
@@ -50,9 +51,23 @@ static void timer_a_func(KTIMER *timer)
 	KeSetTimer(timer, HalReadSchedClock() + 1000000000ULL);
 }
 
+static unsigned int taskHeartbeatDistr[10];
+
 static void timer_b_func(KTIMER *timer)
 {
 	KePrintf("KTIMER2 hello!\n");
+	KePrintf("%4u %4u %4u %4u %4u %4u %4u %4u %4u %4u\n",
+		taskHeartbeatDistr[0],
+		taskHeartbeatDistr[1],
+		taskHeartbeatDistr[2],
+		taskHeartbeatDistr[3],
+		taskHeartbeatDistr[4],
+		taskHeartbeatDistr[5],
+		taskHeartbeatDistr[6],
+		taskHeartbeatDistr[7],
+		taskHeartbeatDistr[8],
+		taskHeartbeatDistr[9]
+	);
 	KeSetTimer(timer, HalReadSchedClock() + 5000000000);
 }
 
@@ -98,6 +113,20 @@ void KiStartKernel(void)
 	KeCPUIdleLoop();
 }
 
+static void loop_forever(void *arg)
+{
+	int prio = (int) (unsigned long) arg;
+
+	KeSetBasePriority(prio);
+
+	for (;;) {
+		for (int i = 0; i < 1000000000; i++)
+			asm volatile("" ::: "memory");
+		taskHeartbeatDistr[prio]++;
+		KePrintf("%d\n", prio);
+	}
+}
+
 static void start_init_thread(void *arg)
 {
 	(void) arg;
@@ -105,6 +134,18 @@ static void start_init_thread(void *arg)
 	KePrintf("Hello from init thread!\n");
 
 	KeDisablePreemption();
+
+	for (int i = 0; i < 10; i++) {
+		char comm[32];
+		snprintf(comm, sizeof(comm), "test:%03d", i);
+		ETHREAD *thread;
+		OSSTATUS status = ExCreateThread(&thread, loop_forever, (void *) (unsigned long) i);
+		if (!OS_SUCCESS(status))
+			KePanic("Failed to create thread %s: %d\n", comm, status);
+		ExSetThreadComm(thread, comm);
+		BUG_ON(!ExWakeThread(thread));
+	}
+
 	KeSetCurrentState(KTHREAD_ZOMBIE);
 	KeReschedule();
 	KePanic("KeReschedule() returned!");

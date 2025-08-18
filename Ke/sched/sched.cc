@@ -763,3 +763,89 @@ void KeSetCurrentState(int state)
 	atomic_store(&thread->thread_state, state, _MO_SeqCst);
 }
 
+void KeSetBasePriority(int prio)
+{
+	BUG_ON(prio < KPRIORITY_MIN);
+	BUG_ON(prio > KPRIORITY_MAX);
+	KTHREAD *thread = HalCurrentThread();
+
+	/*
+	 * Avoid unnecessary processing if no modification to the base priority
+	 * is being carried out.
+	 */
+	if (thread->base_priority == prio)
+		return;
+
+	KeDisablePreemption();
+	KSCHEDULER *scheduler = HalPtrThisCpu(kiScheduler);
+	scheduler->scheduler_lock.lock();
+
+	int old_prio = thread->current_priority;
+	if (old_prio == prio) {
+		scheduler->scheduler_lock.unlock();
+		KeEnablePreemption();
+		return;
+	}
+
+	thread->base_priority = prio;
+	thread->current_priority = prio;
+
+	nsec_t now = HalReadSchedClock();
+	BUG_ON(now < thread->last_vruntime_update);
+
+	nsec_t elapsed_ns = thread->last_vruntime_update - now;
+	thread->last_vruntime_update = now;
+
+	KTHREAD *first_cfs = nullptr;
+	if (old_prio > KPRIORITY_MAX_CFS) {
+		/*
+		 * Realtime tasks don't track vruntime correctly.  Therefore,
+		 * when a realtime task lowers priority to CFS, set the vruntime
+		 * to the minimum vruntime in the CFS tasks queue.
+		 */
+		first_cfs = scheduler->cfs_tasks.first();
+		if (first_cfs)
+			thread->vruntime = first_cfs->vruntime;
+		else
+			thread->vruntime = 0;
+	}
+
+	if (old_prio <= KPRIORITY_MAX_CFS) {
+		thread->vruntime += vruntime_scale[old_prio] * elapsed_ns;
+	}
+
+	if (prio > KPRIORITY_MAX_CFS) {
+		/*
+		 * Realtime threads are never preempted.
+		 */
+		unset_sched_timer(scheduler);
+	} else if (!scheduler->realtime_tasks.empty()) {
+		/*
+		 * Preempt immediately by a realtime thread.
+		 */
+		unset_sched_timer(scheduler);
+		if (!scheduler->next_thread) {
+			scheduler->next_thread = scheduler->realtime_tasks.pop_front();
+			scheduler->num_realtime--;
+			KeSetPendingPreemption();
+		}
+	} else if (!scheduler->cfs_tasks.empty()) {
+		/*
+		 * Calculate the preemption deadline.
+		 */
+		if (!first_cfs)
+			first_cfs = scheduler->cfs_tasks.first();
+		nsec_t deadline = calc_vruntime_deadline(thread, first_cfs, prio);
+		set_sched_timer(scheduler, deadline);
+	} else {
+		/*
+		 * There are no other threads to execute.
+		 */
+		unset_sched_timer(scheduler);
+	}
+	scheduler->deadline_dirty = false;
+
+	scheduler->scheduler_lock.unlock();
+	KeEnablePreemption();
+}
+
