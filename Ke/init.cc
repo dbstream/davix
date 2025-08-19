@@ -132,7 +132,13 @@ static void start_init_thread(void *arg)
 
 	KePrintf("Hello from init thread!\n");
 
+	KeSetSleepTimeoutNanos(1000000000ULL);
 	KeDisablePreemption();
+
+	KeSetCurrentState(KTHREAD_UNINTERRUPTIBLE | KTHREAD_TIMEOUT_F);
+	KeReschedule();
+
+	KePrintf("Starting worker threads.\n");
 
 	for (int i = 0; i < 10; i++) {
 		char comm[32];

@@ -4,8 +4,16 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include <Ke/sched.h>
 #include <Ke/thread.h>
 #include <string.h>
+
+static void thread_timed_out(KSYSTIMER *timer)
+{
+	KTHREAD *thread = container_of(&KTHREAD::timeout_systimer, timer);
+
+	KeWakeThread(thread);
+}
 
 OSSTATUS KeInitializeThread(
 	KTHREAD *thread,
@@ -20,6 +28,8 @@ OSSTATUS KeInitializeThread(
 	thread->last_vruntime_update = 0;
 	thread->base_priority = KPRIORITY_MIN;
 	thread->current_priority = KPRIORITY_MIN;
+	thread->sleep_timeout = 0;
+	thread->timeout_systimer.init(thread_timed_out);
 	KeSetThreadComm(thread, "(uninitialized)");
 
 	OSSTATUS status = HalInitializeThread(&thread->hal, entrypoint, arg);

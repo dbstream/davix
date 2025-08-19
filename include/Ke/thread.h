@@ -8,6 +8,7 @@
 #pragma once
 
 #include <Hal/thread.h>
+#include <Ke/systimer.h>
 #include <Ke/time.h>
 #include <OS/status.h>
 #include <dsl/avltree.h>
@@ -35,6 +36,8 @@ struct KTHREAD {
 	int base_priority;
 	int current_priority;
 
+	nsec_t sleep_timeout;
+	KSYSTIMER timeout_systimer;
 
 	char comm[32];
 };
@@ -68,6 +71,10 @@ enum : int {
 	 * KTHREAD_ZOMBIE: the thread has died.
 	 */
 	KTHREAD_ZOMBIE			= 5,
+	/*
+	 * KTHREAD_TIMEOUT_F: use the thread's sleep_timeout.
+	 */
+	KTHREAD_TIMEOUT_F		= 8,
 };
 
 static constexpr int KPRIORITY_MIN = 0;
@@ -90,4 +97,8 @@ void KeSetThreadComm(KTHREAD *thread, const char *comm);
 void KeSetCurrentState(int state);
 
 void KeSetBasePriority(int prio);
+
+void KeSetSleepTimeoutNanos(nsec_t ns);
+
+void KeUnsetSleepTimeout(void);
 

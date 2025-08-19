@@ -821,8 +821,21 @@ static void schedule(KSCHEDULER *scheduler)
 		}
 	}
 
+	bool did_set_sleep_timer = false;
+	if (current->thread_state & KTHREAD_TIMEOUT_F) {
+		if (current->sleep_timeout != NSEC_MAX) {
+			did_set_sleep_timer = true;
+			BUG_ON(!KeSetSysTimer(
+				&current->timeout_systimer,
+				current->sleep_timeout
+			));
+		}
+	}
+
 	scheduler->current_thread = next;
 	KTHREAD *previous = context_switch(current, next);
+	if (did_set_sleep_timer)
+		KeUnsetSysTimer(&current->timeout_systimer);
 	KiFinalizeTaskSwitch(previous);
 }
 
@@ -879,6 +892,18 @@ void KeSetCurrentState(int state)
 {
 	KTHREAD *thread = HalCurrentThread();
 	atomic_store(&thread->thread_state, state, _MO_SeqCst);
+}
+
+void KeSetSleepTimeoutNanos(nsec_t ns)
+{
+	KTHREAD *thread = HalCurrentThread();
+	thread->sleep_timeout = HalReadSchedClock() + ns;
+}
+
+void KeUnsetSleepTimeout(void)
+{
+	KTHREAD *thread = HalCurrentThread();
+	thread->sleep_timeout = NSEC_MAX;
 }
 
 void KeSetBasePriority(int prio)
