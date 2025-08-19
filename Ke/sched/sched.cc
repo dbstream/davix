@@ -242,6 +242,31 @@ static int do_enqueue_locked(KSCHEDULER *scheduler, KTHREAD *thread)
 	int current_prio = current->current_priority;
 	int prio = thread->current_priority;
 
+	if (prio <= KPRIORITY_MAX_CFS) {
+		/*
+		 * Clamp vruntime of the task so that it is contained within the
+		 * range [min - 1timeslice, max + 1timeslice]
+		 */
+		KTHREAD *cfsmin = scheduler->cfs_tasks.first();
+		if (cfsmin) {
+			KTHREAD *cfsmax = scheduler->cfs_tasks.last();
+			BUG_ON(!cfsmax);
+			unsigned long long low = cfsmin->vruntime;
+			unsigned long long high = cfsmax->vruntime;
+
+			if (low <= VRUNTIME_PREEMPT)
+				low = 0;
+			else
+				low -= VRUNTIME_PREEMPT;
+			high += VRUNTIME_PREEMPT;
+			if (low > thread->vruntime)
+				thread->vruntime = low;
+			else if (high < thread->vruntime)
+				thread->vruntime = high;
+		} else
+			thread->vruntime = 0;
+	}
+
 	if (current == scheduler->idle_task) {
 		/*
 		 * The idle thread should always be preempted.
