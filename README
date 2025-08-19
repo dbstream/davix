@@ -1,2 +1,15 @@
-rtdavix - more kernel experiments
+rtdavix - rewrite #17923721
+
+# Build instructions
+
+Run `make` and pray that you have a good compiler installed (System `gcc`
+usually works on a Linux host but a `x86_64-elf-` cross-toolchain is
+recommended).
+
+# Instructions for running the kernel
+
+`./run` neatly builds the kernel for you and launches a QEMU virtual machine
+from a rescue `.iso`. `./run --help` shows some options that can be passed to
+the script.
+
 
