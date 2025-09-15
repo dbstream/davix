@@ -10,6 +10,7 @@
 #include <Ke/context.h>
 #include <Ke/idle.h>
 #include <Ke/log.h>
+#include <Ke/mutex.h>
 #include <Ke/sched.h>
 #include <Ke/thread.h>
 #include <Ke/timer.h>
@@ -126,6 +127,33 @@ static void loop_forever(void *arg)
 	}
 }
 
+static KeMutex mutex;
+
+static void mutex_test_thread(void *arg)
+{
+	int n = (int) (unsigned long) arg;
+	KePrintf("Hello from T%d!\n", n);
+
+	KePrintf("T%d: Locking mutex...\n", n);
+	mutex.lock();
+	KePrintf("T%d: locked mutex. Sleeping for 0.2s...\n", n);
+
+	KeDisablePreemption();
+	KeSetSleepTimeoutNanos(200000000ULL);
+	KeSetCurrentState(KTHREAD_UNINTERRUPTIBLE | KTHREAD_TIMEOUT_F);
+	KeReschedule();
+	KeEnablePreemption();
+
+	KePrintf("T%d: unlocking mutex...\n", n);
+	mutex.unlock();
+	KePrintf("T%d: unlocked mutex. Exiting...\n", n);
+
+	KeDisablePreemption();
+	KeSetCurrentState(KTHREAD_ZOMBIE);
+	KeReschedule();
+	KePanic("KeReschedule() returned!");
+}
+
 static void start_init_thread(void *arg)
 {
 	(void) arg;
@@ -145,6 +173,17 @@ static void start_init_thread(void *arg)
 		snprintf(comm, sizeof(comm), "test:%03d", i);
 		ETHREAD *thread;
 		OSSTATUS status = ExCreateThread(&thread, loop_forever, (void *) (unsigned long) i);
+		if (!OS_SUCCESS(status))
+			KePanic("Failed to create thread %s: %d\n", comm, status);
+		ExSetThreadComm(thread, comm);
+		BUG_ON(!ExWakeThread(thread));
+	}
+
+	for (int i = 1; i <= 2; i++) {
+		char comm[32];
+		snprintf(comm, sizeof(comm), "mutextest:%d", i);
+		ETHREAD *thread;
+		OSSTATUS status = ExCreateThread(&thread, mutex_test_thread, (void *) (unsigned long) i);
 		if (!OS_SUCCESS(status))
 			KePanic("Failed to create thread %s: %d\n", comm, status);
 		ExSetThreadComm(thread, comm);

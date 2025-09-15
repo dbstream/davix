@@ -13,9 +13,11 @@ kobjs += context.o
 kobjs += idle.o
 kobjs += init.o
 kobjs += log.o
+kobjs += mutex.o
 kobjs += panic.o
 kobjs += smp.o
 kobjs += spinlock.o
 kobjs += thread.o
 kobjs += timer.o
+kobjs += turnstile.o
 

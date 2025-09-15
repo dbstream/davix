@@ -40,6 +40,9 @@ struct KTHREAD {
 	KSYSTIMER timeout_systimer;
 
 	char comm[32];
+
+	dsl::ListHead wq_entry;
+	bool wq_removed;
 };
 
 enum : int {
@@ -99,6 +102,8 @@ void KeSetCurrentState(int state);
 void KeSetBasePriority(int prio);
 
 void KeSetSleepTimeoutNanos(nsec_t ns);
+
+void KeSetSleepTimeoutNanosAbs(nsec_t ns);
 
 void KeUnsetSleepTimeout(void);
 

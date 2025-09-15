@@ -925,6 +925,12 @@ void KeSetSleepTimeoutNanos(nsec_t ns)
 	thread->sleep_timeout = HalReadSchedClock() + ns;
 }
 
+void KeSetSleepTimeoutNanosAbs(nsec_t ns)
+{
+	KTHREAD *thread = HalCurrentThread();
+	thread->sleep_timeout = ns;
+}
+
 void KeUnsetSleepTimeout(void)
 {
 	KTHREAD *thread = HalCurrentThread();

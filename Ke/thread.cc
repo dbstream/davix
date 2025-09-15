@@ -4,8 +4,10 @@
  *
  * Copyright (C) 2025  dbstream
  */
+#include "OS/status.h"
 #include <Ke/sched.h>
 #include <Ke/thread.h>
+#include <Ki/turnstile.h>
 #include <string.h>
 
 static void thread_timed_out(KSYSTIMER *timer)
@@ -21,6 +23,9 @@ OSSTATUS KeInitializeThread(
 	void *arg
 )
 {
+	if (!KiExpandTurnstilePool())
+		return OS_STATUS_KERNEL_ALLOCATION_FAILED;
+
 	thread->thread_state = KTHREAD_UNINTERRUPTIBLE;
 	thread->running = false;
 	thread->active_wakeup_count = 0;
@@ -33,8 +38,10 @@ OSSTATUS KeInitializeThread(
 	KeSetThreadComm(thread, "(uninitialized)");
 
 	OSSTATUS status = HalInitializeThread(&thread->hal, entrypoint, arg);
-	if (!OS_SUCCESS(status))
+	if (!OS_SUCCESS(status)) {
+		KiShrinkTurnstilePool();
 		return status;
+	}
 
 	return OS_STATUS_SUCCESS;
 }
@@ -42,6 +49,7 @@ OSSTATUS KeInitializeThread(
 void KeDestroyThread(KTHREAD *thread)
 {
 	HalDestroyThread(&thread->hal);
+	KiShrinkTurnstilePool();
 }
 
 void KeInitializeIdleThread(KTHREAD *thread)
