@@ -11,6 +11,7 @@
 #include <Ke/idle.h>
 #include <Ke/log.h>
 #include <Ke/mutex.h>
+#include <Ke/semaphore.h>
 #include <Ke/sched.h>
 #include <Ke/thread.h>
 #include <Ke/timer.h>
@@ -154,6 +155,38 @@ static void mutex_test_thread(void *arg)
 	KePanic("KeReschedule() returned!");
 }
 
+static KeSemaphore sema;
+
+static void sema_wait_thread(void *arg)
+{
+	(void) arg;
+	KePrintf("Hello from sema wait thread!\n");
+
+	KePrintf("Waiting for semaphore...\n");
+	sema.wait();
+	KePrintf("Got semaphore. Exiting...\n");
+
+	KeDisablePreemption();
+	KeSetCurrentState(KTHREAD_ZOMBIE);
+	KeReschedule();
+	KePanic("KeReschedule() returned!\n");
+}
+
+static void sema_signal_thread(void *arg)
+{
+	(void) arg;
+	KePrintf("Hello from sema signal thread!\n");
+
+	KePrintf("Signalling semaphore...\n");
+	sema.signal();
+	KePrintf("Signalled semaphore. Exiting...\n");
+
+	KeDisablePreemption();
+	KeSetCurrentState(KTHREAD_ZOMBIE);
+	KeReschedule();
+	KePanic("KeReschedule() returned!\n");
+}
+
 static void start_init_thread(void *arg)
 {
 	(void) arg;
@@ -187,6 +220,24 @@ static void start_init_thread(void *arg)
 		if (!OS_SUCCESS(status))
 			KePanic("Failed to create thread %s: %d\n", comm, status);
 		ExSetThreadComm(thread, comm);
+		BUG_ON(!ExWakeThread(thread));
+	}
+
+	{
+		ETHREAD *thread;
+		OSSTATUS status = ExCreateThread(&thread, sema_wait_thread, nullptr);
+		if (!OS_SUCCESS(status))
+			KePanic("Failed to create thread sema wait thread: %d\n", status);
+		ExSetThreadComm(thread, "sema wait thread");
+		BUG_ON(!ExWakeThread(thread));
+	}
+
+	{
+		ETHREAD *thread;
+		OSSTATUS status = ExCreateThread(&thread, sema_signal_thread, nullptr);
+		if (!OS_SUCCESS(status))
+			KePanic("Failed to create thread sema signal thread: %d\n", status);
+		ExSetThreadComm(thread, "sema signal thread");
 		BUG_ON(!ExWakeThread(thread));
 	}
 

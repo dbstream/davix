@@ -15,6 +15,7 @@ kobjs += init.o
 kobjs += log.o
 kobjs += mutex.o
 kobjs += panic.o
+kobjs += semaphore.o
 kobjs += smp.o
 kobjs += spinlock.o
 kobjs += thread.o
