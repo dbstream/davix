@@ -7,7 +7,10 @@
  */
 #include <Hal/mm.h>
 #include <Ke/log.h>
+#include <Ke/mutex.h>
+#include <Ke/semaphore.h>
 #include <Ke/spinlock.h>
+#include <Ke/thread.h>
 #include <Mm/pool.h>
 #include <Mm/vmap.h>
 #include <Acpi/setup.h>
@@ -456,9 +459,7 @@ void uacpi_kernel_sleep(uacpi_u64 msec)
  */
 uacpi_handle uacpi_kernel_create_mutex(void)
 {
-	// This is needed for initialization to succeed:
-	static unsigned long x = 1UL;
-	return (void *) x++;
+	return MmNew<KeMutex>();
 }
 
 /**
@@ -467,7 +468,7 @@ uacpi_handle uacpi_kernel_create_mutex(void)
  */
 void uacpi_kernel_free_mutex(uacpi_handle handle)
 {
-	(void) handle;
+	MmDelete((KeMutex *) handle);
 }
 
 /**
@@ -475,9 +476,7 @@ void uacpi_kernel_free_mutex(uacpi_handle handle)
  */
 uacpi_handle uacpi_kernel_create_event(void)
 {
-	// This is needed for initialization to succeed:
-	static unsigned long x = 1UL;
-	return (void *) x++;
+	return MmNew<KeSemaphore>();
 }
 
 /**
@@ -486,7 +485,7 @@ uacpi_handle uacpi_kernel_create_event(void)
  */
 void uacpi_kernel_free_event(uacpi_handle handle)
 {
-	(void) handle;
+	MmDelete((KeSemaphore *) handle);
 }
 
 /**
@@ -494,7 +493,7 @@ void uacpi_kernel_free_event(uacpi_handle handle)
  */
 uacpi_thread_id uacpi_kernel_get_thread_id(void)
 {
-	return (void *) 1UL;
+	return HalCurrentThread();
 }
 
 /**
@@ -509,10 +508,23 @@ uacpi_thread_id uacpi_kernel_get_thread_id(void)
  */
 uacpi_status uacpi_kernel_acquire_mutex(uacpi_handle handle, uacpi_u16 timeout)
 {
-	(void) handle;
-	(void) timeout;
-	// FIXME: this is a stub.
-	return UACPI_STATUS_OK;
+	KeMutex *mutex = (KeMutex *) handle;
+	OSSTATUS status;
+
+	if (timeout == 0)
+		status = mutex->trylock();
+	else if (timeout < 0xffff)
+		status = mutex->lock_timeout(1000000ULL * timeout);
+	else {
+		mutex->lock();
+		status = OS_STATUS_SUCCESS;
+	}
+
+	if (OS_SUCCESS(status)) {
+		[[likely]];
+		return UACPI_STATUS_OK;
+	} else
+		return UACPI_STATUS_TIMEOUT;
 }
 
 /**
@@ -521,8 +533,8 @@ uacpi_status uacpi_kernel_acquire_mutex(uacpi_handle handle, uacpi_u16 timeout)
  */
 void uacpi_kernel_release_mutex(uacpi_handle handle)
 {
-	(void) handle;
-	// FIXME: this is a stub.
+	KeMutex *mutex = (KeMutex *) handle;
+	mutex->unlock();
 }
 
 /**
@@ -537,10 +549,19 @@ void uacpi_kernel_release_mutex(uacpi_handle handle)
  */
 uacpi_bool uacpi_kernel_wait_for_event(uacpi_handle handle, uacpi_u16 timeout)
 {
-	(void) handle;
-	(void) timeout;
-	// FIXME: this is a stub.
-	return UACPI_TRUE;
+	KeSemaphore *sema = (KeSemaphore *) handle;
+	OSSTATUS status;
+
+	if (timeout == 0)
+		status = sema->trywait();
+	else if (timeout < 0xffff)
+		status = sema->wait_timeout(1000000ULL * timeout);
+	else {
+		sema->wait();
+		status = OS_STATUS_SUCCESS;
+	}
+
+	return OS_SUCCESS(status) ? UACPI_TRUE : UACPI_FALSE;
 }
 
 /**
@@ -549,8 +570,8 @@ uacpi_bool uacpi_kernel_wait_for_event(uacpi_handle handle, uacpi_u16 timeout)
  */
 void uacpi_kernel_signal_event(uacpi_handle handle)
 {
-	(void) handle;
-	// FIXME: this is a stub.
+	KeSemaphore *sema = (KeSemaphore *) handle;
+	sema->signal();
 }
 
 /**
@@ -559,8 +580,13 @@ void uacpi_kernel_signal_event(uacpi_handle handle)
  */
 void uacpi_kernel_reset_event(uacpi_handle handle)
 {
-	(void) handle;
-	// FIXME: this is a stub.
+	/*
+	 * note: sema->reset() is really really bad to call if there are
+	 * concurrent waits and signals going on.  Since AML is unknown
+	 * code, we should ideally not trust it to be correct wrt this.
+	 */
+	KeSemaphore *sema = (KeSemaphore *) handle;
+	sema->reset();
 }
 
 /**
@@ -623,10 +649,7 @@ uacpi_status uacpi_kernel_uninstall_interrupt_handler(
  */
 uacpi_handle uacpi_kernel_create_spinlock(void)
 {
-	KeIRQSpinlock *lock = MmNew<KeIRQSpinlock>();
-	if (lock)
-		lock->init();
-	return lock;
+	return MmNew<KeIRQSpinlock>();
 }
 
 /**

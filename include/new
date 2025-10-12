@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: GPL-3.0
+/*
+ * File: include/new
+ * Placement new operator.
+ *
+ * Copyright (C) 2025  dbstream
+ *
+ * This file should not exist; it is bad design that placement new needs to be
+ * declared in order for code which uses placement new to compile.
+ */
+#pragma once
+
+inline void *operator new(unsigned long size, void *ptr)
+{
+	(void) size;
+	return ptr;
+}
+
