@@ -87,7 +87,7 @@ provide NO_REBOOT "y"
 provide FIRMWARE "UEFI"
 provide QSMP "1"
 provide QMACHINE "pc"
-provide BOOTLOADER "grub"
+provide BOOTLOADER "limine"
 
 # Parse the command line arguments.
 while true; do
