@@ -2,4 +2,5 @@
 # Copyright (C) 2025  dbstream
 
 kobjs += handle.o
+kobjs += vector.o
 

@@ -9,6 +9,7 @@
 #include <Hal/interrupt.h>
 #include <Hal/irq_vectors.h>
 #include <Hal/smp.h>
+#include <Ke/irq.h>
 #include <Ke/log.h>
 #include <Ke/smp.h>
 #include <asm/apic.h>
@@ -130,6 +131,8 @@ void HalInitializeIRQSubsystem(void)
 	HalInitializeLocalAPIC();
 	halCpuToApic[0] = apic_read_id();
 	KePrintf("Hal: BSP apicid=%u\n", halCpuToApic[0]);
+
+	KeReserveInterruptVector(IRQ_VECTOR_INT80h);
 
 	HalEnableRawIRQs();
 
