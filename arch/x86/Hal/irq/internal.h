@@ -12,3 +12,11 @@ void HalInitializeLocalAPIC(void);
 
 void HalInitializeLocalAPICNonBSP(void);
 
+void HalAddIOAPIC(unsigned long address, unsigned int gsi_base);
+
+void HalAddIRQOverride(unsigned int source, unsigned int dest,
+		bool force_active_hi, bool force_active_lo,
+		bool force_tgm_edge, bool force_tgm_level);
+
+void HalPrintIRQOverrideTable(void);
+

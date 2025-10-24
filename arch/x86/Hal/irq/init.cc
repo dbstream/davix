@@ -117,6 +117,57 @@ static void enumerate_smp(void)
 			keProcessorCount);
 }
 
+static void enumerate_ioapic_callback(acpi_entry_hdr *entry, void *arg)
+{
+	(void) arg;
+
+	if (entry->type == ACPI_MADT_ENTRY_TYPE_INTERRUPT_SOURCE_OVERRIDE) {
+		acpi_madt_interrupt_source_override *o =
+			(acpi_madt_interrupt_source_override *) entry;
+
+		if (o->bus != 0)
+			return;
+		uint16_t mps_flags = o->flags;
+
+		bool active_high = false;
+		bool active_low = false;
+		bool tgm_edge = false;
+		bool tgm_level = false;
+
+		if (mps_flags & (1 << 0)) {
+			if (mps_flags & (1 << 1))
+				active_low = true;
+			else
+				active_high = true;
+		}
+
+		if (mps_flags & (1 << 2)) {
+			if (mps_flags & (1 << 3))
+				tgm_level = true;
+			else
+				tgm_edge = true;
+		}
+
+		HalAddIRQOverride(o->source, o->gsi,
+				active_high, active_low,
+				tgm_edge, tgm_level);
+		return;
+	}
+
+	if (entry->type != ACPI_MADT_ENTRY_TYPE_IOAPIC)
+		return;
+
+	acpi_madt_ioapic *ioapic = (acpi_madt_ioapic *) entry;
+
+	HalAddIOAPIC(ioapic->address, ioapic->gsi_base);
+}
+
+static void enumerate_ioapic(void)
+{
+	AcpiParseMADT(AcpiMADT, enumerate_ioapic_callback, nullptr);
+	HalPrintIRQOverrideTable();
+}
+
 void HalInitializeIRQSubsystem(void)
 {
 	find_madt();
@@ -137,5 +188,6 @@ void HalInitializeIRQSubsystem(void)
 	HalEnableRawIRQs();
 
 	enumerate_smp();
+	enumerate_ioapic();
 }
 

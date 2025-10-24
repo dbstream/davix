@@ -4,5 +4,6 @@
 kobjs += apic.o
 kobjs += entry.o
 kobjs += init.o
+kobjs += ioapic.o
 kobjs += ipi.o
 
